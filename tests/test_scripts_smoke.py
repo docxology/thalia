@@ -1,0 +1,91 @@
+"""Smoke tests that the thin-orchestrator scripts actually run (Zero-Mock).
+
+Each script is loaded from disk and its ``main()`` invoked in-process; we assert it
+produces the artifact it advertises. Scripts are not measured for coverage, but
+running them validates the end-to-end orchestration.
+"""
+
+import importlib.util
+from pathlib import Path
+
+
+SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
+
+
+def _load(stem: str):
+    """Load a script module from disk by file stem (handles digit-prefixed names)."""
+    path = SCRIPTS / f"{stem}.py"
+    spec = importlib.util.spec_from_file_location(f"_atlas_script_{stem.replace('0', 'o')}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestScripts:
+    def test_preflight(self):
+        assert _load("00_preflight").main() == 0
+
+    def test_run_harness_eval_writes_json(self):
+        path = _load("run_harness_eval").main()
+        assert Path(path).exists()
+
+    def test_run_compiler_writes_json(self):
+        path = _load("run_compiler").main()
+        assert Path(path).exists()
+
+    def test_generate_figures_writes_pngs(self):
+        paths = _load("generate_figures").main()
+        assert paths and all(Path(p).exists() for p in paths)
+
+    def test_manuscript_variables_token_coverage(self):
+        path = _load("z_generate_manuscript_variables").main()
+        assert Path(path).exists()
+
+    def test_build_dashboard_writes_html(self):
+        path = _load("build_dashboard").main()
+        assert Path(path).exists()
+        assert Path(path).read_text().startswith("<!doctype html>")
+
+    def test_run_demo_writes_artifacts(self):
+        paths = _load("run_demo").main()
+        assert paths
+        assert all(Path(path).exists() for path in paths.values())
+
+    def test_run_query_cli(self):
+        rc = _load("run_query").main(
+            ["--query", "what is the wifi password", "--session-history", "User: my wifi password is bluefish42"]
+        )
+        assert rc == 0
+
+    def test_run_query_demo_bare(self):
+        # No args -> deterministic demo. The working-render pipeline runs every
+        # script bare; this must exit 0 rather than fail on the required --query
+        # (the defect that broke Stage 4 and blocked the PDF render).
+        assert _load("run_query").main([]) == 0
+
+    def test_run_dspy(self):
+        # Real DSPy runtime when the extra is installed (writes JSON); a clean
+        # exit-0 notice otherwise. Either way the bare run must not blow up.
+        from src.dspy_runtime import DSPY_AVAILABLE
+
+        result = _load("run_dspy").main()
+        if DSPY_AVAILABLE:
+            assert Path(result).exists()
+        else:
+            assert result == 0
+
+    def test_run_learned_retrieval(self):
+        # Real learned-embedder measurement when a model is live; clean exit-0
+        # notice otherwise. Must not blow up either way.
+        from src.retrieval.learned import embed_model_available
+
+        result = _load("run_learned_retrieval").main()
+        if embed_model_available():
+            assert Path(result).exists()
+        else:
+            assert result == 0
+
+    def test_run_injection_probe(self):
+        # Always writes the deterministic rows (+ neural when a model is live).
+        result = _load("run_injection_probe").main()
+        assert Path(result).exists()

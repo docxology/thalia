@@ -1,0 +1,106 @@
+# tasks.yaml — task + Gantt source of truth for this project.
+# Managed by the projects/taskboard server (live read-write) and seed_tasks.py.
+# status: todo | in_progress | blocked | done. dates: YYYY-MM-DD. progress: 0-100.
+project:
+  name: atlas
+  title: ATLAS — typed long-context memory harness
+  status: active
+  color: '#4C72B0'
+  lead: DAF
+tasks:
+- id: atlas-1
+  title: Expand manuscript methods + tighten styling
+  status: done
+  start: '2026-06-06'
+  end: '2026-06-07'
+  progress: 100
+  milestone: false
+  deps: []
+  tags:
+  - manuscript
+  notes: ''
+- id: atlas-2
+  title: Harden review docs + render hydration
+  status: done
+  start: '2026-06-07'
+  end: '2026-06-07'
+  progress: 100
+  milestone: false
+  deps:
+  - atlas-1
+  tags:
+  - docs
+  notes: ''
+- id: atlas-3
+  title: DSPy compiler-driven optimization stages
+  status: done
+  start: '2026-06-05'
+  end: '2026-06-09'
+  progress: 100
+  milestone: false
+  deps: []
+  tags:
+  - dspy
+  notes: '2026-06-09 verified compiler/DSPy surface: targeted gate `uv run --project working/atlas pytest working/atlas/tests/test_mipro.py working/atlas/tests/test_gepa.py working/atlas/tests/test_dspy_runtime.py -q` passed and `uv run --project working/atlas python working/atlas/scripts/run_compiler.py` wrote output/data/compile_result.json. The full-suite gate is the generated verification-summary command in output/reports/verification_summary.json; do not pin transient pass/skip counts here.'
+- id: atlas-4
+  title: Hermes layered-memory + self-evolution integration
+  status: done
+  start: '2026-06-08'
+  end: '2026-06-22'
+  progress: 100
+  milestone: false
+  deps:
+  - atlas-3
+  tags:
+  - memory
+  notes: '2026-06-10 completed via real Session restart-safe recall, output/data/demo_result.json, enriched compiler traces, and updated memory/session/compiler skills. Verified by the full suite and template validation.'
+- id: atlas-5
+  title: RLM-style Inspector for inspectable external state
+  status: done
+  start: '2026-06-22'
+  end: '2026-07-02'
+  progress: 100
+  milestone: false
+  deps:
+  - atlas-4
+  tags:
+  - tooling
+  notes: '2026-06-10 completed adaptive Inspector operability: CLI flags, config/env precedence, InspectorMetadata diagnostics, long-haystack recovery test, figure registry, and docs/skills/manuscript updates.'
+- id: atlas-6
+  title: Build harness evaluation suite (run_harness_eval.py)
+  status: done
+  start: '2026-06-06'
+  end: '2026-06-09'
+  progress: 100
+  milestone: false
+  deps: []
+  tags:
+  - eval
+  notes: '2026-06-09 verified local harness evaluation suite and smoke path with the full-suite gate recorded in output/reports/verification_summary.json, including `working/atlas/tests/test_scripts_smoke.py::TestScripts::test_run_harness_eval_writes_json` and evaluation/metrics coverage. External demo/release work remains outside this task.'
+- id: atlas-7
+  title: Determinism / no-randomness reproducibility audit
+  status: done
+  start: '2026-06-25'
+  end: '2026-07-05'
+  progress: 100
+  milestone: false
+  deps:
+  - atlas-4
+  - atlas-5
+  tags:
+  - reproducibility
+  notes: '2026-06-10 completed static determinism and zero-mock guards, provenance byte-stable writers, figure-style split, and full coverage/render/validation gates.'
+- id: atlas-m1
+  title: ATLAS harness demo
+  status: done
+  start: '2026-07-08'
+  end: '2026-07-08'
+  progress: 100
+  milestone: true
+  deps:
+  - atlas-4
+  - atlas-5
+  - atlas-6
+  - atlas-7
+  tags: []
+  notes: '2026-06-10 completed canonical deterministic demo via scripts/run_demo.py, dashboard demo/verification sections, regenerated artifacts, and clean template validation.'

@@ -1,0 +1,28 @@
+# `scripts/` — Agent contract
+
+## Thin orchestrator rules
+
+1. **No business logic.** Import from `src/`; handle only I/O, path setup, and
+   serialisation. If you are tempted to compute something here, it belongs in `src/`.
+2. **Path setup.** Each script defines
+   `PROJECT_ROOT = Path(__file__).resolve().parent.parent` and inserts
+   `PROJECT_ROOT`, `PROJECT_ROOT/src`, and the repo root onto `sys.path` before
+   importing `src.*`.
+3. **Print output paths.** Every produced artifact path is printed to stdout for
+   manifest collection.
+4. **Determinism.** Scripts must produce byte-identical artifacts on repeated runs
+   (JSON serialised with `sort_keys=True`).
+5. **Fail loudly.** `z_generate_manuscript_variables.py` raises `SystemExit` if the
+   manuscript uses a token the generator does not emit — never silence it.
+
+## Outputs (all under `output/`, gitignored / regeneratable)
+
+- `data/eval_results.json`, `data/compile_result.json`, `data/manuscript_variables.json`
+- `data/demo_result.json`, `reports/verification_summary.json`,
+  `figures/figure_registry.json`, `reports/artifact_manifest.json`
+- `figures/retriever_comparison.png`, `figures/rrf_sensitivity.png`,
+  `figures/compiler_convergence.png`, `figures/consolidation_curve.png`,
+  `figures/category_breakdown.png`, `figures/evidence_funnel.png`,
+  `figures/noise_scaling.png`, `figures/mmr_tradeoff.png`,
+  `figures/method_ablation.png`
+- `dashboard.html`

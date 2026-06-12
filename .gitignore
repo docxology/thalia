@@ -1,0 +1,17 @@
+# Generated outputs are regeneratable; never commit them.
+output/
+.coverage
+.coverage.*
+.pytest_cache/
+__pycache__/
+*.pyc
+.benchmarks/
+
+# Egg-info / build artifacts.
+**/*.egg-info/
+build/
+dist/
+
+# Project-local virtualenvs (the root .venv is shared).
+.venv/
+data/longmemeval/

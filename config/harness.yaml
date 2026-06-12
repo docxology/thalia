@@ -1,0 +1,35 @@
+# ATLAS harness configuration.
+# Loaded by src/config.py::load_config; every field maps to HarnessConfig.
+# Override any field at runtime with an ATLAS_<FIELD> environment variable
+# (e.g. ATLAS_TOP_K=4). Lane weights are both-or-neither: set both or leave both
+# null to use the per-task-category defaults in src/stages/retriever.py.
+
+# Inspector — Stage 0
+max_windows: 15            # cap on evidence windows emitted from the session
+
+# Retriever — Stage 1
+top_k: 8                   # cap on ranked evidence returned
+rrf_k: 60                  # Reciprocal Rank Fusion damping constant
+lexical_weight: null       # null -> per-category default (else set with semantic_weight)
+semantic_weight: null      # null -> per-category default (else set with lexical_weight)
+context_budget_tokens: 2048  # inline-delivery token budget
+rerank: rrf                # "rrf" (fusion order) or "mmr" (diversity re-rank)
+mmr_lambda: 0.7            # MMR relevance/diversity tradeoff in [0,1] (1 = pure relevance)
+
+# Reasoner — Stage 2
+max_evidence: 5            # cap on evidence windows the reasoner considers
+verify: false             # run a grounding-verification pass (re-answer if weak)
+grounding_threshold: 0.3  # min answer-in-evidence support before re-answering
+
+# Inspector recursion (RLM-style partitioning for long contexts)
+partition_threshold: 40    # record count above which block partitioning runs
+partition_size: 10         # block size (records) for partitioning
+
+# Adaptive retrieval + memory recall (all off by default)
+query_expansion: false     # pseudo-relevance-feedback query expansion
+expansion_terms: 5         # feedback terms appended when expanding
+recency_weight: 0.0        # recency bonus in [0,1] favouring later turns
+recall_memory: false       # consult episodic store + MEMORY.md for evidence
+recall_limit: 3            # max recalled evidence windows
+adaptive_windows: false    # scale Inspector windows by context length for long contexts
+adaptive_window_ratio: 5   # one window per N context lines when adaptive_windows is true

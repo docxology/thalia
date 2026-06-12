@@ -1,0 +1,50 @@
+claims:
+  - claim_id: num-stages
+    kind: number
+    value: 5
+    source: src/harness.py AutoHarness composes 4 runtime stages + 1 compiler
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/harness.py
+  - claim_id: dataset-size
+    kind: number
+    value: 6
+    source: src/evaluation/dataset.py build_demo_dataset (one example per task category)
+    source_tier: generated_metric
+    freshness: active
+    artifact_path: output/data/eval_results.json
+  - claim_id: rrf-k
+    kind: number
+    value: 60
+    source: src/retrieval/fusion.py DEFAULT_K (Cormack et al. 2009)
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/retrieval/fusion.py
+  - claim_id: rrf-lexical-weight
+    kind: number
+    value: 0.65
+    source: src/retrieval/fusion.py DEFAULT_LEXICAL_WEIGHT
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/retrieval/fusion.py
+  - claim_id: skill-size-budget-kb
+    kind: number
+    value: 15
+    source: src/compiler/gepa.py SKILL_MAX_BYTES (mirrors hermes-agent-self-evolution)
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/compiler/gepa.py
+  - claim_id: coverage-gate
+    kind: number
+    value: 90
+    source: pyproject.toml [tool.coverage.report] fail_under
+    source_tier: project_source
+    freshness: active
+    artifact_path: pyproject.toml
+  - claim_id: composite-default
+    kind: number
+    value: 0.621
+    source: output/data/eval_results.json composite (default config)
+    source_tier: generated_metric
+    freshness: active
+    artifact_path: output/data/eval_results.json

@@ -1,0 +1,77 @@
+# ATLAS Manuscript Configuration
+# Agentic Typed-pipeline with Lexical And Structured stages.
+# Consumed by infrastructure/rendering (PDF metadata) and project scripts such as
+# working/atlas/scripts/z_generate_manuscript_variables.py.
+
+paper:
+  title: "ATLAS: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
+  subtitle: "Typed Pipelines, Lexical-Anchored Retrieval, Episodic-First Memory, and Bounded Compiler Traces"
+  version: "0.1"
+  date: ""  # Auto-generated at render time if empty
+
+authors:
+  - name: "Daniel Ari Friedman"
+    orcid: "0000-0001-6232-9096"
+    email: "daniel@activeinference.institute"
+    affiliations:
+      - "Active Inference Institute"
+      - "FractAI"
+    corresponding: true
+
+publication:
+  doi: ""  # Assigned on deposit
+  journal: ""
+  year: "2026"
+
+keywords:
+  - "DSPy"
+  - "declarative pipelines"
+  - "recursive language models"
+  - "agentic search"
+  - "lexical retrieval"
+  - "reciprocal rank fusion"
+  - "episodic memory"
+  - "memory consolidation"
+  - "compiler optimization"
+  - "GEPA"
+  - "active inference"
+  - "reproducible research"
+
+metadata:
+  license: "MIT"
+  language: "en"
+
+render:
+  formats:
+    pdf: true
+    html: true
+    slides: true
+    docx: false
+    epub: false
+
+# LLM overlays are disabled by default: this project's core is deterministic and
+# offline. A real LM can be wired into the Reasoner and an Ollama review enabled
+# here for an optional manuscript review pass.
+llm:
+  reviews:
+    enabled: false
+  translations:
+    enabled: false
+
+testing:
+  max_test_failures: 0
+  max_infra_test_failures: 0
+  max_project_test_failures: 0
+
+# Project-specific provenance accepted by the template config schema. Runtime
+# harness configuration remains canonical in ../config/harness.yaml.
+project_config:
+  harness:
+    num_stages: 5
+    max_windows: 15
+    top_k: 8
+    rrf_k: 60
+    lexical_weight: 0.65
+    semantic_weight: 0.35
+    context_budget_tokens: 2048
+    max_evidence: 5

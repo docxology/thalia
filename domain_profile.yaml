@@ -1,0 +1,75 @@
+domain: agentic_systems_research
+display_name: ATLAS Auto-Harness Research
+required_packages:
+  - numpy
+  - matplotlib
+  - pytest
+preferred_outputs:
+  - pdf
+  - html
+validation_gates:
+  - experiment_method_design
+  - artifact_manifest
+  - evidence_grounding
+  - render_validation
+figure_types:
+  - retriever_comparison
+  - rrf_sensitivity
+  - compiler_convergence
+  - consolidation_curve
+  - category_breakdown
+  - evidence_funnel
+  - noise_scaling
+  - mmr_tradeoff
+  - method_ablation
+  - orchestration_value
+  - scaling_ci
+  - backend_comparison
+  - paraphrase_retrieval
+  - injection_resistance
+  - longmemeval
+  - bottleneck
+citation_policy: official_or_scholarly
+source_policy: "Prefer primary project outputs, the four foundational papers, and the template/ substrate. Mark commissioned-brief citations as provided; do not assert independent verification."
+review_gates:
+  - experiment_method_design
+  - evidence_grounding
+  - render_validation
+artifact_expectations:
+  - output/data/eval_results.json
+  - output/data/compile_result.json
+  - output/data/demo_result.json
+  - output/data/manuscript_variables.json
+  - output/figures/retriever_comparison.png
+  - output/figures/rrf_sensitivity.png
+  - output/figures/compiler_convergence.png
+  - output/figures/consolidation_curve.png
+  - output/figures/category_breakdown.png
+  - output/figures/evidence_funnel.png
+  - output/figures/noise_scaling.png
+  - output/figures/mmr_tradeoff.png
+  - output/figures/method_ablation.png
+  - output/figures/orchestration_value.png
+  - output/figures/scaling_ci.png
+  - output/figures/backend_comparison.png
+  - output/figures/paraphrase_retrieval.png
+  - output/figures/injection_resistance.png
+  - output/figures/longmemeval.png
+  - output/figures/bottleneck.png
+  - output/figures/figure_registry.json
+  - output/dashboard.html
+  - output/reports/verification_summary.json
+benchmark_rubric:
+  name: atlas-harness-readiness
+  dimensions:
+    - name: deterministic_reproducibility
+      weight: 2.0
+    - name: evidence_grounding
+      weight: 2.0
+    - name: test_coverage
+      weight: 1.0
+    - name: artifact_manifest
+      weight: 1.0
+    - name: scope_honesty
+      weight: 2.0
+llm_prompt_guidance: "Use generated evaluation artifacts and manuscript variables as the evidence source; never invent numeric results. Preserve the stated scope boundaries (extractive-LM accuracy ceiling; hashing-embedding semantic surrogate)."

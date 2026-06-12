@@ -1,0 +1,31 @@
+{
+  "embedding_document_prefix": "search_document:",
+  "embedding_query_prefix": "search_query:",
+  "learned_recall_at_1": 1.0,
+  "metric": "recall@1",
+  "model": "nomic-embed-text",
+  "model_metadata": {
+    "api_base": "http://localhost:11434",
+    "available": true,
+    "details": {
+      "context_length": 2048,
+      "embedding_length": 768,
+      "families": [
+        "nomic-bert"
+      ],
+      "family": "nomic-bert",
+      "format": "gguf",
+      "parameter_size": "137M",
+      "parent_model": "",
+      "quantization_level": "F16"
+    },
+    "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+    "model": "nomic-embed-text:latest",
+    "modified_at": "2026-06-08T16:33:48.900810949-07:00",
+    "ollama_version": "0.30.3",
+    "requested_model": "nomic-embed-text",
+    "size": 274302450
+  },
+  "n_probes": 4,
+  "surrogate_recall_at_1": 0.25
+}

@@ -1,0 +1,80 @@
+{
+  "category_accuracy": {
+    "knowledge_update": [
+      0.03966537485150228,
+      0.02327601751715616,
+      0.05840610297938561
+    ],
+    "multi_session": [
+      0.0240635257431022,
+      0.015532955524980373,
+      0.032917500435969166
+    ],
+    "preference": [
+      0.14001476235197474,
+      0.12238691158651976,
+      0.1598871160800403
+    ],
+    "single_session": [
+      0.048077467298834574,
+      0.03621439496732464,
+      0.060747393920468934
+    ],
+    "temporal": [
+      0.057469543016143834,
+      0.046850967131943026,
+      0.06863356933100492
+    ]
+  },
+  "extractive_accuracy": [
+    0.0483920022672186,
+    0.04257431462969144,
+    0.054730019642410185
+  ],
+  "extractive_composite": [
+    0.2112190158632499,
+    0.20389696494001688,
+    0.21848985711270466
+  ],
+  "extractive_grounding": [
+    0.43036271500972917,
+    0.40947428590360285,
+    0.450513284346724
+  ],
+  "n_extractive": 500,
+  "n_neural": 50,
+  "neural_generation_options": {
+    "temperature": 0.0
+  },
+  "neural_accuracy": [
+    0.11899092524194631,
+    0.08361294830290479,
+    0.15922313788882508
+  ],
+  "neural_grounding": [
+    0.37948476148810256,
+    0.30884481164724636,
+    0.4450948523429074
+  ],
+  "neural_model": "gemma3:4b",
+  "neural_model_metadata": {
+    "api_base": "http://localhost:11434",
+    "available": true,
+    "details": {
+      "families": [
+        "gemma3"
+      ],
+      "family": "gemma3",
+      "format": "gguf",
+      "parameter_size": "4.3B",
+      "parent_model": "",
+      "quantization_level": "Q4_K_M"
+    },
+    "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+    "model": "gemma3:4b",
+    "modified_at": "2026-06-08T14:02:59.340727371-07:00",
+    "ollama_version": "0.30.3",
+    "requested_model": "gemma3:4b",
+    "size": 3338801804
+  }
+}

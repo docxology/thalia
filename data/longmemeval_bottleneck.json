@@ -1,0 +1,80 @@
+{
+  "default_max_windows": 15,
+  "embed_model_for_modes": "nomic-embed-text",
+  "embed_model_metadata": {
+    "api_base": "http://localhost:11434",
+    "available": true,
+    "details": {
+      "context_length": 2048,
+      "embedding_length": 768,
+      "families": [
+        "nomic-bert"
+      ],
+      "family": "nomic-bert",
+      "format": "gguf",
+      "parameter_size": "137M",
+      "parent_model": "",
+      "quantization_level": "F16"
+    },
+    "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+    "model": "nomic-embed-text:latest",
+    "modified_at": "2026-06-08T16:33:48.900810949-07:00",
+    "ollama_version": "0.30.3",
+    "requested_model": "nomic-embed-text",
+    "size": 274302450
+  },
+  "extractive_grounding_by_maxwindows": {
+    "15": 0.42204346092421213,
+    "30": 0.46772018756905076,
+    "50": 0.5112650760290759,
+    "100": 0.5749184285100113
+  },
+  "inspector_recall": 0.6,
+  "n_neural": 30,
+  "n_ranking": 40,
+  "neural_generation_options": {
+    "temperature": 0.0
+  },
+  "neural_adaptive": {
+    "accuracy": 0.18318279385399439,
+    "grounding": 0.5331876723662027
+  },
+  "neural_by_maxwindows": {
+    "15": {
+      "accuracy": 0.09213157712441912,
+      "grounding": 0.35941593550437695
+    },
+    "100": {
+      "accuracy": 0.1781505729884402,
+      "grounding": 0.5330947925785653
+    }
+  },
+  "neural_model": "gemma3:4b",
+  "neural_model_metadata": {
+    "api_base": "http://localhost:11434",
+    "available": true,
+    "details": {
+      "families": [
+        "gemma3"
+      ],
+      "family": "gemma3",
+      "format": "gguf",
+      "parameter_size": "4.3B",
+      "parent_model": "",
+      "quantization_level": "Q4_K_M"
+    },
+    "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+    "model": "gemma3:4b",
+    "modified_at": "2026-06-08T14:02:59.340727371-07:00",
+    "ollama_version": "0.30.3",
+    "requested_model": "gemma3:4b",
+    "size": 3338801804
+  },
+  "ranking_recall_at_10": 1.0,
+  "sweep_values": [
+    15,
+    30,
+    50,
+    100
+  ]
+}

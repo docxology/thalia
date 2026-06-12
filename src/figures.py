@@ -1,0 +1,656 @@
+"""Figure generators for the ATLAS manuscript (matplotlib, headless).
+
+Thin, deterministic plotting helpers driven by :mod:`src.evaluation`. Each
+function takes computed data plus an output path, writes a 300-dpi PNG, and
+returns the path. No business logic lives here — the numbers come from the
+evaluation module so figures and prose share a single source of truth.
+"""
+
+from __future__ import annotations
+
+from .evaluation import (
+    RetrieverComparison,
+    consolidation_simulation,
+    evidence_funnel,
+    method_ablation,
+    mmr_lambda_sweep,
+    noise_scaling_experiment,
+    rrf_weight_sweep,
+)
+from .figure_style import EXPORT_DPI, PALETTE, annotate_bars as _annotate_bars
+from .figure_style import plt, prepare as _prepare, pretty as _pretty, zoomed_ylim as _zoomed_ylim
+
+
+
+def plot_retriever_comparison(comparison: RetrieverComparison, output_path: str | Path) -> Path:
+    """Bar chart of lexical vs. semantic vs. hybrid composite metric."""
+    path = _prepare(output_path)
+    labels = ["Lexical\n(BM25/grep)", "Semantic\n(hashing)", "Hybrid\n(RRF)"]
+    values = [comparison.lexical, comparison.semantic, comparison.hybrid]
+    colors = [PALETTE["lexical"], PALETTE["semantic"], PALETTE["hybrid"]]
+
+    fig, ax = plt.subplots()
+    bars = ax.bar(labels, values, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6)
+    ax.set_ylabel("Composite metric (0–1)")
+    ax.set_title("Retrieval mode comparison (slack budget, inline delivery)")
+    ax.set_ylim(0, 1)
+    _annotate_bars(ax, bars, values, dy=0.02)
+    # On the clean set at a slack budget all three lanes tie; say so on the figure so
+    # the identical bars read as the (real) finding, not a broken render.
+    if max(values) - min(values) < 1e-9:
+        ax.annotate(
+            "all lanes tie — gold evidence is unambiguous at a slack budget\n(see noise-scaling figure for where they diverge)",
+            (0.5, 0.88),
+            xycoords="axes fraction",
+            ha="center",
+            fontsize=8,
+            color=PALETTE["muted"],
+        )
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_rrf_weight_sensitivity(output_path: str | Path, steps: int = 11) -> Path:
+    """Line plot of composite metric vs. lexical lane weight (RRF sweep)."""
+    path = _prepare(output_path)
+    sweep = rrf_weight_sweep(steps=steps)
+    weights = [w for w, _ in sweep]
+    scores = [s for _, s in sweep]
+    best_w, best_s = max(sweep, key=lambda pair: pair[1])
+
+    fig, ax = plt.subplots()
+    ax.plot(weights, scores, marker="o", color=PALETTE["hybrid"], linewidth=1.8, zorder=2)
+    ax.set_ylim(*_zoomed_ylim(scores, pad=0.012))
+    # Draw the optimum on top with a halo so it is visible even where it sits under
+    # the line; annotate the non-monotonic midpoint dip the caption refers to.
+    ax.scatter([best_w], [best_s], s=90, facecolor=PALETTE["accent"], edgecolor="white", linewidth=1.4, zorder=5, label=f"optimum @ w_lex={best_w:.2f}")
+    dip_i = min(range(len(scores)), key=lambda i: scores[i])
+    if 0 < dip_i < len(scores) - 1:
+        ax.annotate(
+            "balanced fusion:\nneither lane dominates",
+            (weights[dip_i], scores[dip_i]),
+            textcoords="offset points",
+            xytext=(44, 26),  # up-and-right of the dip, clear of the x-axis ticks
+            ha="center",
+            fontsize=8,
+            color=PALETTE["muted"],
+            arrowprops=dict(arrowstyle="->", color=PALETTE["muted"], lw=0.8),
+        )
+    ax.margins(x=0.04)  # ensure the far-left optimum marker (w_lex=0) is fully visible
+    ax.set_xlabel("Lexical lane weight (semantic = 1 − weight)")
+    ax.set_ylabel("Composite metric (zoomed)")
+    ax.set_title("RRF lane-weight sensitivity")
+    ax.legend(loc="upper right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_compiler_convergence(trace: list[tuple[object, float]], output_path: str | Path, components: dict | None = None) -> Path:
+    """Compiler search trace, with the component decomposition that explains the tie.
+
+    The composite-vs-candidate curve is flat on the easy dataset; rather than leave a
+    bare flat line, the inset bars show the three weighted metric components are each
+    pinned (accuracy/grounding/efficiency constant across candidates), so the flatness
+    is a *proven* structural tie, not a rendering accident. ``components`` is a
+    ``{"accuracy","grounding","efficiency"}`` dict (e.g. from ``run_full_eval``).
+    """
+    path = _prepare(output_path)
+    scores = [score for _, score in trace]
+    best_so_far: list[float] = []
+    running = float("-inf")
+    for s in scores:
+        running = max(running, s)
+        best_so_far.append(running)
+    x = list(range(1, len(scores) + 1))
+    tied = bool(scores) and max(scores) - min(scores) < 1e-9
+
+    fig, ax = plt.subplots()
+    ax.plot(x, scores, marker="o", color=PALETTE["muted"], linewidth=1.0, label="candidate composite")
+    ax.plot(x, best_so_far, color=PALETTE["hybrid"], linewidth=2.0, linestyle=(0, (4, 3)), label="best so far")
+    ax.set_xlabel("Candidate / iteration")
+    ax.set_ylabel("Composite metric (0–1)")
+    ax.set_title("Compiler search: a structural tie, decomposed")
+    ax.set_ylim(0, 1)
+    if tied:
+        ax.annotate(
+            f"all {len(scores)} candidates tie at {scores[0]:.3f}\n(optimum is a tie-break, not a win)",
+            (x[len(x) // 2], scores[0]),
+            textcoords="offset points", xytext=(0, 20), ha="center", fontsize=8, color=PALETTE["muted"],
+        )
+    # Inset: the weighted components that sum to the (constant) composite — proving the tie.
+    if components:
+        labels = ["0.6·acc", "0.3·grnd", "0.1·eff"]
+        vals = [0.6 * components["accuracy"], 0.3 * components["grounding"], 0.1 * components["efficiency"]]
+        colors = [PALETTE["lexical"], PALETTE["hybrid"], PALETTE["accent"]]
+        inset = ax.inset_axes([0.6, 0.1, 0.36, 0.42])
+        pos = list(range(len(labels)))
+        bars = inset.bar(pos, vals, color=colors, edgecolor=PALETTE["ink"], linewidth=0.4)
+        for bar, v in zip(bars, vals):
+            inset.text(bar.get_x() + bar.get_width() / 2, v + 0.006, f"{v:.2f}", ha="center", va="bottom", fontsize=7)
+        inset.set_xticks(pos)
+        inset.set_xticklabels(labels, fontsize=7)
+        inset.set_ylim(0, max(vals) * 1.35)
+        inset.set_title("weighted components\n(constant across candidates)", fontsize=7.5)
+        inset.tick_params(axis="y", labelsize=6)
+        inset.set_yticks([])
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_consolidation_curve(output_path: str | Path, turns: int = 12) -> Path:
+    """Schematic utility curves: forced consolidation vs. episodic-first.
+
+    Illustrative (not empirical) — communicates the consolidation-fault mechanism
+    from Zhang et al. (2026).
+    """
+    path = _prepare(output_path)
+    sim = consolidation_simulation(turns=turns)
+    x = list(range(1, turns + 1))
+
+    fig, ax = plt.subplots()
+    ax.plot(x, sim["forced"], marker="s", color=PALETTE["accent"], label="forced consolidation")
+    ax.plot(x, sim["episodic_first"], marker="o", color=PALETTE["hybrid"], label="episodic-first (gated)")
+    ax.axhline(0.5, color=PALETTE["muted"], linestyle="--", linewidth=1.0, label="no-memory baseline")
+    ax.set_xlabel("Turn")
+    ax.set_ylabel("Memory utility (schematic)")
+    ax.set_title("Consolidation regimes (conceptual schematic)")
+    ax.set_ylim(0, 1)
+    ax.legend(loc="lower left", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_category_breakdown(category_means: dict[str, float], output_path: str | Path) -> Path:
+    """Horizontal bar chart of composite metric per task category."""
+    path = _prepare(output_path)
+    items = sorted(category_means.items(), key=lambda kv: kv[1])
+    labels = [_pretty(k) for k, _ in items]
+    values = [v for _, v in items]
+    # Colour the two weakest categories distinctly so the bimodal spread (the weak
+    # code/multi-session classes vs the strong rest) reads at a glance.
+    colors = [PALETTE["accent"] if i < 2 else PALETTE["hybrid"] for i in range(len(values))]
+
+    fig, ax = plt.subplots()
+    ax.barh(labels, values, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6)
+    ax.set_xlabel("Composite metric (0–1)")
+    ax.set_title("Per-task-category performance")
+    ax.set_xlim(0, 1)
+    ax.grid(axis="x")
+    for i, value in enumerate(values):
+        ax.text(value + 0.01, i, f"{value:.3f}", va="center", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_evidence_funnel(output_path: str | Path) -> Path:
+    """Funnel of mean evidence counts: session lines -> windows -> ranked -> cited."""
+    path = _prepare(output_path)
+    funnel = evidence_funnel()
+    stages = ["session\nlines", "inspector\nwindows", "ranked\nevidence", "cited\nsources"]
+    values = [funnel["session_lines"], funnel["windows"], funnel["ranked"], funnel["cited"]]
+    colors = [PALETTE["muted"], PALETTE["lexical"], PALETTE["hybrid"], PALETTE["accent"]]
+
+    fig, ax = plt.subplots()
+    bars = ax.bar(stages, values, color=colors, edgecolor="black", linewidth=0.6)
+    ax.set_ylabel("Mean count per query")
+    ax.set_title("Evidence narrowing funnel")
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, value + 0.05, f"{value:.1f}", ha="center", va="bottom", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_noise_scaling(output_path: str | Path) -> Path:
+    """Composite metric per retrieval mode as session noise scales."""
+    path = _prepare(output_path)
+    experiment = noise_scaling_experiment()
+
+    fig, ax = plt.subplots()
+    # The hybrid lane tracks the lexical lane exactly on this dataset (the default
+    # RRF weights let the lexical signal dominate the weak sub-word semantic
+    # surrogate), so a solid hybrid line would render invisibly under lexical. Give
+    # each lane a distinct style/marker and dodge the end-of-line value labels so
+    # the overlap is legible rather than hidden.
+    style = {
+        "lexical": dict(linestyle="-", marker="o", linewidth=1.8, zorder=2),
+        "semantic": dict(linestyle="-", marker="s", linewidth=1.8, zorder=2),
+        "hybrid": dict(linestyle="--", marker="x", linewidth=1.8, zorder=3),
+    }
+    label_dy = {"lexical": -11, "semantic": 4, "hybrid": 7}
+    for mode in ("lexical", "semantic", "hybrid"):
+        levels = [lvl for lvl, _ in experiment[mode]]
+        scores = [s for _, s in experiment[mode]]
+        ax.plot(levels, scores, color=PALETTE[mode], label=mode, **style[mode])
+        # Label each lane's value at the noisiest level so the lexical-vs-surrogate
+        # divergence (semantic > lexical under noise) is readable on the figure
+        # itself, matching the value-annotation style of the bar charts. Vertical
+        # offsets keep overlapping lanes' labels from colliding.
+        ax.annotate(
+            f"{scores[-1]:.3f}",
+            (levels[-1], scores[-1]),
+            textcoords="offset points",
+            xytext=(4, label_dy[mode]),
+            fontsize=8,
+            color=PALETTE[mode],
+        )
+    ax.set_xlabel("Distractor lines added (session noise)")
+    ax.set_ylabel("Composite metric (0–1)")
+    ax.set_title("Robustness to session noise by lane")
+    ax.set_ylim(0, 1)
+    ax.legend(loc="lower right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_mmr_tradeoff(output_path: str | Path, steps: int = 11) -> Path:
+    """Composite metric as the MMR lambda (relevance/diversity) is swept 0..1."""
+    path = _prepare(output_path)
+    sweep = mmr_lambda_sweep(steps=steps)
+    lambdas = [lam for lam, _ in sweep]
+    scores = [s for _, s in sweep]
+
+    fig, ax = plt.subplots()
+    ax.plot(lambdas, scores, marker="o", color=PALETTE["accent"], linewidth=1.8)
+    ax.set_ylim(*_zoomed_ylim(scores, pad=0.01))
+    ax.set_xlabel("MMR λ  (0 = max diversity, 1 = pure relevance)")
+    ax.set_ylabel("Composite metric (zoomed)")
+    ax.set_title("MMR relevance/diversity tradeoff")
+    # The single real finding is the penalty at λ=0 (pure diversity evicts the
+    # discriminative span); on a 0–1 axis it is invisible, so zoom and call it out.
+    if len(scores) > 1 and scores[0] < scores[1]:
+        ax.annotate(
+            f"pure diversity evicts gold span\n(-{scores[1] - scores[0]:.3f})",
+            (lambdas[0], scores[0]),
+            textcoords="offset points",
+            xytext=(34, -2),
+            fontsize=8,
+            color=PALETTE["accent"],
+            arrowprops=dict(arrowstyle="->", color=PALETTE["accent"], lw=0.8),
+        )
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_method_ablation(output_path: str | Path) -> Path:
+    """Bar chart of composite metric for base + each added method + all combined."""
+    path = _prepare(output_path)
+    ablation = method_ablation()
+    labels = list(ablation.keys())
+    values = [ablation[k] for k in labels]
+    colors = [PALETTE["muted"]] + [PALETTE["lexical"], PALETTE["semantic"], PALETTE["accent"], PALETTE["hybrid"]][
+        : len(labels) - 1
+    ]
+
+    fig, ax = plt.subplots()
+    lo, hi = _zoomed_ylim(values, pad=0.02)
+    bars = ax.bar(labels, values, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6)
+    base = values[0]
+    ax.axhline(base, color=PALETTE["muted"], linestyle="--", linewidth=0.9, zorder=0, label=f"base = {base:.3f}")
+    ax.set_ylabel("Composite metric (zoomed)")
+    ax.set_title("Added-method ablation (single-turn dataset, tight budget)")
+    ax.set_ylim(lo, hi)
+    _annotate_bars(ax, bars, values, dy=(hi - lo) * 0.01)
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_backend_comparison(data: dict, output_path: str | Path) -> Path:
+    """Per-example extractive vs real neural Reasoner token-F1.
+
+    The comparison has only six examples, so paired points are more honest than
+    grouped category bars. Data comes from ``data/neural_eval.json``.
+    """
+    path = _prepare(output_path)
+    rows = data.get("rows") or [
+        {"category": c, "extractive_f1": data["category_extractive_f1"][c], "neural_f1": data["category_neural_f1"][c]}
+        for c in sorted(data["category_neural_f1"])
+    ]
+    rows = sorted(rows, key=lambda r: (r["neural_f1"] - r["extractive_f1"], str(r["category"])))
+    labels = [_pretty(str(r["category"])) for r in rows]
+    ext = [float(r["extractive_f1"]) for r in rows]
+    neu = [float(r["neural_f1"]) for r in rows]
+    x = list(range(len(rows)))
+
+    fig, ax = plt.subplots(figsize=(7.0, 4.2))
+    for i, (e, n) in enumerate(zip(ext, neu)):
+        ax.plot([i, i], [e, n], color="#BBBBBB", linewidth=1.2, zorder=1)
+    ax.scatter(x, ext, color=PALETTE["muted"], edgecolor=PALETTE["ink"], linewidth=0.5, s=48, label="extractive")
+    ax.scatter(x, neu, color=PALETTE["semantic"], edgecolor=PALETTE["ink"], linewidth=0.5, s=56, marker="s", label=f"neural ({data['model']})")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=25, ha="right")
+    ax.set_ylabel("Token-F1 vs gold answer")
+    ax.set_ylim(0, 1)
+    ax.set_title(f"Backend comparison by example (n={data['n']})")
+    me, mn = data["mean_extractive_f1"], data["mean_neural_f1"]
+    ax.axhline(me, color=PALETTE["muted"], linestyle=":", linewidth=1.0, zorder=0)
+    ax.axhline(mn, color=PALETTE["semantic"], linestyle=":", linewidth=1.0, zorder=0)
+    ax.annotate(
+        f"mean token-F1: extractive {me:.3f} -> neural {mn:.3f}",
+        (0.02, 0.95),
+        xycoords="axes fraction",
+        ha="left",
+        va="top",
+        fontsize=9,
+        color=PALETTE["ink"],
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#DDDDDD", alpha=0.9),
+    )
+    ax.grid(axis="y")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_bottleneck(data: dict, output_path: str | Path) -> Path:
+    """The Inspector is the bottleneck, and widening it is the fix (real LongMemEval).
+
+    Extractive grounding and neural accuracy both climb as ``max_windows`` relaxes the
+    Inspector's narrowing; the subtitle reports the localisation (full-haystack ranking
+    recall vs Inspector recall). Data from
+    :func:`src.evaluation.longmemeval.bottleneck_analysis`.
+    """
+    path = _prepare(output_path)
+    sweep = data["extractive_grounding_by_maxwindows"]
+    mws = sorted(int(k) for k in sweep)
+    grounding = [sweep[str(k)] if str(k) in sweep else sweep[k] for k in mws]
+    neural = data["neural_by_maxwindows"]
+
+    def _n(mw, field):
+        d = neural.get(str(mw), neural.get(mw, {}))
+        return d.get(field)
+
+    nmws = sorted(int(k) for k in neural)
+    neural_acc = [_n(mw, "accuracy") for mw in nmws]
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    ax.plot(mws, grounding, marker="o", color=PALETTE["hybrid"], linewidth=1.8, label="extractive grounding")
+    ax.plot(nmws, neural_acc, marker="s", color=PALETTE["semantic"], linewidth=1.8, label=f"neural accuracy ({data['neural_model']})")
+    if len(neural_acc) == 2:
+        ax.annotate(f"+{neural_acc[1] - neural_acc[0]:.3f} accuracy", (nmws[1], neural_acc[1]), textcoords="offset points", xytext=(-6, 10), fontsize=9, color=PALETTE["semantic"], ha="right")
+    # The shipped fix: the adaptive Inspector reaches the manual best with no tuning.
+    adaptive = data.get("neural_adaptive")
+    if adaptive:
+        ax.axhline(adaptive["accuracy"], color=PALETTE["accent"], linestyle=":", linewidth=1.4, zorder=1)
+        ax.scatter([mws[-1]], [adaptive["accuracy"]], marker="*", s=200, color=PALETTE["accent"], edgecolor="white", linewidth=0.8, zorder=6, label=f"adaptive Inspector (auto-tuned): {adaptive['accuracy']:.3f}")
+    ax.set_xlabel("Inspector max_windows (context-narrowing budget)")
+    ax.set_ylabel("Rate")
+    ax.set_ylim(0, max(max(grounding), max(v for v in neural_acc if v is not None)) + 0.12)
+    ax.set_title("Widening the Inspector recovers grounding and accuracy")
+    mode = data.get("ranking_recall_by_mode") or {}
+    if mode.get("available"):
+        mode_text = (
+            f"lex {mode['lexical']:.2f} / dense {mode['dense']:.2f} / hybrid {mode['hybrid']:.2f}"
+            f" (n={mode['n']}, k={mode.get('k', 10)})"
+        )
+    else:
+        mode_text = "dense/hybrid mode rows unavailable"
+    ax.text(
+        0.03,
+        0.47,
+        f"localisation (n={data['n_ranking']}):\nfull ranking {data['ranking_recall_at_10']:.2f} vs Inspector {data['inspector_recall']:.2f}\n{mode_text}\nneural sweep n={data.get('n_neural', 'NA')}",
+        transform=ax.transAxes,
+        ha="left",
+        va="center",
+        fontsize=8,
+        color=PALETTE["muted"],
+    )
+    ax.grid(True)
+    ax.legend(loc="center right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_longmemeval(data: dict, output_path: str | Path) -> Path:
+    """Real LongMemEval_S: extractive vs neural accuracy + session grounding, with CIs.
+
+    The headline real-data result: accuracy collapses versus the synthetic set, the
+    neural advantage becomes statistically real (CIs barely overlap), and session
+    grounding caps both — retrieval is the bottleneck on real long-context data. Data
+    from :func:`src.evaluation.longmemeval.longmemeval_eval` (committed aggregates).
+    """
+    path = _prepare(output_path)
+    backends = ["Extractive", f"Neural\n({data['neural_model']})"]
+    acc = [data["extractive_accuracy"], data["neural_accuracy"]]
+    grnd = [data["extractive_grounding"], data["neural_grounding"]]
+    x = range(len(backends))
+    w = 0.38
+
+    fig, ax = plt.subplots(figsize=(6.2, 4.2))
+    am = [t[0] for t in acc]
+    ae = [[t[0] - t[1] for t in acc], [t[2] - t[0] for t in acc]]
+    gm = [t[0] for t in grnd]
+    ge = [[t[0] - t[1] for t in grnd], [t[2] - t[0] for t in grnd]]
+    ax.bar([i - w / 2 for i in x], am, width=w, yerr=ae, capsize=4, color=PALETTE["semantic"], edgecolor=PALETTE["ink"], linewidth=0.5, label="answer accuracy", error_kw={"elinewidth": 1.1})
+    ax.bar([i + w / 2 for i in x], gm, width=w, yerr=ge, capsize=4, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="session grounding", error_kw={"elinewidth": 1.1})
+    for i, t in zip([i - w / 2 for i in x], acc):
+        ax.text(i, t[2] + 0.015, f"{t[0]:.3f}", ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(backends)
+    ax.set_ylim(0, max(0.55, max(gm) + 0.12))
+    ax.set_ylabel("Rate (95% bootstrap CI)")
+    ax.set_title(f"Real benchmark: LongMemEval_S (n={data['n_extractive']} ext, {data['n_neural']} neural)")
+    ax.annotate(
+        "grounding is session-level upper bound",
+        (0.5, -0.18),
+        xycoords="axes fraction",
+        ha="center",
+        fontsize=8.5,
+        color=PALETTE["muted"],
+    )
+    ax.grid(axis="y")
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_scaling_ci(data: dict, output_path: str | Path) -> Path:
+    """Per-category accuracy with 95% bootstrap CIs on the seeded large dataset.
+
+    The first figure in the paper with real error bars: the demo set is n=6 point
+    estimates, this is n per category with dispersion. Data from
+    :func:`src.evaluation.large_dataset_eval`.
+    """
+    path = _prepare(output_path)
+    items = sorted(data["category_accuracy"].items(), key=lambda kv: kv[1][0])
+    labels = [_pretty(c) for c, _ in items]
+    means = [m for _, (m, _, _) in items]
+    lo = [m - low for _, (m, low, _) in items]
+    hi = [high - m for _, (m, _, high) in items]
+    y = range(len(labels))
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    ax.barh(list(y), means, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.6, height=0.62, zorder=2)
+    ax.errorbar(means, list(y), xerr=[lo, hi], fmt="none", ecolor=PALETTE["ink"], elinewidth=1.2, capsize=4, zorder=3)
+    ax.set_yticks(list(y))
+    ax.set_yticklabels(labels)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("Token-F1 accuracy (95% bootstrap CI)")
+    ax.set_title(f"Per-category accuracy at scale (n={data['n']}, {data['per_category']}/category)")
+    overall_accuracy = sum(means) / len(means)
+    ax.axvline(overall_accuracy, color=PALETTE["accent"], linestyle="--", linewidth=1.0, zorder=1, label=f"mean accuracy {overall_accuracy:.3f}")
+    ax.grid(axis="x")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_injection_resistance(data: dict, output_path: str | Path) -> Path:
+    """Context-poisoning exact-case grid over a small probe set."""
+    path = _prepare(output_path)
+    rows = data.get("rows") or []
+    n = int(data["n_probes"])
+    if not rows:
+        rows = [
+            {
+                "probe": i + 1,
+                "harness_poisoned": i < round(data["harness_poison_rate"] * n),
+                "harness_auditable": i < round(data["harness_audit_rate"] * n),
+                "naive_poisoned": i < round(data["naive_poison_rate"] * n),
+                "naive_auditable": False,
+            }
+            for i in range(n)
+        ]
+    conditions = [
+        ("Harness", "harness_poisoned", "harness_auditable"),
+        ("Naive", "naive_poisoned", "naive_auditable"),
+    ]
+    if data.get("neural_poison_rate") is not None:
+        neural_rows = {r["probe"]: r for r in data.get("neural_rows", [])}
+        for row in rows:
+            nr = neural_rows.get(row["probe"], {})
+            row["neural_poisoned"] = bool(nr.get("neural_poisoned", False))
+            row["neural_auditable"] = bool(nr.get("neural_auditable", False))
+        conditions.append((f"Neural\n({data['neural_model']})", "neural_poisoned", "neural_auditable"))
+
+    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    for y, (_label, poison_key, audit_key) in enumerate(conditions):
+        for x, row in enumerate(rows):
+            poisoned = bool(row.get(poison_key))
+            auditable = bool(row.get(audit_key))
+            face = PALETTE["accent"] if poisoned else PALETTE["hybrid"]
+            marker = "X" if poisoned else "o"
+            ax.scatter(x, y, s=280, marker=marker, color=face, edgecolor=PALETTE["ink"], linewidth=0.8, zorder=3)
+            ax.text(
+                x,
+                y,
+                "A" if auditable else "no cite",
+                ha="center",
+                va="center",
+                fontsize=7.5,
+                color="white" if auditable else PALETTE["ink"],
+                zorder=4,
+            )
+    ax.set_xticks(list(range(len(rows))))
+    ax.set_xticklabels([f"Probe {r['probe']}" for r in rows])
+    ax.set_yticks(list(range(len(conditions))))
+    ax.set_yticklabels([c[0] for c in conditions])
+    ax.set_xlim(-0.55, len(rows) - 0.45)
+    ax.set_ylim(-0.6, len(conditions) - 0.4)
+    ax.invert_yaxis()
+    ax.grid(False)
+    ax.set_title(f"Context-poisoning exact cases (n={n}; X = poisoned, A = true source cited)")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_orchestration_value(baseline: dict, output_path: str | Path) -> Path:
+    """Stacked composite decomposition: naive full-context baseline vs full pipeline.
+
+    Each bar stacks the weighted metric components (0.6·accuracy, 0.3·grounding,
+    0.1·efficiency) so they sum to the composite. Shows that the orchestration's lift
+    is entirely grounding + efficiency — raw accuracy ties. Data from
+    :func:`src.evaluation.no_harness_baseline`.
+    """
+    path = _prepare(output_path)
+    labels = ["Naive\n(full context to LM)", "Full pipeline\n(5 stages)"]
+    acc = [0.6 * baseline["naive_accuracy"], 0.6 * baseline["pipeline_accuracy"]]
+    grd = [0.3 * baseline["naive_grounding"], 0.3 * baseline["pipeline_grounding"]]
+    eff = [0.1 * baseline["naive_efficiency"], 0.1 * baseline["pipeline_efficiency"]]
+
+    fig, ax = plt.subplots(figsize=(5.6, 4.2))
+    b1 = ax.bar(labels, acc, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
+    b2 = ax.bar(labels, grd, bottom=acc, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    bottom2 = [a + g for a, g in zip(acc, grd)]
+    ax.bar(labels, eff, bottom=bottom2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
+    for i, total in enumerate([baseline["naive_composite"], baseline["pipeline_composite"]]):
+        ax.text(i, total + 0.012, f"{total:.3f}", ha="center", va="bottom", fontsize=10, fontweight="semibold")
+    raw = (
+        f"raw acc {baseline['naive_accuracy']:.3f} = {baseline['pipeline_accuracy']:.3f}; "
+        f"grounding {baseline['naive_grounding']:.2f} -> {baseline['pipeline_grounding']:.2f}; "
+        f"eff {baseline['naive_efficiency']:.2f} -> {baseline['pipeline_efficiency']:.2f}"
+    )
+    ax.annotate(raw, (0.5, -0.18), xycoords="axes fraction", ha="center", fontsize=8.5, color=PALETTE["muted"])
+    ax.set_ylabel("Composite metric (component-stacked)")
+    ax.set_title("Where the orchestration adds value")
+    ax.set_ylim(0, 0.72)
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_paraphrase_retrieval(data: dict, output_path: str | Path) -> Path:
+    """Exact counts: hashing surrogate vs real learned embedder recall@1.
+
+    Makes the manuscript's second scope boundary measurable: a learned embedder
+    captures paraphrase meaning the sub-word surrogate structurally cannot. Data from
+    :func:`src.retrieval.learned.paraphrase_retrieval_probe`
+    (``data/learned_retrieval.json``).
+    """
+    path = _prepare(output_path)
+    labels = ["Hashing surrogate\n(char-trigram)", f"Learned embedder\n({data['model']})"]
+    values = [data["surrogate_recall_at_1"], data["learned_recall_at_1"]]
+    n = int(data["n_probes"])
+    counts = [round(v * n) for v in values]
+    colors = [PALETTE["muted"], PALETTE["semantic"]]
+
+    fig, ax = plt.subplots(figsize=(5.4, 4.0))
+    bars = ax.bar(labels, values, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6, width=0.6)
+    ax.set_ylabel(f"Recall@1 over {data['n_probes']} paraphrase probes")
+    ax.set_title("Paraphrase retrieval exact counts")
+    ax.set_ylim(0, 1.16)
+    for bar, count, value in zip(bars, counts, values):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.02,
+            f"{count}/{n}\n({value:.2f})",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+__all__ = [
+    "PALETTE",
+    "EXPORT_DPI",
+    "plot_backend_comparison",
+    "plot_injection_resistance",
+    "plot_longmemeval",
+    "plot_bottleneck",
+    "plot_scaling_ci",
+    "plot_orchestration_value",
+    "plot_paraphrase_retrieval",
+    "plot_retriever_comparison",
+    "plot_rrf_weight_sensitivity",
+    "plot_compiler_convergence",
+    "plot_consolidation_curve",
+    "plot_category_breakdown",
+    "plot_evidence_funnel",
+    "plot_noise_scaling",
+    "plot_mmr_tradeoff",
+    "plot_method_ablation",
+]
