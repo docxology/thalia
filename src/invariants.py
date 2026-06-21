@@ -162,8 +162,10 @@ def check_recency_zero_is_noop() -> InvariantResult:
     # Recency should be able to change the order when set; zero must not.
     rerun = Retriever(recency_weight=0.0)(evidence_windows=windows, query="wifi password")
     order_rerun = [r.window.source_index for r in rerun["ranked_evidence"]]
-    ok = order_base == order_rerun and isinstance(order_weighted, list)
-    return InvariantResult("recency_zero_noop", ok, f"base order={order_base}")
+    ok = order_base == order_rerun and order_weighted != order_base
+    return InvariantResult(
+        "recency_zero_noop", ok, f"base order={order_base} weighted={order_weighted}"
+    )
 
 
 def check_static_determinism_guard() -> InvariantResult:

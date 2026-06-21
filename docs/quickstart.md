@@ -31,6 +31,7 @@ ATLAS_TOP_K=4 uv run --project working/atlas python working/atlas/scripts/run_qu
 ## Multi-turn session (Python)
 
 ```python
+# Run from the atlas dir (`cd working/atlas`) so `src` is importable.
 from src.session import Session
 s = Session(db_path="episodes.db", memory_path="MEMORY.md")
 s.ask("My wifi password is bluefish42")

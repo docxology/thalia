@@ -70,7 +70,7 @@ class TestMemoryPersistence:
         h = AutoHarness()
         s = "User: please remember the door code is 4321\nAssistant: door code 4321 noted"
         h.forward("please remember the door code is 4321", s, session_ending=True)
-        assert "4321" in h.memory_gate.memory_md or h.memory_gate.store.count() == 1
+        assert "4321" in h.memory_gate.memory_md
 
     def test_memory_snapshot_injected(self):
         snap = MemorySnapshot(memory_md="# MEMORY\n\nprior")
@@ -110,8 +110,10 @@ class TestHarnessRecall:
         cfg = default_config().with_(recall_memory=True)
         h = AutoHarness(config=cfg, episodic_store=store, start_turn=store.count())
         out = h.forward("where do I live", "")
-        cited_negative = any(c.source_index < 0 for c in out.evidence_citations)
-        assert "Lisbon" in out.answer or cited_negative
+        # Recalled evidence is cited with a negative (synthetic) source index,
+        # and the recalled fact must surface in the user-facing answer.
+        assert any(c.source_index < 0 for c in out.evidence_citations)
+        assert "Lisbon" in out.answer
 
     def test_recall_off_by_default(self):
         from src.memory.episodic_store import EpisodicStore

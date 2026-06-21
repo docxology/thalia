@@ -19,7 +19,7 @@
     "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
     "model": "nomic-embed-text:latest",
     "modified_at": "2026-06-08T16:33:48.900810949-07:00",
-    "ollama_version": "0.30.3",
+    "ollama_version": "0.30.5",
     "requested_model": "nomic-embed-text",
     "size": 274302450
   },
@@ -32,22 +32,22 @@
   "inspector_recall": 0.6,
   "n_neural": 30,
   "n_ranking": 40,
-  "neural_generation_options": {
-    "temperature": 0.0
-  },
   "neural_adaptive": {
-    "accuracy": 0.18318279385399439,
-    "grounding": 0.5331876723662027
+    "accuracy": 0.15003401382776546,
+    "grounding": 0.5384133397251656
   },
   "neural_by_maxwindows": {
     "15": {
-      "accuracy": 0.09213157712441912,
-      "grounding": 0.35941593550437695
+      "accuracy": 0.09325821798777022,
+      "grounding": 0.35937370711435074
     },
     "100": {
-      "accuracy": 0.1781505729884402,
-      "grounding": 0.5330947925785653
+      "accuracy": 0.14712226700419165,
+      "grounding": 0.5395732194560222
     }
+  },
+  "neural_generation_options": {
+    "temperature": 0.0
   },
   "neural_model": "gemma3:4b",
   "neural_model_metadata": {
@@ -66,11 +66,19 @@
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
     "modified_at": "2026-06-08T14:02:59.340727371-07:00",
-    "ollama_version": "0.30.3",
+    "ollama_version": "0.30.5",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },
   "ranking_recall_at_10": 1.0,
+  "ranking_recall_by_mode": {
+    "available": true,
+    "dense": 1.0,
+    "hybrid": 1.0,
+    "k": 10,
+    "lexical": 1.0,
+    "n": 8
+  },
   "sweep_values": [
     15,
     30,

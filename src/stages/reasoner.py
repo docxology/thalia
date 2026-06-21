@@ -94,7 +94,7 @@ class Reasoner(Module):
             )
 
         if strategy == "react":
-            answer, trace = self._react(query, top, evidence_texts)
+            answer, trace = self._react(query, top)
         else:
             answer, trace = self._chain_of_thought(query, evidence_texts)
 
@@ -164,7 +164,6 @@ class Reasoner(Module):
         self,
         query: str,
         top: list[RankedEvidence],
-        evidence_texts: list[str],
     ) -> tuple[str, str]:
         """Read->integrate->answer loop for multi-hop / code / update tasks.
 

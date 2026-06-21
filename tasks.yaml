@@ -90,6 +90,19 @@ tasks:
   tags:
   - reproducibility
   notes: '2026-06-10 completed static determinism and zero-mock guards, provenance byte-stable writers, figure-style split, and full coverage/render/validation gates.'
+- id: atlas-8
+  title: Modular harness and evaluation manuscript split
+  status: done
+  start: '2026-06-19'
+  end: '2026-06-19'
+  progress: 100
+  milestone: false
+  deps:
+  - atlas-1
+  tags:
+  - manuscript
+  - eval
+  notes: 'Split harness design and evaluation into lexical-order modules covering method contract, pipeline stages, formalism, traceability, benchmarks, robustness, and summary while preserving the stable scope-boundary spine. Verified with `uv run pytest tests/test_manuscript_integrity.py tests/test_manuscript_variables.py -q`.'
 - id: atlas-m1
   title: ATLAS harness demo
   status: done

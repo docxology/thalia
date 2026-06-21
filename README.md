@@ -67,6 +67,7 @@ uv run --project working/atlas python working/atlas/scripts/run_query.py --query
 ```
 
 ```python
+# Run these snippets from the atlas dir (`cd working/atlas`) so `src` is importable.
 # Configure: file < env (ATLAS_*) < explicit override
 from src.config import load_config, default_config
 config = load_config("working/atlas/config/harness.yaml").with_(top_k=4)

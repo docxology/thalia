@@ -74,6 +74,8 @@ class HarnessConfig:
         recency_weight: Recency bonus in [0, 1] favouring later session turns.
         recall_memory: Consult the episodic store + MEMORY.md for evidence at inference.
         recall_limit: Maximum recalled evidence windows.
+        adaptive_windows: Inspector scales max_windows with input size instead of capping flat.
+        adaptive_window_ratio: Windows-per-record divisor when adaptive_windows is on.
     """
 
     max_windows: int = 15

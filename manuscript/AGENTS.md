@@ -14,8 +14,9 @@
 
 ## Editing rules
 
-- Section files are numbered `00_`–`99_`; keep the `{#sec:...}` anchors stable
-  (cross-references use `[@sec:...]`).
+- Section files are numbered `00_`–`99_`; lettered split files such as
+  `04a_*.md` and `07a_*.md` are rendered in lexical order. Keep the
+  `{#sec:...}` anchors stable (cross-references use `[@sec:...]`).
 - Citations use Pandoc `[@key]` resolved from `references.bib`. Entries marked
   "as provided" are transcribed from the commissioning brief — do not assert
   independent verification.

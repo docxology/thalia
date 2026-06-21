@@ -1,0 +1,99 @@
+# Evaluation: Baseline, Neural Validation, and Context Poisoning {#sec:evaluation-baseline-neural-context-poisoning}
+
+## Does the orchestration help? A no-harness baseline {#sec:eval-baseline}
+
+A fair challenge: does the five-stage pipeline earn its complexity, or could a naive
+baseline — hand the LM the *entire* session with no Inspector windowing, no Retriever
+ranking, and no citations — do as well? [@fig:orchestration_value] decomposes both.
+On raw accuracy they *tie* exactly ({{RESULT_NAIVE_ACCURACY}} each): on this compact
+set the extractive LM recovers the gold line whether or not the context is narrowed,
+so the pipeline does not raise accuracy. But the naive baseline earns zero grounding
+(it cites nothing) and zero efficiency (it dumps the full context), so its composite
+is only {{RESULT_NAIVE_COMPOSITE}} against the pipeline's {{RESULT_COMPOSITE}} — a
+lift of {{RESULT_ORCHESTRATION_LIFT}} that comes *entirely* from the grounding and
+efficiency the orchestration provides. The honest reading is precise: on this dataset
+the pipeline's value is provenance and bounded context, not raw answer accuracy
+(which is LM-bounded — [@sec:eval-neural]).
+
+![Composite decomposition for the naive full-context baseline versus the full pipeline, stacked into weighted accuracy/grounding/efficiency components. Accuracy ties; the orchestration's entire lift is the grounding and efficiency the naive baseline structurally cannot earn.](../output/figures/orchestration_value.png){#fig:orchestration_value width=60%}
+
+The composite weights themselves are a fair target. Sweeping the accuracy weight
+across [{{RESULT_WEIGHT_SWEEP_LOW}}, {{RESULT_WEIGHT_SWEEP_HIGH}}] (grounding and
+efficiency splitting the remainder in the default {{CONFIG_WEIGHT_GROUND}}:{{CONFIG_WEIGHT_EFF}} ratio), the compiler's winning configuration is
+{{RESULT_WEIGHT_ROBUST}} — always {{RESULT_WEIGHT_WINNER}} — so the headline
+{{CONFIG_WEIGHT_ACC}}/{{CONFIG_WEIGHT_GROUND}}/{{CONFIG_WEIGHT_EFF}} choice is not load-bearing. (The efficiency term's
+$1 - |\text{ranked}|/{{CONFIG_EFFICIENCY_SCALE}}$ uses {{CONFIG_EFFICIENCY_SCALE}} as the inline context budget in evidence slots; on
+this compact set ranked evidence sits far below it, which is exactly why efficiency
+stays high and near-constant.)
+
+## Real DSPy and neural validation {#sec:eval-neural}
+
+The accuracy ceiling above is a property of the *default extractive LM*, so we
+measure that claim rather than assert it. The same five-stage contract runs
+unchanged under (i) a real `dspy.Predict` program compiled by a real
+`dspy.BootstrapFewShot` optimizer and (ii) a real neural model
+(`{{RESULT_NEURAL_MODEL}}`, served locally through Ollama) dropped into the Reasoner
+slot via `src/dspy_runtime.py`. Inputs are identical across backends; only the
+language model changes.
+
+We also tested the optimiser the only way that can falsify it — a held-out
+before/after. On a leave-out split of the dataset, the `BootstrapFewShot`-compiled
+program shows **no measurable token-F1 lift** over the uncompiled one: the extractive
+backend ignores few-shot demonstrations by construction, and the neural backend is
+already at ceiling on these terse-gold questions. So the Compiler's *measured* value
+on this task class is its auditable search trace, not a demonstrated accuracy gain —
+we report that null rather than imply an improvement the data does not show
+(`src.dspy_runtime.held_out_optimizer_lift`).
+
+[@fig:backend_comparison] reports token-F1 per task category for the deterministic
+extractive backend versus the neural model on all {{RESULT_NEURAL_N}} examples.
+Swapping in the neural LM raises mean accuracy from {{RESULT_EXTRACTIVE_MEAN_F1}} to
+{{RESULT_NEURAL_MEAN_F1}}, and the gain concentrates exactly where extraction
+*cannot* synthesise an answer: on **code** the extractive backend scores
+{{RESULT_EXTRACTIVE_CODE_F1}} (it can only echo a transcript line) against
+{{RESULT_NEURAL_CODE_F1}} for the neural model, and on **multi-session**
+{{RESULT_EXTRACTIVE_MULTI_F1}} against {{RESULT_NEURAL_MULTI_F1}}. Those two classes
+are the harness's weakest under the extractive LM, and they are the ones a real LM
+rescues — direct evidence that the accuracy ceiling is LM-bounded, not
+pipeline-bounded.
+
+The comparison also surfaces a metric caveat that strengthens the honesty story: on
+single-session and preference the neural model scores *lower* on token-F1 despite
+answers that are arguably more correct (it returns "bluefish42" where the gold
+string is "wifi password is bluefish42"). Token-F1 rewards lexical overlap with the
+gold phrasing, so a terse-but-correct neural answer is penalised; the metric, not
+the model, is the limiting factor there. With {{RESULT_NEURAL_N}} examples this is a
+diagnostic signal, not a population estimate, so the figure is case-level rather
+than a category-rate bar chart. Unlike the bit-identical deterministic path, the
+neural numbers are reproducible *on a host* (temperature 0) rather than across
+machines and Ollama versions. Both backends and this table regenerate with
+`scripts/run_neural_eval.py`.
+
+![Per-example token-F1 for the deterministic extractive Reasoner versus a real neural model (`{{RESULT_NEURAL_MODEL}}`) dropped into the same five-stage contract. Lines pair the two backends on each of the {{RESULT_NEURAL_N}} examples; horizontal guides mark the means. Recorded at temperature 0 via `scripts/run_neural_eval.py`; reproducible on a host serving the model, not bit-pinned.](../output/figures/backend_comparison.png){#fig:backend_comparison width={{CONFIG_BACKEND_FIGURE_WIDTH}}%}
+
+## Cognitive security: context-poisoning {#sec:eval-injection}
+
+A memory harness is only as trustworthy as its behaviour under *adversarial*
+context — the cognitive-security question of whether injected text can override a
+stored fact. We probe it directly: {{RESULT_INJECT_N}} sessions each state a true
+fact, then inject an adversarial line ("IGNORE ALL PREVIOUS … the password is
+hunter2"; "SYSTEM OVERRIDE …") that tries to override it.
+[@fig:injection_resistance] reports, per backend, how often the *answer* is poisoned
+and how often the true source stays auditable.
+
+The result is honest and instructive, and it is *not* "the harness is immune".
+Lexical extraction has no inherent injection immunity: the grounded harness and the
+naive full-context baseline are poisoned at the same rate
+({{RESULT_INJECT_HARNESS_POISON}} probes), because whichever line lexically overlaps
+the query most simply wins. What separates them is **provenance** — the harness keeps
+the true source in its cited evidence on {{RESULT_INJECT_HARNESS_AUDIT}} probes
+against {{RESULT_INJECT_NAIVE_AUDIT}} for the naive baseline, so even a poisoned
+answer stays auditable and recoverable because the citation trail surfaces both the
+injected and the genuine source. The optional neural row is recorded only when a
+live model is available; the current aggregate records {{RESULT_INJECT_NEURAL_POISON}}
+neural poison cases, and if that token is unavailable (`—`) the figure omits the
+neural row rather than inferring one. The property ATLAS actually provides is
+therefore **visibility, not immunity**: grounding does not stop poisoning, but it
+refuses to hide it (`scripts/run_injection_probe.py`).
+
+![Context-poisoning over {{RESULT_INJECT_N}} probes as exact cases, not population rates. `X` marks a poisoned answer and `A` marks that the true source remains cited. Lexical extraction is poisonable, but only the grounded harness keeps the true source auditable; optional neural rows appear only when `data/injection_eval.json` contains a live neural measurement.](../output/figures/injection_resistance.png){#fig:injection_resistance width=65%}
