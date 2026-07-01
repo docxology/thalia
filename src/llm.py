@@ -114,7 +114,7 @@ class OllamaError(RuntimeError):
 
 
 DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-DEFAULT_OPENROUTER_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+DEFAULT_OPENROUTER_MODEL = "openrouter/tencent/hy3-preview"
 ENV_OPENROUTER_KEY = "THALIA_OPENROUTER_API_KEY"
 
 
@@ -130,7 +130,7 @@ class OpenRouterLM:
     environment variable.
 
     Args:
-        model: OpenRouter model slug (default ``nvidia/nemotron-3-ultra-550b-a55b:free``).
+        model: OpenRouter model slug (default ``tencent/hy3-preview``).
         api_base: OpenRouter API base URL.
         api_key: API key (defaults to ``THALIA_OPENROUTER_API_KEY`` env var).
         timeout: Per-request timeout in seconds.
@@ -145,7 +145,7 @@ class OpenRouterLM:
         api_key: str | None = None,
         timeout: float = 30.0,
         temperature: float = 0.0,
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> None:
         self.model = model
         self.api_base = api_base.rstrip("/")

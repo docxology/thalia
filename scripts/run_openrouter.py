@@ -2,8 +2,8 @@
 """Thin orchestrator: run a real neural LLM via OpenRouter and record the result.
 
 Configures dspy with an OpenRouter-hosted model (default
-``nvidia/nemotron-3-ultra-550b-a55b:free``), runs the same ``dspy.Predict``
-program over the demo dataset, and writes the comparison to ``output/data/``.
+``tencent/hy3-preview``), runs the same ``dspy.Predict`` program
+over the demo dataset, and writes the comparison to ``output/data/``.
 
 The API key is read from the ``THALIA_OPENROUTER_API_KEY`` environment variable
 or a ``.env`` file in the project root. Logic lives in :mod:`src.dspy_runtime`.

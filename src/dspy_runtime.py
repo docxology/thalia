@@ -25,7 +25,7 @@ DEFAULT_OLLAMA_MODEL = "gemma3:4b"
 DEFAULT_OLLAMA_BASE = "http://localhost:11434"
 
 # OpenRouter defaults
-DEFAULT_OPENROUTER_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+DEFAULT_OPENROUTER_MODEL = "openrouter/tencent/hy3-preview"
 DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 ENV_OPENROUTER_KEY = "THALIA_OPENROUTER_API_KEY"
 
@@ -238,11 +238,11 @@ def configure_openrouter(
     api_base: str = DEFAULT_OPENROUTER_BASE,
     api_key: str | None = None,
     temperature: float = 0.0,
-    max_tokens: int = 512,
+    max_tokens: int = 1024,
 ) -> Any:
     """Configure dspy with a REAL neural LLM via dspy.LM → litellm → OpenRouter.
 
-    Uses the model specified by ``model`` (default ``nvidia/nemotron-3-ultra-550b-a55b:free``).
+    Uses the model specified by ``model`` (default ``tencent/hy3-preview``).
     The API key is read from the ``THALIA_OPENROUTER_API_KEY`` environment variable
     or passed explicitly. ``temperature=0`` for reproducibility. Returns the
     configured ``dspy.LM``.
