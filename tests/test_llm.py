@@ -5,7 +5,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
-from src.llm import CallableLM, OllamaError, OllamaLM
+from src.llm import CallableLM, OllamaError, OllamaLM, OpenRouterError, OpenRouterLM
 
 # A port that is essentially always closed -> connection-refused for error paths.
 CLOSED_URL = "http://127.0.0.1:1"
@@ -97,3 +97,58 @@ class TestOllamaLM:
 
     def test_host_trailing_slash_normalised(self):
         assert OllamaLM(host="http://localhost:11434/").host == "http://localhost:11434"
+
+
+class TestOpenRouterLM:
+    def test_complete_returns_response(self, httpserver):
+        """Real HTTP server: OpenRouterLM parses the chat completions response."""
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"choices": [{"message": {"content": "bluefish42"}}]}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        assert lm.complete("what is the wifi password?") == "bluefish42"
+
+    def test_complete_strips_whitespace(self, httpserver):
+        """OpenRouterLM strips whitespace from the response content."""
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"choices": [{"message": {"content": "  bluefish42  "}}]}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        assert lm.complete("what is the wifi password?") == "bluefish42"
+
+    def test_missing_choices_field_raises(self, httpserver):
+        """Malformed response without choices raises OpenRouterError."""
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"unexpected": "shape"}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        with pytest.raises(OpenRouterError, match="missing expected fields"):
+            lm.complete("x")
+
+    def test_empty_choices_array_raises(self, httpserver):
+        """Empty choices array raises OpenRouterError."""
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"choices": []}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        with pytest.raises(OpenRouterError, match="missing expected fields"):
+            lm.complete("x")
+
+    def test_no_api_key_raises(self):
+        """OpenRouterLM raises when no API key is available."""
+        with pytest.raises(OpenRouterError, match="API key not set"):
+            OpenRouterLM(api_key="")
+
+    def test_is_available_returns_true_with_key(self):
+        """is_available is True when an API key is configured."""
+        assert OpenRouterLM(api_key="key").is_available() is True
+
+    def test_sends_correct_headers(self, httpserver):
+        """OpenRouterLM sends the API key in the Authorization header."""
+        httpserver.expect_request(
+            "/chat/completions",
+            method="POST",
+            headers={"Authorization": "Bearer test-key-sent"},
+        ).respond_with_json({"choices": [{"message": {"content": "ok"}}]})
+        lm = OpenRouterLM(api_key="test-key-sent", api_base=httpserver.url_for(""), timeout=5)
+        assert lm.complete("x") == "ok"

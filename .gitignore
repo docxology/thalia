@@ -19,3 +19,6 @@ dist/
 # Project-local virtualenvs (the root .venv is shared).
 .venv/
 data/longmemeval/
+
+# Environment / secrets.
+.env

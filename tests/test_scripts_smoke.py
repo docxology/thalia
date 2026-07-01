@@ -93,3 +93,9 @@ class TestScripts:
         # Always writes the deterministic rows (+ neural when a model is live).
         result = _load("run_injection_probe").main()
         assert Path(result).exists()
+
+    def test_run_openrouter(self):
+        # OpenRouter script skips cleanly when no API key (exit 0).
+        # When a key is set it writes the result JSON.
+        result = _load("run_openrouter").main()
+        assert result == 0 or Path(str(result)).exists()

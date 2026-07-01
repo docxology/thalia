@@ -24,6 +24,11 @@ from .module import EVIDENCE_MARKER, QUESTION_MARKER, ExtractiveLM, LMClient
 DEFAULT_OLLAMA_MODEL = "gemma3:4b"
 DEFAULT_OLLAMA_BASE = "http://localhost:11434"
 
+# OpenRouter defaults
+DEFAULT_OPENROUTER_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+ENV_OPENROUTER_KEY = "THALIA_OPENROUTER_API_KEY"
+
 DSPY_AVAILABLE = True
 
 _FIELD_RE = re.compile(r"\[\[ ## (\w+) ## \]\]")
@@ -197,11 +202,11 @@ class ExtractiveDSPyLM(_dspy.BaseLM):
 
 
 class AnswerFromContext(_dspy.Signature):
-        """Answer the question using only the provided context."""
+    """Answer the question using only the provided context."""
 
-        context: str = _dspy.InputField(desc="Evidence the answer must be grounded in.")
-        question: str = _dspy.InputField(desc="The question to answer.")
-        answer: str = _dspy.OutputField(desc="The grounded answer span.")
+    context: str = _dspy.InputField(desc="Evidence the answer must be grounded in.")
+    question: str = _dspy.InputField(desc="The question to answer.")
+    answer: str = _dspy.OutputField(desc="The grounded answer span.")
 
 
 def configure(lm: LMClient | None = None) -> Any:
@@ -224,6 +229,39 @@ def configure_ollama(
     configured ``dspy.LM``.
     """
     lm = _dspy.LM(model=f"ollama_chat/{model}", api_base=api_base, api_key="", temperature=temperature, max_tokens=max_tokens)
+    _dspy.configure(lm=lm)
+    return lm
+
+
+def configure_openrouter(
+    model: str = DEFAULT_OPENROUTER_MODEL,
+    api_base: str = DEFAULT_OPENROUTER_BASE,
+    api_key: str | None = None,
+    temperature: float = 0.0,
+    max_tokens: int = 512,
+) -> Any:
+    """Configure dspy with a REAL neural LLM via dspy.LM → litellm → OpenRouter.
+
+    Uses the model specified by ``model`` (default ``nvidia/nemotron-3-ultra-550b-a55b:free``).
+    The API key is read from the ``THALIA_OPENROUTER_API_KEY`` environment variable
+    or passed explicitly. ``temperature=0`` for reproducibility. Returns the
+    configured ``dspy.LM``.
+    """
+    import os as _os
+
+    key = api_key or _os.environ.get(ENV_OPENROUTER_KEY, "")
+    if not key:
+        raise RuntimeError(
+            f"OpenRouter API key not set. Set the {ENV_OPENROUTER_KEY} environment variable "
+            "or pass api_key= to configure_openrouter()."
+        )
+    lm = _dspy.LM(
+        model=model,
+        api_base=api_base,
+        api_key=key,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
     _dspy.configure(lm=lm)
     return lm
 
@@ -373,6 +411,9 @@ def held_out_optimizer_lift(train_size: int = 4) -> dict:
 __all__ = [
     "DEFAULT_OLLAMA_MODEL",
     "DEFAULT_OLLAMA_BASE",
+    "DEFAULT_OPENROUTER_MODEL",
+    "DEFAULT_OPENROUTER_BASE",
+    "ENV_OPENROUTER_KEY",
     "parse_input_fields",
     "parse_output_fields",
     "render_extractive_prompt",
@@ -385,6 +426,7 @@ __all__ = [
     "ollama_model_available",
     "configure",
     "configure_ollama",
+    "configure_openrouter",
     "build_program",
     "build_dataset",
     "compile_program",
