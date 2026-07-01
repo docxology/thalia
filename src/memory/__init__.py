@@ -1,4 +1,4 @@
-"""Episodic-first memory subsystem for the ATLAS harness.
+"""Episodic-first memory subsystem for the THALIA harness.
 
 Implements the two-tier architecture recommended by Zhang et al. (2026): a raw,
 append-only episodic store that is never overwritten, plus an explicitly gated

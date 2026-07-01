@@ -71,7 +71,7 @@ budgeting sets `delivery_mode` to `INLINE` when the selected evidence fits
 The Retriever therefore exposes both *what* was selected and *why that selection
 fits the delivery path*. This matters because the agentic-search literature shows
 that inline and programmatic/file-based delivery are different regimes
-[@sen2026grep]. ATLAS does not collapse them into one hidden prompt-building step:
+[@sen2026grep]. THALIA does not collapse them into one hidden prompt-building step:
 the delivery mode becomes part of the typed output, and downstream diagnostics can
 separate a retrieval miss from a budget overflow.
 

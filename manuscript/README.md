@@ -1,4 +1,4 @@
-# `manuscript/` — ATLAS write-up
+# `manuscript/` — THALIA write-up
 
 The full design and evaluation write-up, authored as numbered Markdown sections
 that can be explicitly compiled to PDF/HTML by the template rendering pipeline.

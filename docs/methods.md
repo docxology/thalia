@@ -5,7 +5,7 @@ Every method below is deterministic and unit-tested. Formal equations appear in
 
 ## Method contract
 
-ATLAS treats a harness run as a typed dataflow rather than a prompt call. The
+THALIA treats a harness run as a typed dataflow rather than a prompt call. The
 contract is:
 
 1. preserve raw session evidence;
@@ -157,3 +157,58 @@ then reports:
 The protocol is intentionally small and deterministic. It validates composition,
 path hygiene, and reproducibility; it does not claim population-level performance
 or reproduce learned-dense-retrieval results.
+
+## Composable Pipeline (`src/pipeline.py`)
+
+`Pipeline` exposes the same four runtime stages as `AutoHarness` but as an
+explicitly ordered, inspectable chain. Where `AutoHarness.forward` is a single
+opaque call, a `Pipeline` is a list of `PipelineStep` objects executed in
+insertion order. After `run()` returns, every intermediate context is available
+via `pipeline.intermediates` — a list of `(step_name, PipelineContext)` snapshots,
+one per step.
+
+```python
+from src.pipeline import Pipeline
+from src.config import default_config
+
+pipe = (
+    Pipeline(default_config())
+    .with_inspector()
+    .with_retriever()
+    .with_reasoner()
+    .with_memory_gate()
+)
+result = pipe.run(query="What is the wifi password?", session_history="...")
+print(result.answer)
+
+# Inspect intermediates
+for name, ctx in pipe.intermediates:
+    print(name, len(ctx.evidence_windows))
+```
+
+### Relationship to `AutoHarness`
+
+`Pipeline` reuses the exact same stage classes (`Inspector`, `Retriever`,
+`Reasoner`, `MemoryGate`) and the same `HarnessConfig` defaults. Identical inputs
+produce identical outputs in both paths — this is asserted by the invariant suite.
+`AutoHarness` remains the recommended entry point for straightforward use; `Pipeline`
+is for cases that need custom stage insertion, partial pipelines, or per-step
+inspection.
+
+### Builder methods
+
+| Method | Effect |
+| --- | --- |
+| `with_inspector()` | Add Stage 0 (Inspector) |
+| `with_retriever()` | Add Stage 1 (Retriever) |
+| `with_reasoner()` | Add Stage 2 (Reasoner) |
+| `with_memory_gate()` | Add Stage 3 (Memory Gate) |
+| `with_all_stages()` | Shorthand for all four above |
+| `add_step(name, fn)` | Insert a custom `PipelineContext → PipelineContext` step |
+
+### `PipelineContext`
+
+The mutable state bag threaded through the chain. Initial fields are `query` and
+`session_history`; each stage enriches it (e.g. `evidence_windows`, `ranked_evidence`,
+`answer`, `consolidation_action`). Custom steps may stash arbitrary data in
+`ctx.extras` without interfering with built-in stage fields.

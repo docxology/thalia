@@ -22,7 +22,7 @@ manufacture divergence; we report the regime, labeled, on every figure.
 *grep generally beats vector retrieval in the cited inline comparisons, with
 harness/tool-style dependence* [@sen2026grep] — is **not**
 reproduced by these local numbers, and we do not claim it is. The reason is
-deliberate: ATLAS's semantic lane is a *deterministic hashing-embedding surrogate*
+deliberate: THALIA's semantic lane is a *deterministic hashing-embedding surrogate*
 (character n-gram hashing into a fixed vector), chosen so the whole harness runs
 offline with zero mocks. That surrogate captures sub-word overlap, not learned
 distributional semantics, so it behaves more like a second lexical method than
@@ -40,7 +40,7 @@ This boundary is methodologically useful. It separates the *orchestration*
 question — can a typed harness pass evidence through Inspector, Retriever,
 Reasoner, Memory Gate, and Compiler without losing provenance? — from the
 *representation* question — which learned embedding model should occupy the
-semantic lane? ATLAS answers the first question locally and leaves the second as a
+semantic lane? THALIA answers the first question locally and leaves the second as a
 drop-in experimental extension.
 
 ## Learned embedder: surrogate vs dense {#sec:eval-learned}

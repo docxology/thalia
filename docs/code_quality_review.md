@@ -1,7 +1,7 @@
-# Thermo-Nuclear Code Quality Review — ATLAS
+# Thermo-Nuclear Code Quality Review — THALIA
 
 **Date:** 2026-06-02
-**Scope:** Full tree under `working/atlas` (`src/`, `tests/`, `scripts/`)
+**Scope:** Full tree under `working/thalia` (`src/`, `tests/`, `scripts/`)
 **Rubric:** [thermo-nuclear-code-quality-review](https://github.com/cursor/cursor-team-kit) (cursor-team-kit plugin)
 
 ## Executive verdict: **PASS** (after remediation)
@@ -80,8 +80,8 @@ Stage signatures in [`src/signatures/stages.py`](../src/signatures/stages.py) no
 ## Verification
 
 ```bash
-uv run --project working/atlas pytest working/atlas/tests/ \
-  --cov=working/atlas/src --cov-report=term-missing --cov-fail-under=90
+uv run --project working/thalia pytest working/thalia/tests/ \
+  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
 ```
 
 ## Follow-up completed (evaluation package)

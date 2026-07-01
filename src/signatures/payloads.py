@@ -1,10 +1,11 @@
-"""Domain payloads and task taxonomy flowing between ATLAS stages."""
+"""Domain payloads and task taxonomy flowing between THALIA stages."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
-
+import json
+from dataclasses import asdict, dataclass, field
+from enum import Enum, auto
+from typing import Any
 class TaskCategory(str, Enum):
     """Detected task class used for harness-conditioned prompting."""
 
@@ -106,7 +107,19 @@ class DeliveryMode(str, Enum):
 
 @dataclass(frozen=True)
 class HarnessOutput:
-    """The full result of one AutoHarness turn."""
+    """The full result of one AutoHarness turn.
+
+    Attributes:
+        answer: The produced answer string.
+        reasoning_trace: Human-readable trace of the reasoning strategy.
+        evidence_citations: Source windows cited by the Reasoner.
+        ranked_evidence: Evidence ranked by the Retriever.
+        task_category: Detected task category for the query.
+        memory_written: The episodic entry persisted by the Memory Gate.
+        consolidation_applied: Whether memory consolidation fired this turn.
+        delivery_mode: How evidence was delivered (inline or file-based).
+        inspector_metadata: Provenance from the Inspector stage.
+    """
 
     answer: str
     reasoning_trace: str
@@ -117,6 +130,55 @@ class HarnessOutput:
     consolidation_applied: bool = False
     delivery_mode: DeliveryMode = DeliveryMode.INLINE
     inspector_metadata: InspectorMetadata | None = None
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serialisable dict representation.
+
+        Mirrors :func:`src.cli.output_to_dict` but lives on the dataclass so any
+        consumer (not just the CLI) can serialise a HarnessOutput without
+        duplicating the field mapping. Tuples are converted to lists for JSON.
+        """
+        inspector = self.inspector_metadata
+        return {
+            "answer": self.answer,
+            "task_category": self.task_category.value,
+            "delivery_mode": self.delivery_mode.value,
+            "reasoning_trace": self.reasoning_trace,
+            "consolidation_applied": self.consolidation_applied,
+            "citations": [
+                {"source_index": c.source_index, "excerpt": c.excerpt}
+                for c in self.evidence_citations
+            ],
+            "ranked_evidence": [
+                {"source_index": r.window.source_index, "score": r.score}
+                for r in self.ranked_evidence
+            ],
+            "inspector_metadata": None
+            if inspector is None
+            else {
+                "grep_patterns": list(inspector.grep_patterns),
+                "window_indices": list(inspector.window_indices),
+                "confidence": inspector.confidence,
+                "session_length": inspector.session_length,
+                "line_count": inspector.line_count,
+                "effective_max_windows": inspector.effective_max_windows,
+                "partition_threshold": inspector.partition_threshold,
+                "partition_size": inspector.partition_size,
+                "partition_blocks_considered": inspector.partition_blocks_considered,
+                "adaptive_windows": inspector.adaptive_windows,
+            },
+        }
+
+    def to_json(self, **json_kwargs: Any) -> str:
+        """Return a JSON string representation of this output.
+
+        Args:
+            **json_kwargs: Passed through to ``json.dumps`` (e.g. ``indent=2``).
+
+        Returns:
+            A JSON string.
+        """
+        return json.dumps(self.to_dict(), **json_kwargs)
 
 
 __all__ = [

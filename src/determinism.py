@@ -1,4 +1,4 @@
-"""Static determinism guards for the ATLAS deterministic core."""
+"""Static determinism guards for the THALIA deterministic core."""
 
 from __future__ import annotations
 

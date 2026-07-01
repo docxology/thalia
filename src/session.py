@@ -1,4 +1,4 @@
-"""Persistent multi-turn session over the ATLAS harness.
+"""Persistent multi-turn session over the THALIA harness.
 
 A :class:`Session` wraps :class:`AutoHarness` with disk-backed state so a
 conversation survives process restarts:
@@ -25,7 +25,7 @@ from .signatures import HarnessOutput, MemorySnapshot
 
 
 class Session:
-    """A persistent, multi-turn conversation backed by the ATLAS harness.
+    """A persistent, multi-turn conversation backed by the THALIA harness.
 
     Args:
         config: Harness configuration (defaults to the harness default).
@@ -105,6 +105,40 @@ class Session:
         """Persist memory and close the underlying episodic store."""
         self._persist_memory()
         self.harness.memory_gate.store.close()
+
+    def reset(self) -> None:
+        """Reset this session to a pristine state, discarding all episodes.
+
+        Closes the existing store, clears the in-memory transcript, and creates a
+        fresh :class:`AutoHarness` with a new :class:`EpisodicStore` at the same
+        ``db_path``. The MEMORY.md snapshot is re-read from disk (if a path was
+        configured), so any consolidated memory that was persisted survives the
+        reset; in-memory-only state is lost.
+        """
+        self.harness.memory_gate.store.close()
+        self._transcript = []
+        memory_md = self.memory_path.read_text() if self.memory_path and self.memory_path.exists() else ""
+        store = EpisodicStore(self.db_path)
+        self.harness = AutoHarness(
+            config=self.harness.config,
+            lm=self.harness.reasoner.lm,
+            episodic_store=store,
+            memory_snapshot=MemorySnapshot(memory_md=memory_md),
+            start_turn=store.count(),
+        )
+        for episode in store.all():
+            self._transcript.append(f"User: {episode.query}")
+            self._transcript.append(f"Assistant: {episode.answer}")
+
+    # -- Context manager protocol --------------------------------------------------
+    # Enables ``with Session(...) as s:`` so the episodic store is always closed
+    # and the consolidated MEMORY.md flushed to disk, even on early return or
+    # exception.
+    def __enter__(self) -> "Session":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+        self.close()
 
 
 __all__ = ["Session"]

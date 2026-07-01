@@ -1,7 +1,7 @@
-"""Command-line interface for running queries against the ATLAS harness.
+"""Command-line interface for running queries against the THALIA harness.
 
 Precedence for configuration (lowest to highest): built-in defaults, a ``--config``
-YAML file, ``ATLAS_*`` environment variables, then explicit CLI flags. The default
+YAML file, ``THALIA_*`` environment variables, then explicit CLI flags. The default
 language model is the deterministic extractive responder; pass a real model
 programmatically via :func:`run_query`.
 """
@@ -17,34 +17,16 @@ from .config import HarnessConfig, apply_env_overrides, default_config, load_con
 from .harness import AutoHarness
 from .module import LMClient
 from .signatures import HarnessOutput
+from . import __version__
 
 
 def output_to_dict(out: HarnessOutput) -> dict:
-    """Serialise a :class:`HarnessOutput` to a JSON-friendly dict."""
-    inspector = out.inspector_metadata
-    return {
-        "answer": out.answer,
-        "task_category": out.task_category.value,
-        "delivery_mode": out.delivery_mode.value,
-        "reasoning_trace": out.reasoning_trace,
-        "consolidation_applied": out.consolidation_applied,
-        "citations": [{"source_index": c.source_index, "excerpt": c.excerpt} for c in out.evidence_citations],
-        "ranked_evidence": [{"source_index": r.window.source_index, "score": r.score} for r in out.ranked_evidence],
-        "inspector_metadata": None
-        if inspector is None
-        else {
-            "grep_patterns": list(inspector.grep_patterns),
-            "window_indices": list(inspector.window_indices),
-            "confidence": inspector.confidence,
-            "session_length": inspector.session_length,
-            "line_count": inspector.line_count,
-            "effective_max_windows": inspector.effective_max_windows,
-            "partition_threshold": inspector.partition_threshold,
-            "partition_size": inspector.partition_size,
-            "partition_blocks_considered": inspector.partition_blocks_considered,
-            "adaptive_windows": inspector.adaptive_windows,
-        },
-    }
+    """Serialise a :class:`HarnessOutput` to a JSON-friendly dict.
+
+    Delegates to :meth:`HarnessOutput.to_dict` so the serialisation lives on the
+    dataclass itself — the CLI is a thin caller, not a second source of truth.
+    """
+    return out.to_dict()
 
 
 def run_query(
@@ -70,8 +52,9 @@ def run_query(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser for the ATLAS query CLI."""
-    parser = argparse.ArgumentParser(prog="atlas", description="Run a query against the ATLAS auto-harness.")
+    """Build the argument parser for the THALIA query CLI."""
+    parser = argparse.ArgumentParser(prog="thalia", description="Run a query against the THALIA auto-harness.")
+    parser.add_argument("--version", "-V", action="version", version=f"THALIA v{__version__}", help="Show version and exit.")
     parser.add_argument("--query", "-q", required=True, help="The question to answer.")
     parser.add_argument("--session-history", default="", help="Inline transcript to inspect.")
     parser.add_argument("--session-file", default=None, help="Path to a transcript file to inspect.")
@@ -194,6 +177,9 @@ def main(argv: list[str] | None = None) -> int:
         indices = [c["source_index"] for c in result["citations"]]
         cited = f"{len(indices)} (source indices: {', '.join(map(str, indices))})" if indices else "none"
         print(f"citations: {cited}")
+        # Surface the number of evidence windows the pipeline narrowed to.
+        n_ranked = len(result.get("ranked_evidence", []))
+        print(f"evidence:  {n_ranked} ranked window(s)")
     return 0
 
 

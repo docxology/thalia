@@ -1,6 +1,6 @@
 # Manuscript syntax conventions
 
-Pandoc/crossref conventions used across the ATLAS manuscript sections.
+Pandoc/crossref conventions used across the THALIA manuscript sections.
 
 ## Sections
 

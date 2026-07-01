@@ -1,4 +1,4 @@
-# SKILL.md — atlas-memory-gate
+# SKILL.md — thalia-memory-gate
 
 ## Purpose
 Episodic-first memory gate (Stage 3). Always appends the raw episode to an

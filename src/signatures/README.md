@@ -1,4 +1,4 @@
-# `src/signatures/` — ATLAS signature framework
+# `src/signatures/` — THALIA signature framework
 
 Typed input/output contracts for the harness stages: the lightweight `Signature`
 framework, the shared payload types, and the per-stage signatures. Barrel

@@ -1,10 +1,10 @@
-# ATLAS Manuscript Configuration
+# THALIA Manuscript Configuration
 # Agentic Typed-pipeline with Lexical And Structured stages.
 # Consumed by infrastructure/rendering (PDF metadata) and project scripts such as
-# working/atlas/scripts/z_generate_manuscript_variables.py.
+# working/thalia/scripts/z_generate_manuscript_variables.py.
 
 paper:
-  title: "ATLAS: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
+  title: "THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
   subtitle: "Typed Pipelines, Lexical-Anchored Retrieval, Episodic-First Memory, and Bounded Compiler Traces"
   version: "0.1"
   date: ""  # Auto-generated at render time if empty

@@ -52,3 +52,15 @@ class TestRecall:
         with pytest.raises(ValueError, match="limit must be positive"):
             recall_evidence(store, "", "q", limit=0)
         store.close()
+
+    def test_memory_md_limit_break(self):
+        """When MEMORY.md has more matching lines than limit, only limit lines are returned."""
+        store = EpisodicStore()
+        # Build a MEMORY.md with 5 lines all containing the query term "password".
+        lines = [f"- stored password entry number {i}" for i in range(5)]
+        memory = "\n".join(lines)
+        # limit=2 should stop after 2 matching lines (exercises the `if memory_hits >= limit: break`).
+        windows = recall_evidence(store, memory, "password", limit=2)
+        memory_windows = [w for w in windows if w.source_index <= -10_000]
+        assert len(memory_windows) == 2
+        store.close()

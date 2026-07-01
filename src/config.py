@@ -28,32 +28,32 @@ def _parse_bool(value: str) -> bool:
 
 # Environment variable -> (field name, parser) for runtime overrides.
 _ENV_OVERRIDES: dict[str, tuple[str, Callable[[str], Any]]] = {
-    "ATLAS_TOP_K": ("top_k", int),
-    "ATLAS_MAX_WINDOWS": ("max_windows", int),
-    "ATLAS_MAX_EVIDENCE": ("max_evidence", int),
-    "ATLAS_RRF_K": ("rrf_k", int),
-    "ATLAS_CONTEXT_BUDGET_TOKENS": ("context_budget_tokens", int),
-    "ATLAS_LEXICAL_WEIGHT": ("lexical_weight", float),
-    "ATLAS_SEMANTIC_WEIGHT": ("semantic_weight", float),
-    "ATLAS_RERANK": ("rerank", str),
-    "ATLAS_MMR_LAMBDA": ("mmr_lambda", float),
-    "ATLAS_VERIFY": ("verify", _parse_bool),
-    "ATLAS_GROUNDING_THRESHOLD": ("grounding_threshold", float),
-    "ATLAS_PARTITION_THRESHOLD": ("partition_threshold", int),
-    "ATLAS_PARTITION_SIZE": ("partition_size", int),
-    "ATLAS_QUERY_EXPANSION": ("query_expansion", _parse_bool),
-    "ATLAS_EXPANSION_TERMS": ("expansion_terms", int),
-    "ATLAS_RECENCY_WEIGHT": ("recency_weight", float),
-    "ATLAS_RECALL_MEMORY": ("recall_memory", _parse_bool),
-    "ATLAS_RECALL_LIMIT": ("recall_limit", int),
-    "ATLAS_ADAPTIVE_WINDOWS": ("adaptive_windows", _parse_bool),
-    "ATLAS_ADAPTIVE_WINDOW_RATIO": ("adaptive_window_ratio", int),
+    "THALIA_TOP_K": ("top_k", int),
+    "THALIA_MAX_WINDOWS": ("max_windows", int),
+    "THALIA_MAX_EVIDENCE": ("max_evidence", int),
+    "THALIA_RRF_K": ("rrf_k", int),
+    "THALIA_CONTEXT_BUDGET_TOKENS": ("context_budget_tokens", int),
+    "THALIA_LEXICAL_WEIGHT": ("lexical_weight", float),
+    "THALIA_SEMANTIC_WEIGHT": ("semantic_weight", float),
+    "THALIA_RERANK": ("rerank", str),
+    "THALIA_MMR_LAMBDA": ("mmr_lambda", float),
+    "THALIA_VERIFY": ("verify", _parse_bool),
+    "THALIA_GROUNDING_THRESHOLD": ("grounding_threshold", float),
+    "THALIA_PARTITION_THRESHOLD": ("partition_threshold", int),
+    "THALIA_PARTITION_SIZE": ("partition_size", int),
+    "THALIA_QUERY_EXPANSION": ("query_expansion", _parse_bool),
+    "THALIA_EXPANSION_TERMS": ("expansion_terms", int),
+    "THALIA_RECENCY_WEIGHT": ("recency_weight", float),
+    "THALIA_RECALL_MEMORY": ("recall_memory", _parse_bool),
+    "THALIA_RECALL_LIMIT": ("recall_limit", int),
+    "THALIA_ADAPTIVE_WINDOWS": ("adaptive_windows", _parse_bool),
+    "THALIA_ADAPTIVE_WINDOW_RATIO": ("adaptive_window_ratio", int),
 }
 
 
 @dataclass(frozen=True)
 class HarnessConfig:
-    """Tunable parameters for the full ATLAS pipeline.
+    """Tunable parameters for the full THALIA pipeline.
 
     Attributes:
         max_windows: Inspector cap on emitted evidence windows.
@@ -138,9 +138,32 @@ class HarnessConfig:
         """Return a copy with the given fields replaced (validated)."""
         return replace(self, **changes)
 
+    def validate(self) -> None:
+        """Explicitly validate all current field values.
+
+        Raises:
+            ValueError: If any field violates the validation constraints.
+
+        The frozen dataclass ``__post_init__`` validates on construction, so this
+        is redundant for a fresh config. It exists for long-lived or mutated configs
+        whose construction-time validation may have been bypassed (e.g. deserialised
+        from an external source with ``object.__setattr__``).
+        """
+        self.__post_init__()
+
     def to_dict(self) -> dict[str, Any]:
         """Return a plain-dict view of the configuration (YAML/JSON-friendly)."""
         return asdict(self)
+
+    def to_yaml(self) -> str:
+        """Serialise this config to a YAML string.
+
+        Convenience wrapper around :func:`save_config` for in-memory use
+        (e.g. logging, embedding in a larger YAML document).
+        """
+        import yaml
+
+        return yaml.safe_dump(self.to_dict(), sort_keys=True)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "HarnessConfig":
@@ -149,6 +172,22 @@ class HarnessConfig:
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
 
+    @classmethod
+    def from_yaml(cls, text: str) -> "HarnessConfig":
+        """Build a config from a YAML string (ignoring unrecognised keys).
+
+        Accepts either a flat mapping of fields or a document with a top-level
+        ``harness:`` key (so a manuscript ``config.yaml`` can double as a source).
+        """
+        import yaml
+
+        data = yaml.safe_load(text)
+        if not isinstance(data, dict):
+            raise ValueError(f"YAML must contain a mapping, got {type(data).__name__}")
+        if "harness" in data and isinstance(data["harness"], dict):
+            data = data["harness"]
+        return cls.from_dict(data)
+
 
 def default_config() -> HarnessConfig:
     """Return the default harness configuration."""
@@ -156,7 +195,7 @@ def default_config() -> HarnessConfig:
 
 
 def apply_env_overrides(config: HarnessConfig) -> HarnessConfig:
-    """Return ``config`` with any ``ATLAS_*`` environment overrides applied.
+    """Return ``config`` with any ``THALIA_*`` environment overrides applied.
 
     Recognised variables map to config fields (see ``_ENV_OVERRIDES``); values are
     parsed to the field type. Weight overrides still obey the both-or-neither
@@ -180,12 +219,14 @@ def apply_env_overrides(config: HarnessConfig) -> HarnessConfig:
 def load_config(path: str | Path, apply_env: bool = True) -> HarnessConfig:
     """Load a :class:`HarnessConfig` from a YAML file, then apply env overrides.
 
-    The YAML may be a flat mapping of fields, or carry the fields under a top-level
-    ``harness:`` key (so a manuscript ``config.yaml`` can double as a source).
+    Delegates to :meth:`HarnessConfig.from_yaml` for parsing, so the YAML
+    interpretation lives in one place. The file may be a flat mapping of fields,
+    or carry the fields under a top-level ``harness:`` key (so a manuscript
+    ``config.yaml`` can double as a source).
 
     Args:
         path: Path to the YAML config file.
-        apply_env: Apply ``ATLAS_*`` environment overrides after loading (default True).
+        apply_env: Apply ``THALIA_*`` environment overrides after loading (default True).
 
     Returns:
         A validated :class:`HarnessConfig`.
@@ -194,25 +235,20 @@ def load_config(path: str | Path, apply_env: bool = True) -> HarnessConfig:
         FileNotFoundError: If ``path`` does not exist.
         ValueError: If the file does not contain a mapping.
     """
-    import yaml
-
     text = Path(path).read_text()
-    data = yaml.safe_load(text)
-    if not isinstance(data, dict):
-        raise ValueError(f"config file {path} must contain a mapping, got {type(data).__name__}")
-    if "harness" in data and isinstance(data["harness"], dict):
-        data = data["harness"]
-    config = HarnessConfig.from_dict(data)
+    config = HarnessConfig.from_yaml(text)
     return apply_env_overrides(config) if apply_env else config
 
 
 def save_config(config: HarnessConfig, path: str | Path) -> Path:
-    """Write ``config`` to ``path`` as YAML and return the path."""
-    import yaml
+    """Write ``config`` to ``path`` as YAML and return the path.
 
+    Delegates to :meth:`HarnessConfig.to_yaml` so the YAML serialisation lives
+    on the dataclass itself.
+    """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(yaml.safe_dump(config.to_dict(), sort_keys=True))
+    out.write_text(config.to_yaml())
     return out
 
 

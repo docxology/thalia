@@ -98,7 +98,7 @@ optimum. The two honest boundaries — extractive-LM accuracy and the hashing
 semantic surrogate — are exactly the two designed plug-in points (a real LM, a real
 embedder), neither of which perturbs the rest of the architecture.
 
-The result is therefore not "ATLAS beats another agent." The result is that a
+The result is therefore not "THALIA beats another agent." The result is that a
 typed, lexical-anchored, episodic-first, compiler-optimized harness can be implemented
 as deterministic code, measured with auditable citations, regenerated through the
 template pipeline, and extended at precisely identified model and embedding

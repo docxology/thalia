@@ -12,12 +12,14 @@ session level, this credits a citation that lands on *any* line of the gold sess
 it is therefore an **upper bound** on stricter line-level grounding, and we read it as
 "did retrieval reach the right session" rather than the exact line. This is external
 data, so these results are reproducible from *code plus the downloaded benchmark*
-rather than code alone — an honest relaxation of the self-contained thesis, and worth it.
+rather than code alone — a deliberate, disclosed relaxation of the self-contained thesis.
 
 The reckoning is stark ([@fig:longmemeval]). Extractive accuracy **collapses** to
 {{RESULT_LME_EXT_ACC}} {{RESULT_LME_EXT_ACC_CI}} — from the synthetic
 {{RESULT_LARGE_COMPOSITE}} — confirming directly that the synthetic set was far too
-easy and that the extractive default is near-useless on real long-context memory.
+easy and that the extractive default is far below usable accuracy on real
+long-context memory (a bound on answer phrasing, not on retrieval — the
+localisation below shows the evidence is largely reachable).
 Three findings follow, now with real statistics ({{RESULT_LME_N_EXT}} questions, {{CONFIG_CI_LEVEL}}%
 bootstrap CIs):
 
@@ -35,7 +37,7 @@ bootstrap CIs):
    essentially perfectly. The loss is upstream, in the
    Inspector's aggressive context-narrowing, and widening that window is what recovers
    grounding and accuracy.
-3. **The honest scope.** {{RESULT_LME_NEURAL_ACC}} is a low absolute number: ATLAS as a
+3. **The honest scope.** {{RESULT_LME_NEURAL_ACC}} is a low absolute number: THALIA as a
    deterministic offline harness with a small local model is not competitive with a
    hosted-LLM memory system on LongMemEval, and we do not claim it is. What the run
    establishes is that the *machinery* scales to real 115k-token haystacks, that the
@@ -68,12 +70,12 @@ even when shown the evidence). The two fixes compose: with a real Reasoner
 (This analysis uses a {{RESULT_BN_N_NEURAL}}-question neural subset, so its absolute
 values sit slightly below the {{RESULT_LME_N_NEURAL}}-question headline of
 [@sec:eval-real]; the *relative* gain from relaxing the narrowing is the claim.)
-The actionable result is concrete: ATLAS's default `max_windows={{CONFIG_MAX_WINDOWS}}`
+The actionable result is concrete: THALIA's default `max_windows={{CONFIG_MAX_WINDOWS}}`
 is tuned for compact contexts and is the dominant bottleneck on real long-context memory;
 widening the Inspector *and* using a neural Reasoner is what the benchmark rewards. That
-the dense lane did not help — though it remains the right tool for paraphrase recall
-([@sec:eval-learned]) — is itself the finding: we localised the bottleneck rather than
-assuming it.
+the *surrogate* semantic lane did not move recall here — while a learned dense embedder
+remains the right tool for paraphrase coverage ([@sec:eval-learned]) — is itself the
+finding: we localised the bottleneck rather than assuming it.
 
 We do not stop at the diagnosis. The fix it implies — that the narrowing budget should
 *scale with the haystack* rather than stay fixed — ships as an **adaptive Inspector**

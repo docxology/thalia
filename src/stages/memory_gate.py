@@ -56,7 +56,8 @@ class MemoryGate(Module):
             evidence_citations: Citations from the Reasoner.
             requires_consolidation: The Reasoner's consolidation flag.
             task_category: Detected task category (drives novelty detection).
-            turn_id: Explicit turn id; defaults to the current episode count.
+            turn_id: Explicit turn id; defaults to ``store.max_turn_id() + 1`` (the
+                smallest id guaranteed not to collide with an existing episode).
             session_ending: Whether the session is closing.
             explicit_request: Override for the explicit-request criterion; when
                 None it is auto-detected from the query text.
@@ -66,7 +67,12 @@ class MemoryGate(Module):
             (str) and ``memory_delta`` (str).
         """
         category_value = task_category.value if isinstance(task_category, TaskCategory) else str(task_category)
-        resolved_turn_id = turn_id if turn_id is not None else self.store.count()
+        # Auto-assign a collision-proof turn id: MAX(turn_id) + 1 rather than
+        # count(). count() can collide with an explicitly-assigned id when explicit
+        # and auto ids are mixed (e.g. an explicit turn_id=0 in an empty store makes
+        # count() return a value that a later auto-assign would reuse), which
+        # EpisodicStore.append rejects with a ValueError.
+        resolved_turn_id = turn_id if turn_id is not None else self.store.max_turn_id() + 1
 
         self.signature.validate_inputs(
             query=query,

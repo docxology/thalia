@@ -1,4 +1,4 @@
-# SKILL.md — atlas-retriever
+# SKILL.md — thalia-retriever
 
 ## Purpose
 Lexical-first hybrid retriever (Stage 1). Ranks Inspector windows with a BM25/grep

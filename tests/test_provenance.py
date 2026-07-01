@@ -16,7 +16,7 @@ from src.provenance import (
 class TestVerificationSummary:
     def test_default_summary_has_authoritative_commands(self):
         summary = default_verification_summary()
-        assert "uv run --project working/atlas pytest working/atlas/tests/" in summary.test_command
+        assert "uv run --project working/thalia pytest working/thalia/tests/" in summary.test_command
         assert summary.coverage_gate == 90
 
     def test_write_and_load_round_trip(self, tmp_path):
@@ -37,7 +37,7 @@ class TestFigureRegistry:
 
 class TestArtifactManifest:
     def test_writes_current_hashes_for_stable_outputs(self, tmp_path):
-        root = tmp_path / "atlas"
+        root = tmp_path / "thalia"
         data = root / "output" / "data"
         data.mkdir(parents=True)
         artifact = data / "demo_result.json"

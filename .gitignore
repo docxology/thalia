@@ -2,6 +2,10 @@
 output/
 .coverage
 .coverage.*
+# Coverage JSON export is a regeneratable snapshot that drifts from the live
+# pytest --cov gate; keep a single authoritative coverage number (the gate +
+# PUBLICATION_READINESS.md) rather than a tracked, staleness-prone copy.
+coverage_project.json
 .pytest_cache/
 __pycache__/
 *.pyc

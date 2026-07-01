@@ -38,9 +38,9 @@ class TestReproPathHygiene:
         offenders = []
         for doc in docs:
             text = doc.read_text()
-            if "pytest" in text and "uv run --project working/atlas pytest working/atlas/tests/" not in text:
+            if "pytest" in text and "uv run --project working/thalia pytest working/thalia/tests/" not in text:
                 offenders.append(str(doc.relative_to(PROJECT)))
-            if "projects/working/atlas" in text:
+            if "projects/working/thalia" in text:
                 offenders.append(str(doc.relative_to(PROJECT)))
         assert offenders == []
 
@@ -50,7 +50,7 @@ class TestTemplateRootDiscovery:
         root = tmp_path / "tmpl"
         (root / "infrastructure" / "rendering").mkdir(parents=True)
         (root / "infrastructure" / "rendering" / "manuscript_injection.py").write_text("x = 1\n")
-        nested = root / "projects" / "working" / "atlas" / "scripts"
+        nested = root / "projects" / "working" / "thalia" / "scripts"
         nested.mkdir(parents=True)
         assert find_template_root(starts=(nested,)) == root
 
@@ -58,12 +58,38 @@ class TestTemplateRootDiscovery:
         assert find_template_root(starts=(tmp_path,)) is None
 
     def test_find_template_root_detects_sibling_template_checkout(self, tmp_path):
-        sidecar = tmp_path / "projects" / "working" / "atlas"
+        sidecar = tmp_path / "projects" / "working" / "thalia"
         sidecar.mkdir(parents=True)
         template = tmp_path / "template"
         (template / "infrastructure" / "rendering").mkdir(parents=True)
         (template / "infrastructure" / "rendering" / "manuscript_injection.py").write_text("x = 1\n")
         assert find_template_root(starts=(sidecar,)) == template
+
+    def test_find_template_root_skips_duplicate_candidates(self, tmp_path):
+        """Multiple starts that share ancestors should not cause duplicate work (line 29 continue)."""
+        # Both starts share tmp_path as a common ancestor; neither has the marker.
+        # The seen-set deduplication (line 29) prevents revisiting tmp_path twice.
+        start_a = tmp_path / "proj_a"
+        start_b = tmp_path / "proj_b"
+        start_a.mkdir()
+        start_b.mkdir()
+        # No marker anywhere — should return None without errors.
+        assert find_template_root(starts=(start_a, start_b)) is None
+
+
+class TestCrossrefIntegrity:
+    def test_dangling_crossref_raises(self, tmp_path):
+        """check_crossref_integrity must raise ValueError for an @ref with no matching anchor."""
+        md = tmp_path / "01_intro.md"
+        # Reference an undefined label — no {#fig:missing} or \label{fig:missing} anywhere.
+        md.write_text("See @fig:missing for details.\n")
+        with pytest.raises(ValueError, match="dangling cross-reference"):
+            check_crossref_integrity(tmp_path)
+
+    def test_defined_crossref_does_not_raise(self, tmp_path):
+        md = tmp_path / "01_intro.md"
+        md.write_text("![caption](img.png){#fig:defined}\n\nAs shown in @fig:defined.\n")
+        check_crossref_integrity(tmp_path)  # should not raise
 
 
 class TestManuscriptGates:
@@ -80,7 +106,7 @@ class TestManuscriptGates:
         import importlib.util
 
         path = PROJECT / "scripts" / "z_generate_manuscript_variables.py"
-        spec = importlib.util.spec_from_file_location("_atlas_z_gen", path)
+        spec = importlib.util.spec_from_file_location("_thalia_z_gen", path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         out = mod.main()

@@ -48,7 +48,10 @@ def _fmt(value: float, places: int = 3) -> str:
 
 def _coverage_gate() -> int:
     """Read the enforced ``src/`` coverage gate from pyproject.toml (no hard-coding)."""
-    import tomllib
+    try:
+        import tomllib  # Python >= 3.11
+    except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
+        import tomli as tomllib  # type: ignore[no-redef]
 
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text())

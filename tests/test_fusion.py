@@ -66,6 +66,25 @@ class TestRRFFusion:
         fused = rrf_fuse([ScoredChunk(3)], [ScoredChunk(1)], lexical_weight=0.5, semantic_weight=0.5)
         assert _ids(fused) == [1, 3]
 
+    def test_duplicate_id_in_a_lane_is_deduped_to_first_occurrence(self):
+        # A lane that emits the same id twice must not double-count it: the fused
+        # score must equal the score of its first-occurrence rank only, and the
+        # reported rank must match that first occurrence.
+        lex_with_dup = [ScoredChunk(1), ScoredChunk(2), ScoredChunk(1)]
+        lex_clean = [ScoredChunk(1), ScoredChunk(2)]
+        dup_fused = {c.id: c for c in rrf_fuse(lex_with_dup, [])}
+        clean_fused = {c.id: c for c in rrf_fuse(lex_clean, [])}
+
+        # Id 1 appears once in the output, at its first-occurrence rank (0).
+        assert dup_fused[1].lexical_rank == 0
+        # Score is exactly the first-occurrence contribution, not inflated by the
+        # duplicate at rank 2.
+        assert abs(dup_fused[1].fused_score - DEFAULT_LEXICAL_WEIGHT / (DEFAULT_K + 1)) < 1e-12
+        # The duplicate did not perturb id 1's score relative to a clean lane.
+        assert abs(dup_fused[1].fused_score - clean_fused[1].fused_score) < 1e-12
+        # And id 2's rank is unaffected by the duplicate of id 1 preceding it.
+        assert dup_fused[2].lexical_rank == 1
+
 
 class TestDataclasses:
     def test_scored_chunk_default_score(self):

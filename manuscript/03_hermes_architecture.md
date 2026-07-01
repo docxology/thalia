@@ -1,6 +1,6 @@
 # Hermes Agent Architecture {#sec:hermes}
 
-ATLAS uses the Hermes Agent ecosystem [@nous2026hermes; @nous2026selfevolution]
+THALIA uses the Hermes Agent ecosystem [@nous2026hermes; @nous2026selfevolution]
 as the concrete engineering pattern that binds the four foundations together. Two
 sub-systems matter: prompt assembly with a frozen memory snapshot, and the
 DSPy + GEPA self-evolution loop.
@@ -20,7 +20,7 @@ directly implements the consolidation-safety principle of [@zhang2026memory]: th
 raw episodic store (SQLite/FTS5) is kept separate from the consolidated snapshot,
 and the snapshot the model reasons against never changes underneath it.
 
-**ATLAS adoption.** `src.signatures.MemorySnapshot` is a frozen dataclass
+**THALIA adoption.** `src.signatures.MemorySnapshot` is a frozen dataclass
 injected into the Reasoner as read-only `memory_context`; the Memory Gate writes
 raw episodes to `EpisodicStore` and only updates its `memory_md` through gated
 consolidation. The snapshot the Reasoner sees within a turn is immutable
@@ -46,7 +46,7 @@ pass hard gates before merge: the full test suite (100%), size limits (skills
 ≤ 15 KB, tool descriptions ≤ 500 chars), caching compatibility (no mid-conversation
 changes), semantic preservation, and human review.
 
-**ATLAS adoption.** The Compiler stage embodies both engines. The MIPRO-style
+**THALIA adoption.** The Compiler stage embodies both engines. The MIPRO-style
 search (`src/compiler/mipro.py`) evaluates configurations against the harness
 metric; the GEPA-style optimizer (`src/compiler/gepa.py`) reflects on the weakest
 metric component of an evaluation report and applies a targeted, bounded mutation,

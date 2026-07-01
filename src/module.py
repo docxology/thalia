@@ -1,4 +1,4 @@
-"""Module and language-model abstractions for the ATLAS harness.
+"""Module and language-model abstractions for the THALIA harness.
 
 Mirrors the DSPy ``Module`` / ``Predict`` shape and the Recursive Language Model
 drop-in ``completion(messages)`` interface, while keeping a fully deterministic

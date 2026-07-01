@@ -1,4 +1,4 @@
-"""Tests for the ATLAS query CLI (Zero-Mock)."""
+"""Tests for the THALIA query CLI (Zero-Mock)."""
 
 import json
 
@@ -10,15 +10,15 @@ from src.llm import CallableLM
 SESSION = "User: my wifi password is bluefish42\nAssistant: noted"
 
 _ENV_KEYS = (
-    "ATLAS_TOP_K",
-    "ATLAS_MAX_WINDOWS",
-    "ATLAS_MAX_EVIDENCE",
-    "ATLAS_RRF_K",
-    "ATLAS_CONTEXT_BUDGET_TOKENS",
-    "ATLAS_LEXICAL_WEIGHT",
-    "ATLAS_SEMANTIC_WEIGHT",
-    "ATLAS_ADAPTIVE_WINDOWS",
-    "ATLAS_ADAPTIVE_WINDOW_RATIO",
+    "THALIA_TOP_K",
+    "THALIA_MAX_WINDOWS",
+    "THALIA_MAX_EVIDENCE",
+    "THALIA_RRF_K",
+    "THALIA_CONTEXT_BUDGET_TOKENS",
+    "THALIA_LEXICAL_WEIGHT",
+    "THALIA_SEMANTIC_WEIGHT",
+    "THALIA_ADAPTIVE_WINDOWS",
+    "THALIA_ADAPTIVE_WINDOW_RATIO",
 )
 
 
@@ -72,12 +72,12 @@ class TestResolveConfig:
         assert cfg.top_k == 2 and cfg.max_evidence == 1
 
     def test_env_applied(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_TOP_K", "5")
+        monkeypatch.setenv("THALIA_TOP_K", "5")
         args = build_parser().parse_args(["--query", "q"])
         assert resolve_config(args).top_k == 5
 
     def test_flag_beats_env(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_TOP_K", "5")
+        monkeypatch.setenv("THALIA_TOP_K", "5")
         args = build_parser().parse_args(["--query", "q", "--top-k", "3"])
         assert resolve_config(args).top_k == 3
 
@@ -110,17 +110,17 @@ class TestMain:
 
 class TestExtendedParserFlags:
     _ENV_KEYS = (
-        "ATLAS_RERANK",
-        "ATLAS_MMR_LAMBDA",
-        "ATLAS_VERIFY",
-        "ATLAS_GROUNDING_THRESHOLD",
-        "ATLAS_PARTITION_THRESHOLD",
-        "ATLAS_PARTITION_SIZE",
-        "ATLAS_QUERY_EXPANSION",
-        "ATLAS_RECENCY_WEIGHT",
-        "ATLAS_RECALL_MEMORY",
-        "ATLAS_ADAPTIVE_WINDOWS",
-        "ATLAS_ADAPTIVE_WINDOW_RATIO",
+        "THALIA_RERANK",
+        "THALIA_MMR_LAMBDA",
+        "THALIA_VERIFY",
+        "THALIA_GROUNDING_THRESHOLD",
+        "THALIA_PARTITION_THRESHOLD",
+        "THALIA_PARTITION_SIZE",
+        "THALIA_QUERY_EXPANSION",
+        "THALIA_RECENCY_WEIGHT",
+        "THALIA_RECALL_MEMORY",
+        "THALIA_ADAPTIVE_WINDOWS",
+        "THALIA_ADAPTIVE_WINDOW_RATIO",
     )
 
     @pytest.fixture(autouse=True)
@@ -171,8 +171,8 @@ class TestExtendedParserFlags:
         assert cfg.adaptive_window_ratio == 9
 
     def test_adaptive_flags_beat_env(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_ADAPTIVE_WINDOWS", "false")
-        monkeypatch.setenv("ATLAS_ADAPTIVE_WINDOW_RATIO", "4")
+        monkeypatch.setenv("THALIA_ADAPTIVE_WINDOWS", "false")
+        monkeypatch.setenv("THALIA_ADAPTIVE_WINDOW_RATIO", "4")
         args = build_parser().parse_args(["--query", "q", "--adaptive-windows", "--adaptive-window-ratio", "8"])
         cfg = resolve_config(args)
         assert cfg.adaptive_windows is True

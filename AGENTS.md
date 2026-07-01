@@ -1,12 +1,12 @@
-# ATLAS — Agent Reference
+# THALIA — Agent Reference
 
-Agent-facing technical reference for the ATLAS auto-harness. This is an
+Agent-facing technical reference for the THALIA auto-harness. This is an
 in-progress, local-only research project under `projects/working/`; it is not
 discovered or rendered by the template pipeline by default. Project source is
 tracked in this private sidecar; generated `output/` artifacts are gitignored and
 must not be committed to the public template checkout.
 
-## What ATLAS is
+## What THALIA is
 
 A DSPy + Hermes auto-harness: five composable stages (Inspector, Retriever,
 Reasoner, Memory Gate, Compiler), each a typed `Signature` backed by a `SKILL.md`,
@@ -38,10 +38,11 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 |------|----------------|
 | `src/signatures/` | Signature framework (`framework.py`), payloads (`payloads.py`), stage contracts (`stages.py`) |
 | `src/manuscript_integrity.py` | Manuscript `{{TOKEN}}` coverage + crossref validation |
-| `src/module.py` | `Module`, `Prediction`, `LMClient`, `ExtractiveLM`, prompt rendering |
-| `src/config.py` | `HarnessConfig` + `load_config`/`save_config`/`apply_env_overrides` |
+| `src/module.py` | `Module`, `Predict`, `Prediction`, `LMClient`, `ExtractiveLM`, prompt rendering, `tokenize` |
+| `src/config.py` | `HarnessConfig` + `load_config`/`save_config`/`apply_env_overrides` + `to_yaml`/`from_yaml` |
 | `src/llm.py` | Real LM adapters: `CallableLM`, `OllamaLM` (stdlib HTTP), `OllamaError` |
-| `src/session.py` | `Session` — persistent multi-turn conversation (file-backed) |
+| `src/session.py` | `Session` — persistent multi-turn conversation (file-backed, context-manager safe) |
+| `src/pipeline.py` | `Pipeline` — composable explicit stage chain with intermediates + custom steps |
 | `src/cli.py` | Query CLI: `run_query`, `build_parser`, `resolve_config`, `main` |
 | `src/retrieval/lexical.py` | BM25 + grep + key-phrase extraction |
 | `src/retrieval/semantic.py` | Hashing-embedding cosine (deterministic surrogate) |
@@ -51,7 +52,7 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 | `src/routing.py` | `classify_task` — deterministic task-category routing |
 | `src/stages/reasoner.py` | Stage 2 |
 | `src/stages/memory_gate.py` | Stage 3 (episodic-first) |
-| `src/memory/episodic_store.py` | SQLite (+FTS5) append-only store |
+| `src/memory/episodic_store.py` | SQLite (+FTS5) append-only store (context-manager safe) |
 | `src/memory/consolidation.py` | Gated consolidation logic |
 | `src/compiler/metrics.py` | `harness_metric`, dataset/eval primitives |
 | `src/compiler/mipro.py` | MIPRO-style config search |
@@ -67,40 +68,41 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 
 ```bash
 # Tests + coverage (authoritative gate; confirm collected > 0 and coverage >= 90%)
-uv run --project working/atlas pytest working/atlas/tests/ \
-  --cov=working/atlas/src --cov-report=term-missing --cov-fail-under=90
+uv run --project working/thalia pytest working/thalia/tests/ \
+  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
 
 # Single test
-uv run --project working/atlas pytest working/atlas/tests/test_harness.py -v
+uv run --project working/thalia pytest working/thalia/tests/test_harness.py -v
 
 # Regenerate artifacts (thin orchestrators; print output paths)
-uv run --project working/atlas python working/atlas/scripts/run_harness_eval.py
-uv run --project working/atlas python working/atlas/scripts/run_compiler.py
-uv run --project working/atlas python working/atlas/scripts/generate_figures.py
-uv run --project working/atlas python working/atlas/scripts/build_dashboard.py
-uv run --project working/atlas python working/atlas/scripts/z_generate_manuscript_variables.py
+uv run --project working/thalia python working/thalia/scripts/run_harness_eval.py
+uv run --project working/thalia python working/thalia/scripts/run_compiler.py
+uv run --project working/thalia python working/thalia/scripts/run_pipeline.py
+uv run --project working/thalia python working/thalia/scripts/generate_figures.py
+uv run --project working/thalia python working/thalia/scripts/build_dashboard.py
+uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
 
-# Run a query (configurable: file < ATLAS_* env < CLI flags)
-uv run --project working/atlas python working/atlas/scripts/run_query.py \
+# Run a query (configurable: file < THALIA_* env < CLI flags)
+uv run --project working/thalia python working/thalia/scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
 
 # Real DSPy runtime (needs the `dspy` extra; otherwise prints a notice and exits 0)
-uv pip install --python working/atlas/.venv/bin/python "dspy-ai>=2.5"
-uv run --project working/atlas python working/atlas/scripts/run_dspy.py
+uv pip install --python working/thalia/.venv/bin/python "dspy-ai>=2.5"
+uv run --project working/thalia python working/thalia/scripts/run_dspy.py
 
 # Record the real extractive-vs-neural measurement (needs a live Ollama model);
 # writes data/neural_eval.json, which the backend-comparison figure + §07 tokens read
-uv run --project working/atlas python working/atlas/scripts/run_neural_eval.py
+uv run --project working/thalia python working/thalia/scripts/run_neural_eval.py
 
 # Other gated recorders (each writes a committed aggregate JSON read by figures + tokens):
-uv run --project working/atlas python working/atlas/scripts/run_learned_retrieval.py    # learned dense embedder vs surrogate
-uv run --project working/atlas python working/atlas/scripts/run_injection_probe.py       # context-poisoning resistance + neural row
+uv run --project working/thalia python working/thalia/scripts/run_learned_retrieval.py    # learned dense embedder vs surrogate
+uv run --project working/thalia python working/thalia/scripts/run_injection_probe.py       # context-poisoning resistance + neural row
 
 # Real LongMemEval_S benchmark (download once, then record); needs Ollama for neural rows:
-bash working/atlas/scripts/get_longmemeval.sh
-uv run --project working/atlas python working/atlas/scripts/run_longmemeval.py            # accuracy/grounding/composite + bootstrap CIs
-uv run --project working/atlas python working/atlas/scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
+bash working/thalia/scripts/get_longmemeval.sh
+uv run --project working/thalia python working/thalia/scripts/run_longmemeval.py            # accuracy/grounding/composite + bootstrap CIs
+uv run --project working/thalia python working/thalia/scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
 ```
 
 ## Extension points
@@ -110,7 +112,7 @@ uv run --project working/atlas python working/atlas/scripts/run_longmemeval_bott
 - **Real embedder:** replace `src/retrieval/semantic.py::SemanticIndex` (same
   `top_k(query, k)` contract).
 - **Real DSPy:** install the `dspy` extra. Two real seams open up without changing
-  the core: `to_dspy_signature` (ATLAS signature → real `dspy.Signature`) and the
+  the core: `to_dspy_signature` (THALIA signature → real `dspy.Signature`) and the
   full `src/dspy_runtime.py` runtime — a real `dspy.Predict` program and a real
   `dspy.BootstrapFewShot` optimizer, both backed by the real deterministic
   `ExtractiveLM` (no mock/stub; offline and reproducible). Run via `scripts/run_dspy.py`.
@@ -118,6 +120,16 @@ uv run --project working/atlas python working/atlas/scripts/run_longmemeval_bott
   → a live local Ollama model (e.g. `ollama pull gemma3:4b`), so the same dspy program
   runs against real generations. `ollama_model_available()` gates it; `run_dspy.py`
   records the neural answer, and `TestRealNeuralDspy` validates real Gemma output.
+- **Composable Pipeline:** `src/pipeline.py::Pipeline` exposes the four stages as
+  an inspectable, chainable sequence. Insert custom steps between stages, inspect
+  intermediates, or run partial pipelines (e.g. Inspector-only). See
+  `tests/test_pipeline.py` for usage patterns.
+- **Context managers:** `Session` and `EpisodicStore` both support `with` blocks
+  so resources are always cleaned up, even on exceptions.
+- **Serialisation:** `HarnessOutput.to_dict()` and `HarnessConfig.to_yaml()`/`from_yaml()`
+  provide round-trip serialisation without duplicating field mappings.
+- **Type safety:** `src/py.typed` marks the package as PEP 561 typed; `__version__`
+  is exported at the top level.
 
 ## Scope honesty
 

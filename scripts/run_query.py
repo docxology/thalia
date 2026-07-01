@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: run a single query against the ATLAS harness from the CLI.
+"""Thin orchestrator: run a single query against the THALIA harness from the CLI.
 
 All logic lives in ``src/cli.py``; this wrapper only sets up the import path and
 delegates. Example:
 
-    uv run --project working/atlas python working/atlas/scripts/run_query.py \\
+    uv run --project working/thalia python working/thalia/scripts/run_query.py \\
         --query "What is the wifi password?" \\
         --session-history "User: my wifi password is bluefish42" --json
 """

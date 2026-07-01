@@ -115,6 +115,30 @@ class TestReflect:
         assert new == cfg
 
 
+def _improving_build_fn(config):
+    """Return a run-fn that produces a perfect answer only after reflection sets lexical_weight.
+
+    With the default seed config (lexical_weight=None) the answer is wrong, so accuracy ≈ 0
+    and accuracy is the weakest component.  ``reflect`` then sets lexical_weight=0.8; on the
+    next call the answer matches perfectly, raising the composite and triggering lines 166-167.
+    """
+
+    def run(example):
+        # Produce the correct answer only when the config has been mutated by reflect().
+        answer = example.expected_answer if config.lexical_weight is not None else "wrong"
+        ranked = (RankedEvidence(window=EvidenceWindow(text=answer, source_index=0), score=1.0),)
+        return HarnessOutput(
+            answer=answer,
+            reasoning_trace="",
+            evidence_citations=(),
+            ranked_evidence=ranked,
+            task_category=TaskCategory.SINGLE_SESSION,
+            memory_written=EpisodicEntry(0, example.query, answer),
+        )
+
+    return run
+
+
 class TestEvolve:
     def test_empty_dataset_raises(self):
         with pytest.raises(ValueError, match="non-empty"):
@@ -129,6 +153,13 @@ class TestEvolve:
         assert result.n_candidates == 1
         assert len(result.trace) == 1
 
+    def test_zero_iterations_best_config_is_seed(self):
+        """iterations=0 must return the seed config as best_config (no mutation attempted)."""
+        seed = HarnessConfig(top_k=5, max_evidence=3)
+        result = GEPAOptimizer().evolve(_build_fn, DATASET, seed_config=seed, iterations=0)
+        assert result.best_config == seed
+        assert result.n_candidates == 1
+
     def test_evolution_records_trace(self):
         result = GEPAOptimizer().evolve(_build_fn, DATASET, iterations=4)
         assert result.n_candidates == 5  # seed + 4 iterations
@@ -140,6 +171,30 @@ class TestEvolve:
         result = GEPAOptimizer().evolve(_build_fn, DATASET, seed_config=seed, iterations=6)
         seed_score = result.trace[0][1]
         assert result.best_score >= seed_score
+
+    def test_improvement_branch_updates_best_config(self):
+        """Lines 166-167: best_config/best_score must update when a candidate beats the seed.
+
+        _improving_build_fn returns a wrong answer for the seed config (lexical_weight=None)
+        and a correct answer after reflect() sets lexical_weight=0.8.  The candidate therefore
+        has a strictly higher composite, which must flow through the improvement branch.
+        """
+        seed = default_config()  # lexical_weight=None
+        result = GEPAOptimizer().evolve(
+            _improving_build_fn, DATASET, seed_config=seed, iterations=1
+        )
+        seed_score = result.trace[0][1]
+        candidate_score = result.trace[1][1]
+        # The candidate must score strictly better (improvement branch fires).
+        assert candidate_score > seed_score, (
+            f"candidate_score={candidate_score} should exceed seed_score={seed_score}"
+        )
+        # best_config must have been updated to the reflected candidate.
+        assert result.best_config != seed, "best_config should have changed to the improved candidate"
+        assert result.best_config.lexical_weight == 0.8, (
+            "best_config should be the reflect()-mutated config with lexical_weight=0.8"
+        )
+        assert result.best_score == candidate_score
 
 
 class TestDSPyBridge:
@@ -177,7 +232,7 @@ class TestRealDspyBridge:
         assert issubclass(converted, dspy.Signature)
         assert set(converted.input_fields) == {"question", "context"}
         assert set(converted.output_fields) == {"answer"}
-        # the ATLAS instruction (class docstring) carries through to dspy
+        # the THALIA instruction (class docstring) carries through to dspy
         assert _ScalarSig.instructions() in converted.instructions
 
     def test_all_stage_signatures_convert_and_are_predict_usable(self):

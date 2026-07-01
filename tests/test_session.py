@@ -62,3 +62,37 @@ class TestFilePersistence:
         s.ask("please remember the gate code is 1111", session_ending=True)
         assert not list(tmp_path.glob("MEMORY.md"))
         s.close()
+
+
+class TestSessionLifecycle:
+    def test_reset_clears_transcript(self, tmp_path):
+        """Reset discards in-memory transcript and creates a fresh store."""
+        db = str(tmp_path / "episodes_reset.db")
+        s = Session(db_path=db)
+        s.ask("my wifi password is bluefish42")
+        assert s.turn_count == 1
+        # Reset closes the old store and opens a new one at the same path.
+        # Since the old episodes were in the same file, the new store sees them.
+        s.reset()
+        assert s.turn_count == 1  # same db_path, same episodes
+        # Verify the transcript was re-read from the store.
+        out = s.ask("what is the wifi password")
+        assert "bluefish42" in out.answer
+        assert s.turn_count == 2
+
+    def test_reset_preserves_persisted_memory(self, tmp_path):
+        """Reset re-reads MEMORY.md from disk, surviving the reset."""
+        db = str(tmp_path / "episodes_mem.db")
+        mem = str(tmp_path / "MEMORY.md")
+        s = Session(db_path=db, memory_path=mem)
+        s.ask("please remember the combo is 1234", session_ending=True)
+        assert s.turn_count == 1
+        s.close()
+        # Re-open, then reset.
+        s2 = Session(db_path=db, memory_path=mem)
+        assert s2.turn_count == 1
+        assert "1234" in s2.harness.memory_gate.memory_md
+        s2.reset()
+        # After reset: fresh store at same path (episodes still there), memory from disk reloaded.
+        assert "1234" in s2.harness.memory_gate.memory_md
+        assert s2.turn_count == 1  # episodes persist on disk

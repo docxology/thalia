@@ -1,4 +1,4 @@
-"""Canonical deterministic ATLAS demo artifacts."""
+"""Canonical deterministic THALIA demo artifacts."""
 
 from __future__ import annotations
 
@@ -26,16 +26,16 @@ def build_demo_artifacts(output_dir: str | Path) -> dict[str, Path]:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix="atlas-demo-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="thalia-demo-") as tmp:
         db = Path(tmp) / "episodes.db"
         memory = Path(tmp) / "MEMORY.md"
-        session = Session(config=default_config().with_(recall_memory=True), db_path=str(db), memory_path=memory)
-        first = session.ask("My wifi password is bluefish42")
-        session.close()
+        with Session(config=default_config().with_(recall_memory=True), db_path=str(db), memory_path=memory) as session:
+            first = session.ask("My wifi password is bluefish42")
+            first_turns = session.turn_count
 
-        reopened = Session(config=default_config().with_(recall_memory=True), db_path=str(db), memory_path=memory)
-        second = reopened.ask("What is the wifi password?")
-        reopened.close()
+        with Session(config=default_config().with_(recall_memory=True), db_path=str(db), memory_path=memory) as reopened:
+            second = reopened.ask("What is the wifi password?")
+            reopened_turns = reopened.turn_count
 
     dataset = build_demo_dataset()
     mipro = MIPROCompiler(auto="light").compile(lambda cfg: build_run_fn(cfg), dataset)
@@ -45,7 +45,9 @@ def build_demo_artifacts(output_dir: str | Path) -> dict[str, Path]:
         "claim_boundary": "Deterministic demo transcript; not a benchmark result.",
         "session": {
             "first_answer": first.answer,
+            "first_turn_count": first_turns,
             "reopened_answer": second.answer,
+            "reopened_turn_count": reopened_turns,
             "reopened_citations": [c.source_index for c in second.evidence_citations],
         },
         "compiler": {

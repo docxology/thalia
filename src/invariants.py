@@ -1,4 +1,4 @@
-"""Formal runtime invariants for the ATLAS harness.
+"""Formal runtime invariants for the THALIA harness.
 
 Each check builds small real objects, asserts a structural property, and returns
 an :class:`InvariantResult`. These are *executable specifications*: the test suite

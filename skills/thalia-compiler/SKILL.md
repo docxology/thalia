@@ -1,4 +1,4 @@
-# SKILL.md — atlas-compiler
+# SKILL.md — thalia-compiler
 
 ## Purpose
 Bounded trace-evolution layer (Stage 4). Operates on the harness offline: a
@@ -26,6 +26,17 @@ mipro = MIPROCompiler(auto="heavy").compile(lambda c: build_run_fn(c), ds)
 gepa = GEPAOptimizer().evolve(lambda c: build_run_fn(c), ds, iterations=8)
 assert check_skill_constraints(open("SKILL.md").read()).ok
 ```
+
+`held_out_optimizer_lift` (in `src.dspy_runtime`) measures optimizer value the only
+falsifiable way — a held-out before/after split — and is called from
+`scripts/run_dspy.py`:
+```python
+from src.dspy_runtime import held_out_optimizer_lift
+lift = held_out_optimizer_lift(train_size=4)
+# → {"train_size": 4, "test_size": N, "before": 0.x, "after": 0.x, "lift": delta}
+```
+On the extractive backend the lift is nil (the compiler's value is its auditable
+search trace, not a demonstrated accuracy gain).
 
 ## Constraints
 - Evaluation builds a fresh harness per example (order-independent, reproducible).

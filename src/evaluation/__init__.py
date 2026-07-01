@@ -12,11 +12,14 @@ from .dataset import build_demo_dataset, build_large_dataset, with_noise
 from .scaling import bootstrap_ci, large_dataset_eval
 from .experiments import (
     RetrieverComparison,
+    category_component_breakdown,
     consolidation_simulation,
     evidence_funnel,
+    gepa_component_trajectory,
     method_ablation,
     mmr_lambda_sweep,
     noise_scaling_experiment,
+    pipeline_evidence_flow,
     retriever_comparison,
     rrf_weight_sweep,
 )
@@ -34,9 +37,12 @@ __all__ = [
     "rrf_weight_sweep",
     "mmr_lambda_sweep",
     "evidence_funnel",
+    "pipeline_evidence_flow",
+    "gepa_component_trajectory",
     "method_ablation",
     "noise_scaling_experiment",
     "consolidation_simulation",
+    "category_component_breakdown",
     "run_full_eval",
     "no_harness_baseline",
     "composite_weight_sensitivity",

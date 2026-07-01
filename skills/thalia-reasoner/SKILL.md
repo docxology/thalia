@@ -1,4 +1,4 @@
-# SKILL.md — atlas-reasoner
+# SKILL.md — thalia-reasoner
 
 ## Purpose
 Typed declarative reasoner (Stage 2). Classifies the task, routes multi-hop / code

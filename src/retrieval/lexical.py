@@ -19,6 +19,10 @@ from ..module import tokenize
 DEFAULT_K1 = 1.5
 DEFAULT_B = 0.75
 
+# Decimal places retained when comparing BM25 scores for ranking; collapses
+# sub-1e-12 floating-point noise so tie-breaking is identical across platforms.
+_RANK_PRECISION = 12
+
 # Common English stop-words removed when deriving grep patterns from a query.
 # Kept small and explicit (no NLTK dependency) for determinism.
 _STOPWORDS: frozenset[str] = frozenset(
@@ -95,7 +99,10 @@ class BM25Index:
         if k <= 0:
             raise ValueError(f"k must be positive, got {k}")
         scored = [(idx, s) for idx, s in enumerate(self.score(query)) if s > 0.0]
-        scored.sort(key=lambda pair: (-pair[1], pair[0]))
+        # Round the ordering key so scores equal up to floating-point noise tie
+        # exactly and break on ascending index, keeping ranking identical across
+        # platforms (mirrors ``SemanticIndex.top_k``).
+        scored.sort(key=lambda pair: (-round(pair[1], _RANK_PRECISION), pair[0]))
         return scored[:k]
 
 

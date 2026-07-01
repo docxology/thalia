@@ -1,6 +1,6 @@
 # Operability and Configuration {#sec:operability}
 
-ATLAS is not only a design — it is operable. This section documents the
+THALIA is not only a design — it is operable. This section documents the
 configuration system, the real language-model adapters, the persistent multi-turn
 session, and the command-line interface. Each is fully tested (Zero-Mock,
 including a real in-process HTTP server for the network adapter).
@@ -14,20 +14,78 @@ is loadable, overridable, and serialisable:
   (`config/harness.yaml` ships as the canonical default). The YAML may list fields
   flat or under a `harness:` key; manuscript `config.yaml` keeps renderer metadata
   separate and mirrors selected values only under `project_config.harness`.
-- **Environment** — any field is overridable via `ATLAS_<FIELD>` (e.g.
-  `ATLAS_TOP_K=4`, `ATLAS_LEXICAL_WEIGHT=0.8 ATLAS_SEMANTIC_WEIGHT=0.2`). Lane
+- **Environment** — any field is overridable via `THALIA_<FIELD>` (e.g.
+  `THALIA_TOP_K=4`, `THALIA_LEXICAL_WEIGHT=0.8 THALIA_SEMANTIC_WEIGHT=0.2`). Lane
   weights remain both-or-neither; setting only one against an unset pair raises.
-- **Round-trip** — `to_dict` / `from_dict` and `save_config` make a config
-  serialisable and reproducible; `from_dict` ignores unrecognised keys.
+- **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
+  `save_config` make a config serialisable and reproducible; `from_dict` and
+  `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
+  path — `save_config` delegates to it, so the YAML representation never drifts
+  from the dataclass.
 
 Precedence, lowest to highest: built-in defaults → file → environment → explicit
 CLI flags.
 
 This precedence order is part of the reproducibility story. A manuscript render
 can point to the checked-in `config/harness.yaml`; a local experiment can override
-one field through `ATLAS_*`; and a CLI run can still make an explicit one-off
+one field through `THALIA_*`; and a CLI run can still make an explicit one-off
 choice without mutating source files. The resulting configuration is serialisable,
 so a compiled or manually selected setting can be saved and compared later.
+
+## Composable Pipeline {#sec:op-pipeline}
+
+`AutoHarness` bundles the four runtime stages into one `forward` call. For
+callers that need to inspect or modify the stage chain — insert a logging hook,
+a custom reranker, or run a partial pipeline — `src/pipeline.py::Pipeline`
+exposes the same stages as an explicit, chainable sequence:
+
+```python
+from src.pipeline import Pipeline
+
+pipe = (
+    Pipeline(config)
+    .with_inspector()
+    .add_step("log", lambda ctx: (ctx.extras.update({"n": len(ctx.evidence_windows)}), ctx)[1])
+    .with_retriever()
+    .with_reasoner()
+    .with_memory_gate()
+)
+out = pipe.run(query="What is the wifi password?", session_history="...")
+for step_name, ctx in pipe.intermediates:
+    print(step_name, ctx.extras)
+```
+
+Each `with_*` method appends one stage and returns `self` for chaining;
+`add_step` inserts an arbitrary callable that receives and returns a
+`PipelineContext` (a mutable state bag with an `extras` dict for custom data).
+After `run`, `pipe.intermediates` holds a `(step_name, context)` snapshot after
+every step, so intermediate evidence counts, scores, and traces are inspectable
+without re-running the pipeline. `scripts/run_pipeline.py` exercises this path
+end-to-end and writes the intermediate-step trace to `output/data/`.
+
+## Resource safety {#sec:op-resource-safety}
+
+`Session` and `EpisodicStore` both implement the context-manager protocol
+(`__enter__` / `__exit__`), so resources are always cleaned up — even when an
+exception propagates mid-turn:
+
+```python
+with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
+    s.ask("My wifi password is bluefish42")
+    s.ask("What is the wifi password?")
+# episodic store closed + MEMORY.md flushed automatically
+```
+
+The demo script (`src/demo.py`) uses this pattern, so the context-manager path
+is exercised by the default analysis pipeline, not only by tests.
+
+## Package metadata {#sec:op-metadata}
+
+The package exports `__version__` at the top level (`from src import __version__`)
+and ships a `py.typed` marker (PEP 561) so downstream type checkers see the full
+type annotations. `HarnessOutput.to_dict()` provides JSON serialisation on the
+dataclass itself — the CLI delegates to it, so the field mapping has one source
+of truth.
 
 ## Language-model adapters {#sec:op-lm}
 
@@ -73,7 +131,7 @@ still be recovered and cited.
 harness:
 
 ```bash
-uv run --project working/atlas python working/atlas/scripts/run_query.py \
+uv run --project working/thalia python working/thalia/scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
 ```
@@ -81,7 +139,7 @@ uv run --project working/atlas python working/atlas/scripts/run_query.py \
 For real haystacks, the same CLI exposes the opt-in adaptive Inspector controls:
 
 ```bash
-uv run --project working/atlas python working/atlas/scripts/run_query.py \
+uv run --project working/thalia python working/thalia/scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-file long_session.txt \
   --adaptive-windows --adaptive-window-ratio {{CONFIG_ADAPTIVE_RATIO}} --json
@@ -104,7 +162,7 @@ The intended extension points are stable and narrow:
 | Persistent deployment | `Session` paths | storage location and lifecycle | append-only episodes, consolidation policy |
 | Search policy | `HarnessConfig` / compiler candidates | retrieval depth and weights | stage interfaces, metrics, manuscript tokens |
 
-This matrix is the operational version of the scope boundary. ATLAS can be made
+This matrix is the operational version of the scope boundary. THALIA can be made
 stronger by replacing model and embedding components, but those replacements are
 experiments behind documented interfaces, not reasons to weaken the deterministic
 method contract.

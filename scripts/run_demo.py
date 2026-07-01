@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: build the canonical deterministic ATLAS demo artifacts."""
+"""Thin orchestrator: build the canonical deterministic THALIA demo artifacts."""
 
 from __future__ import annotations
 

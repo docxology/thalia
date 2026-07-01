@@ -1,7 +1,7 @@
 # Foundational Research {#sec:foundations}
 
 This section analyses the four foundational works and the reproducible-research
-substrate, extracting from each the specific design implication ATLAS implements.
+substrate, extracting from each the specific design implication THALIA implements.
 
 ## DSPy: declarative language-model pipelines {#sec:found-dspy}
 
@@ -17,7 +17,7 @@ optimizer, MIPROv2, bootstraps few-shot candidates,
 proposes instruction variants, and searches the combined space with Bayesian
 optimization.
 
-**Implication for ATLAS.** Separate program structure from optimization strategy.
+**Implication for THALIA.** Separate program structure from optimization strategy.
 Deterministic code handles parsing, filtering, routing, and tool dispatch; the
 model handles judgment. Each stage — inspector, retriever, reasoner, memory gate —
 is a first-class typed signature with explicit input/output fields
@@ -33,7 +33,7 @@ narrow the search space, **partition + map** recursive sub-calls over chunks,
 **summarize**, and **verify**. The external interface is identical to a standard LM
 call, so `rlm.completion(messages)` is a drop-in replacement.
 
-**Implication for ATLAS.** The REPL-environment paradigm maps directly onto the
+**Implication for THALIA.** The REPL-environment paradigm maps directly onto the
 Inspector stage: load history as a variable, apply grep/regex anchored on query
 terms, and emit only compact evidence windows plus metadata — never the full
 context ([@sec:stage-inspector]). `src/stages/inspector.py::REPLEnvironment`
@@ -52,7 +52,7 @@ consolidation counterparts; disabling consolidation entirely matches that regime
 (figures cited as reported from a 2026 submitted preprint, not independently
 re-verified here — see [@sec:repro-provenance]).
 
-**Implication for ATLAS.** Raw episodes are first-class evidence. The Memory Gate
+**Implication for THALIA.** Raw episodes are first-class evidence. The Memory Gate
 always appends the raw turn to an append-only store and *only* consolidates a
 derived MEMORY.md delta when explicitly gated ([@sec:stage-memory]). Automatic
 per-turn consolidation — the documented failure mode — is structurally impossible:
@@ -73,7 +73,7 @@ cues (precise but brittle), dense explores embedding neighbourhoods (covers
 paraphrases but admits topical false friends). Harness-level shifts are as large
 as retriever-level shifts.
 
-**Implications for ATLAS.** (i) Lexical-first, hybrid by default — grep/BM25 as
+**Implications for THALIA.** (i) Lexical-first, hybrid by default — grep/BM25 as
 the inline lane, semantic as fallback. (ii) Weighted Reciprocal Rank Fusion
 [@cormack2009rrf] to merge lanes and optional Maximal Marginal Relevance
 [@carbonell1998mmr] when diversity re-ranking is requested. (iii) Sparse context
@@ -93,7 +93,7 @@ equips every directory with human-readable `README.md` and machine-readable
 Protocol [@anthropic2025mcp] — the same pattern Hermes uses for its skill
 catalog.
 
-**Implication for ATLAS.** The harness is built inside `template/` and inherits
+**Implication for THALIA.** The harness is built inside `template/` and inherits
 its discipline: every stage carries a `SKILL.md`, the eight build stages map onto
 the harness's compile-and-validate lifecycle ([@sec:integration]), and the
 manuscript's numbers are generated tokens, not hand-typed values

@@ -1,4 +1,4 @@
-"""Typed signature framework and domain payloads for the ATLAS harness."""
+"""Typed signature framework and domain payloads for the THALIA harness."""
 
 from .framework import Field, FieldKind, InputField, OutputField, Signature
 from .payloads import (

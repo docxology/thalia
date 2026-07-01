@@ -11,7 +11,7 @@ a,
 }
 </style>
 
-**ATLAS** — Agentic Typed-pipeline with Lexical And Structured stages — is a
+**THALIA** — Agentic Typed-pipeline with Lexical And Structured stages — is a
 typed, declaratively-specified agentic harness that fuses four research
 threads with a reproducible-research substrate. From DSPy [@khattab2023dspy] it
 takes the principle that prompts are parameterized code: every stage is a typed
@@ -28,7 +28,7 @@ harness itself as an optimizable program, searching parameter settings and
 recording trace-reflective mutations rather than relying on ad-hoc prompt
 tweaking [@nous2026selfevolution].
 
-The contribution is **architectural and reproducible**, not a new model. ATLAS is
+The contribution is **architectural and reproducible**, not a new model. THALIA is
 implemented as {{CONFIG_NUM_STAGES}} composable stages, each a first-class
 signature backed by a machine-readable `SKILL.md`, with the language-model layer
 abstracted behind a protocol whose default is a deterministic extractive
@@ -57,13 +57,14 @@ LongMemEval_S benchmark** [@wu2025longmemeval] ({{RESULT_LME_N_EXT}} questions o
 assuming it — we show the bottleneck is the Inspector's context-narrowing, not retrieval
 ranking (the committed full-haystack aggregate recovers the evidence; per-mode
 learned-embedder rows remain gated on a working local embedder). An opt-in **adaptive Inspector**
-that scales the narrowing budget with context size then recovers accuracy automatically
-({{RESULT_BN_NEURAL_ACC_LO}} → {{RESULT_BN_ADAPTIVE_ACC}}) while remaining a bit-for-bit
+that scales the narrowing budget with context size then recovers most of that gap
+automatically on the neural subset — up to the manually-tuned best
+({{RESULT_BN_NEURAL_ACC_LO}} → {{RESULT_BN_ADAPTIVE_ACC}}) — while remaining a bit-for-bit
 no-op on compact contexts. We are explicit about two scope boundaries: the
 default extractive responder bounds span-level accuracy, and the local semantic
 lane is a deterministic hashing surrogate, so the lexical-vs-dense *magnitude* of
 [@sen2026grep] is not reproduced here — that requires a learned embedder, which
-drops into the same interface. ATLAS thus operationalises the design principles of
+drops into the same interface. THALIA thus operationalises the design principles of
 all four works inside one enforced, provenance-tracked pipeline built on
 `docxology/template` [@aii2026template].
 

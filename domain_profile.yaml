@@ -1,5 +1,5 @@
 domain: agentic_systems_research
-display_name: ATLAS Auto-Harness Research
+display_name: THALIA Auto-Harness Research
 required_packages:
   - numpy
   - matplotlib
@@ -39,6 +39,7 @@ artifact_expectations:
   - output/data/eval_results.json
   - output/data/compile_result.json
   - output/data/demo_result.json
+  - output/data/pipeline_result.json
   - output/data/manuscript_variables.json
   - output/figures/retriever_comparison.png
   - output/figures/rrf_sensitivity.png
@@ -60,7 +61,7 @@ artifact_expectations:
   - output/dashboard.html
   - output/reports/verification_summary.json
 benchmark_rubric:
-  name: atlas-harness-readiness
+  name: thalia-harness-readiness
   dimensions:
     - name: deterministic_reproducibility
       weight: 2.0

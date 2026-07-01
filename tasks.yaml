@@ -2,118 +2,100 @@
 # Managed by the projects/taskboard server (live read-write) and seed_tasks.py.
 # status: todo | in_progress | blocked | done. dates: YYYY-MM-DD. progress: 0-100.
 project:
-  name: atlas
-  title: ATLAS — typed long-context memory harness
+  name: thalia
+  title: THALIA — typed long-context memory harness
   status: active
   color: '#4C72B0'
   lead: DAF
 tasks:
-- id: atlas-1
-  title: Expand manuscript methods + tighten styling
-  status: done
-  start: '2026-06-06'
-  end: '2026-06-07'
-  progress: 100
-  milestone: false
-  deps: []
-  tags:
-  - manuscript
-  notes: ''
-- id: atlas-2
-  title: Harden review docs + render hydration
-  status: done
-  start: '2026-06-07'
-  end: '2026-06-07'
-  progress: 100
-  milestone: false
-  deps:
-  - atlas-1
-  tags:
-  - docs
-  notes: ''
-- id: atlas-3
-  title: DSPy compiler-driven optimization stages
-  status: done
-  start: '2026-06-05'
-  end: '2026-06-09'
-  progress: 100
-  milestone: false
-  deps: []
-  tags:
-  - dspy
-  notes: '2026-06-09 verified compiler/DSPy surface: targeted gate `uv run --project working/atlas pytest working/atlas/tests/test_mipro.py working/atlas/tests/test_gepa.py working/atlas/tests/test_dspy_runtime.py -q` passed and `uv run --project working/atlas python working/atlas/scripts/run_compiler.py` wrote output/data/compile_result.json. The full-suite gate is the generated verification-summary command in output/reports/verification_summary.json; do not pin transient pass/skip counts here.'
-- id: atlas-4
-  title: Hermes layered-memory + self-evolution integration
-  status: done
-  start: '2026-06-08'
-  end: '2026-06-22'
-  progress: 100
-  milestone: false
-  deps:
-  - atlas-3
-  tags:
-  - memory
-  notes: '2026-06-10 completed via real Session restart-safe recall, output/data/demo_result.json, enriched compiler traces, and updated memory/session/compiler skills. Verified by the full suite and template validation.'
-- id: atlas-5
-  title: RLM-style Inspector for inspectable external state
-  status: done
-  start: '2026-06-22'
-  end: '2026-07-02'
-  progress: 100
-  milestone: false
-  deps:
-  - atlas-4
-  tags:
-  - tooling
-  notes: '2026-06-10 completed adaptive Inspector operability: CLI flags, config/env precedence, InspectorMetadata diagnostics, long-haystack recovery test, figure registry, and docs/skills/manuscript updates.'
-- id: atlas-6
-  title: Build harness evaluation suite (run_harness_eval.py)
-  status: done
-  start: '2026-06-06'
-  end: '2026-06-09'
-  progress: 100
-  milestone: false
-  deps: []
-  tags:
-  - eval
-  notes: '2026-06-09 verified local harness evaluation suite and smoke path with the full-suite gate recorded in output/reports/verification_summary.json, including `working/atlas/tests/test_scripts_smoke.py::TestScripts::test_run_harness_eval_writes_json` and evaluation/metrics coverage. External demo/release work remains outside this task.'
-- id: atlas-7
-  title: Determinism / no-randomness reproducibility audit
-  status: done
-  start: '2026-06-25'
-  end: '2026-07-05'
-  progress: 100
-  milestone: false
-  deps:
-  - atlas-4
-  - atlas-5
-  tags:
-  - reproducibility
-  notes: '2026-06-10 completed static determinism and zero-mock guards, provenance byte-stable writers, figure-style split, and full coverage/render/validation gates.'
-- id: atlas-8
-  title: Modular harness and evaluation manuscript split
-  status: done
-  start: '2026-06-19'
-  end: '2026-06-19'
-  progress: 100
-  milestone: false
-  deps:
-  - atlas-1
-  tags:
-  - manuscript
-  - eval
-  notes: 'Split harness design and evaluation into lexical-order modules covering method contract, pipeline stages, formalism, traceability, benchmarks, robustness, and summary while preserving the stable scope-boundary spine. Verified with `uv run pytest tests/test_manuscript_integrity.py tests/test_manuscript_variables.py -q`.'
-- id: atlas-m1
-  title: ATLAS harness demo
+- id: thalia-m1
+  title: THALIA harness demo
   status: done
   start: '2026-07-08'
   end: '2026-07-08'
   progress: 100
   milestone: true
-  deps:
-  - atlas-4
-  - atlas-5
-  - atlas-6
-  - atlas-7
+  deps: []
   tags: []
-  notes: '2026-06-10 completed canonical deterministic demo via scripts/run_demo.py, dashboard demo/verification sections, regenerated artifacts, and clean template validation.'
+  notes: 'Completed canonical deterministic demo via scripts/run_demo.py, dashboard demo/verification sections, regenerated artifacts, and clean template validation.'
+
+# --- Phase: composability + robustness + docs (2026-06-25) ---
+- id: thalia-9
+  title: Composable Pipeline class + context managers + serialisation + py.typed
+  status: done
+  start: '2026-06-25'
+  end: '2026-06-25'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-m1
+  tags:
+  - composability
+  notes: 'Added src/pipeline.py (Pipeline, PipelineStep, PipelineContext), __enter__/__exit__ on Session + EpisodicStore, HarnessOutput.to_dict(), HarnessConfig.to_yaml()/from_yaml(), __version__, py.typed. 28 new tests in test_pipeline.py.'
+
+- id: thalia-10
+  title: Wire all orphaned methods into runtime paths (zero dead-code audit)
+  status: done
+  start: '2026-06-25'
+  end: '2026-06-25'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-9
+  tags:
+  - robustness
+  notes: 'Reachability trace confirmed zero test-only symbols. Wired: Pipeline->run_pipeline.py, to_yaml->save_config, is_available->preflight, turn_count->demo.py, from_str->longmemeval, held_out_optimizer_lift+model_in_tags->run_dspy.py. Demo.py now uses context managers.'
+
+- id: thalia-11
+  title: Update docs/ to cover new composability and robustness features
+  status: in_progress
+  start: '2026-06-25'
+  end: '2026-06-26'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-10
+  tags:
+  - docs
+  notes: 'docs/architecture.md, docs/configuration.md, docs/quickstart.md, docs/glossary.md, docs/methods.md need Pipeline, context managers, to_yaml/from_yaml, py.typed, __version__, to_dict, turn_count coverage.'
+
+- id: thalia-12
+  title: Update claim_ledger + experiment_plan + domain_profile for new artifacts
+  status: in_progress
+  start: '2026-06-25'
+  end: '2026-06-26'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-10
+  tags:
+  - provenance
+  notes: 'Add pipeline_result.json to artifact_expectations, add pipeline trace to claim_ledger, update domain_profile figure_types if needed.'
+
+- id: thalia-13
+  title: Add/update skills SKILL.md for Pipeline + context managers + compiler
+  status: in_progress
+  start: '2026-06-25'
+  end: '2026-06-26'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-10
+  tags:
+  - skills
+  notes: 'Add thalia-pipeline SKILL.md, update thalia-session SKILL.md with context manager, update thalia-compiler SKILL.md with held_out_optimizer_lift.'
+
+- id: thalia-14
+  title: "Final verification: tests + preflight + scripts smoke + PDF"
+  status: todo
+  start: '2026-06-26'
+  end: '2026-06-26'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-11
+  - thalia-12
+  - thalia-13
+  tags:
+  - verification
+  notes: ''

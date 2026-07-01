@@ -20,19 +20,25 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
 from src.compiler.mipro import MIPROCompiler  # noqa: E402
 from src.evaluation import (  # noqa: E402
     build_demo_dataset,
+    category_component_breakdown,
+    gepa_component_trajectory,
     large_dataset_eval,
     no_harness_baseline,
+    pipeline_evidence_flow,
     retriever_comparison,
     run_full_eval,
 )
 from src.figures import (  # noqa: E402
     plot_backend_comparison,
     plot_category_breakdown,
+    plot_category_components,
     plot_bottleneck,
+    plot_gepa_trajectory,
     plot_injection_resistance,
     plot_longmemeval,
     plot_orchestration_value,
     plot_paraphrase_retrieval,
+    plot_pipeline_flow,
     plot_scaling_ci,
     plot_compiler_convergence,
     plot_consolidation_curve,
@@ -70,6 +76,9 @@ def main() -> list[Path]:
         plot_method_ablation(fig_dir / "method_ablation.png"),
         plot_orchestration_value(no_harness_baseline(), fig_dir / "orchestration_value.png"),
         plot_scaling_ci(large_dataset_eval(), fig_dir / "scaling_ci.png"),
+        plot_category_components(category_component_breakdown(), fig_dir / "category_components.png"),
+        plot_pipeline_flow(pipeline_evidence_flow(), fig_dir / "pipeline_flow.png"),
+        plot_gepa_trajectory(gepa_component_trajectory(), fig_dir / "gepa_trajectory.png"),
     ]
 
     # Real extractive-vs-neural comparison from the committed measurement.

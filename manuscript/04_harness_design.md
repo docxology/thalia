@@ -1,6 +1,6 @@
 # Auto-Harness Design {#sec:harness_design}
 
-ATLAS is organised around {{CONFIG_NUM_STAGES}} functional stages. Four are
+THALIA is organised around {{CONFIG_NUM_STAGES}} functional stages. Four are
 runtime stages composed by `AutoHarness` (`src/harness.py`); the fifth, the
 Compiler, operates on the harness offline. Each stage is a
 `src.module.Module` with a declarative `src.signatures.Signature` contract. The

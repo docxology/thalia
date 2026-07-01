@@ -46,6 +46,17 @@ class TestGenerateVariables:
         except FileNotFoundError as exc:
             assert "run_neural_eval" in str(exc)
 
+    def test_missing_learned_eval_raises_clearly(self, monkeypatch, tmp_path):
+        """_load_learned_eval raises FileNotFoundError with a helpful message (line 79)."""
+        import src.manuscript_variables as mv
+
+        monkeypatch.setattr(mv, "_LEARNED_EVAL_PATH", tmp_path / "absent_learned.json")
+        try:
+            mv.generate_variables()
+            raise AssertionError("expected FileNotFoundError")
+        except FileNotFoundError as exc:
+            assert "run_learned_retrieval" in str(exc)
+
     def test_all_values_are_strings(self):
         variables = generate_variables()
         assert all(isinstance(v, str) for v in variables.values())

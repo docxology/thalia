@@ -1,7 +1,7 @@
 """MIPRO-style metric-driven configuration search.
 
 DSPy's MIPROv2 bootstraps candidate few-shot demonstrations, proposes instruction
-variants, and searches the combined space against a metric. The ATLAS pipeline's
+variants, and searches the combined space against a metric. The THALIA pipeline's
 deterministic core has no free-text instructions to mutate at run time, so the
 analogue here searches the **structural** configuration space (:class:`HarnessConfig`)
 against :func:`src.compiler.metrics.evaluate`. The search is exhaustive over the

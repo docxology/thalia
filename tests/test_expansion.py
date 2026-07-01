@@ -37,3 +37,15 @@ class TestExpansion:
     def test_top_terms_non_positive_raises(self):
         with pytest.raises(ValueError, match="top_terms must be positive"):
             expand_query("q", DOCS, top_terms=0)
+
+    def test_bm25_returns_empty_when_no_query_token_in_docs(self):
+        """expand_query returns the original query unchanged when BM25 scores all docs as 0.
+
+        This exercises line 50 (``return query`` after ``ranked = index.top_k(...)``
+        comes back empty) — happens when the query tokens have zero overlap with every
+        document's vocabulary.
+        """
+        # Documents contain no token that overlaps with "zxqv" — BM25 scores are all 0.
+        zero_overlap_docs = ["alpha beta gamma", "delta epsilon zeta"]
+        result = expand_query("zxqv", zero_overlap_docs)
+        assert result == "zxqv"

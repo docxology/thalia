@@ -1,4 +1,4 @@
-"""Self-improvement layer for the ATLAS harness.
+"""Self-improvement layer for the THALIA harness.
 
 Closes the loop between the pipeline and its evaluation:
 

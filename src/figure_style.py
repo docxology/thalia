@@ -1,4 +1,4 @@
-"""Shared plotting style helpers for ATLAS figures."""
+"""Shared plotting style helpers for THALIA figures."""
 
 from __future__ import annotations
 

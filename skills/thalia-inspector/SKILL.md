@@ -1,4 +1,4 @@
-# SKILL.md — atlas-inspector
+# SKILL.md — thalia-inspector
 
 ## Purpose
 RLM-style context inspector (Stage 0). Loads session history as external state,

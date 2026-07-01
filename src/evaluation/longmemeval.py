@@ -54,12 +54,16 @@ def _item_to_example(item: dict) -> EvalExample:
             line_session.append(sid)
     answer_sessions = set(item.get("answer_session_ids", []))
     evidence = tuple(i for i, sid in enumerate(line_session) if sid in answer_sessions)
+    # Use from_str so the mapping is robust to unexpected question types
+    # (defaults to SINGLE_SESSION rather than raising).
+    raw_type = str(item["question_type"])
+    task_category = TaskCategory.from_str(_TYPE_MAP.get(raw_type, TaskCategory.SINGLE_SESSION).value)
     return EvalExample(
         session_history="\n".join(lines),
         query=str(item["question"]),
         expected_answer=str(item["answer"]),
         expected_source_indices=evidence,
-        task_category=_TYPE_MAP[item["question_type"]],
+        task_category=task_category,
     )
 
 

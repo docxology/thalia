@@ -191,3 +191,41 @@ class TestMethodAblation:
 
         loose = method_ablation(base=default_config(), tight_budget=False)
         assert len(set(round(v, 4) for v in loose.values())) == 1
+
+
+class TestCategoryComponentBreakdown:
+    def test_returns_all_six_categories(self):
+        from src.evaluation import category_component_breakdown
+
+        breakdown = category_component_breakdown()
+        assert len(breakdown) == 6
+
+    def test_keys_are_task_category_values(self):
+        from src.evaluation import category_component_breakdown
+        from src.signatures import TaskCategory
+
+        breakdown = category_component_breakdown()
+        expected = {cat.value for cat in TaskCategory}
+        assert set(breakdown.keys()) == expected
+
+    def test_each_category_has_three_components(self):
+        from src.evaluation import category_component_breakdown
+
+        breakdown = category_component_breakdown()
+        for cat, components in breakdown.items():
+            assert set(components.keys()) == {"accuracy", "grounding", "efficiency"}, cat
+
+    def test_component_values_in_unit_interval(self):
+        from src.evaluation import category_component_breakdown
+
+        breakdown = category_component_breakdown()
+        for cat, components in breakdown.items():
+            for metric, value in components.items():
+                assert 0.0 <= value <= 1.0, f"{cat}.{metric} = {value}"
+
+    def test_deterministic(self):
+        from src.evaluation import category_component_breakdown
+
+        a = category_component_breakdown()
+        b = category_component_breakdown()
+        assert a == b

@@ -19,6 +19,12 @@ import numpy as np
 DEFAULT_DIM = 256
 _NGRAM = 3
 
+# Decimal places retained when comparing similarity scores for ranking. Genuine
+# cosine differences are orders of magnitude larger than this; the rounding only
+# collapses sub-1e-12 floating-point summation noise so cross-platform ordering is
+# identical (see ``SemanticIndex.top_k``).
+RANK_PRECISION = 12
+
 
 def _char_ngrams(text: str, n: int = _NGRAM) -> list[str]:
     """Return padded character n-grams of ``text`` (whitespace-collapsed)."""
@@ -96,13 +102,17 @@ class SemanticIndex:
         """Return the top-k (doc_index, similarity) pairs, descending.
 
         Ties break on ascending document index. Non-positive similarities are
-        dropped so unrelated text does not occupy a slot.
+        dropped so unrelated text does not occupy a slot. The ordering key is
+        rounded to :data:`RANK_PRECISION` decimal places so that similarities that
+        are equal up to floating-point summation noise (which can differ across
+        NumPy builds / CPU architectures) tie *exactly* and break deterministically
+        on index — preserving bit-for-bit ranking across platforms.
         """
         if k <= 0:
             raise ValueError(f"k must be positive, got {k}")
         scored = [(idx, s) for idx, s in enumerate(self.score(query)) if s > 0.0]
-        scored.sort(key=lambda pair: (-pair[1], pair[0]))
+        scored.sort(key=lambda pair: (-round(pair[1], RANK_PRECISION), pair[0]))
         return scored[:k]
 
 
-__all__ = ["embed", "cosine", "SemanticIndex", "DEFAULT_DIM"]
+__all__ = ["embed", "cosine", "SemanticIndex", "DEFAULT_DIM", "RANK_PRECISION"]

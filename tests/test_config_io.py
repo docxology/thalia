@@ -10,19 +10,19 @@ from src.config import (
 )
 
 _ENV_KEYS = (
-    "ATLAS_TOP_K",
-    "ATLAS_MAX_WINDOWS",
-    "ATLAS_MAX_EVIDENCE",
-    "ATLAS_RRF_K",
-    "ATLAS_CONTEXT_BUDGET_TOKENS",
-    "ATLAS_LEXICAL_WEIGHT",
-    "ATLAS_SEMANTIC_WEIGHT",
+    "THALIA_TOP_K",
+    "THALIA_MAX_WINDOWS",
+    "THALIA_MAX_EVIDENCE",
+    "THALIA_RRF_K",
+    "THALIA_CONTEXT_BUDGET_TOKENS",
+    "THALIA_LEXICAL_WEIGHT",
+    "THALIA_SEMANTIC_WEIGHT",
 )
 
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
-    """Ensure no ATLAS_* env vars leak into a test from the surrounding shell."""
+    """Ensure no THALIA_* env vars leak into a test from the surrounding shell."""
     for key in _ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
 
@@ -47,22 +47,22 @@ class TestEnvOverrides:
         assert apply_env_overrides(cfg) == cfg
 
     def test_int_override(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_TOP_K", "3")
+        monkeypatch.setenv("THALIA_TOP_K", "3")
         assert apply_env_overrides(default_config()).top_k == 3
 
     def test_weight_pair_override(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_LEXICAL_WEIGHT", "0.8")
-        monkeypatch.setenv("ATLAS_SEMANTIC_WEIGHT", "0.2")
+        monkeypatch.setenv("THALIA_LEXICAL_WEIGHT", "0.8")
+        monkeypatch.setenv("THALIA_SEMANTIC_WEIGHT", "0.2")
         cfg = apply_env_overrides(default_config())
         assert cfg.lexical_weight == 0.8 and cfg.semantic_weight == 0.2
 
     def test_single_weight_override_raises(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_LEXICAL_WEIGHT", "0.8")
+        monkeypatch.setenv("THALIA_LEXICAL_WEIGHT", "0.8")
         with pytest.raises(ValueError, match="both be set or both None"):
             apply_env_overrides(default_config())
 
     def test_invalid_value_raises(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_TOP_K", "not-an-int")
+        monkeypatch.setenv("THALIA_TOP_K", "not-an-int")
         with pytest.raises(ValueError, match="not a valid int"):
             apply_env_overrides(default_config())
 
@@ -83,13 +83,13 @@ class TestFileLoad:
     def test_load_applies_env(self, tmp_path, monkeypatch):
         path = tmp_path / "c.yaml"
         path.write_text("top_k: 4\n")
-        monkeypatch.setenv("ATLAS_TOP_K", "7")
+        monkeypatch.setenv("THALIA_TOP_K", "7")
         assert load_config(path).top_k == 7
 
     def test_load_no_env_when_disabled(self, tmp_path, monkeypatch):
         path = tmp_path / "c.yaml"
         path.write_text("top_k: 4\n")
-        monkeypatch.setenv("ATLAS_TOP_K", "7")
+        monkeypatch.setenv("THALIA_TOP_K", "7")
         assert load_config(path, apply_env=False).top_k == 4
 
     def test_non_mapping_raises(self, tmp_path):

@@ -29,13 +29,13 @@ hashable, validated on construction, and serialisable.
 
 ## Sources and precedence
 
-Lowest to highest: **built-in defaults → YAML file → `ATLAS_*` environment →
+Lowest to highest: **built-in defaults → YAML file → `THALIA_*` environment →
 explicit CLI flags**.
 
 - **File:** `load_config(path)` reads `config/harness.yaml` (flat, or under a
   `harness:` key). `save_config(config, path)` writes YAML.
-- **Environment:** every field maps to `ATLAS_<FIELD>` (e.g. `ATLAS_TOP_K=4`,
-  `ATLAS_RERANK=mmr`, `ATLAS_VERIFY=true`). Booleans accept `1/true/yes/on` and
+- **Environment:** every field maps to `THALIA_<FIELD>` (e.g. `THALIA_TOP_K=4`,
+  `THALIA_RERANK=mmr`, `THALIA_VERIFY=true`). Booleans accept `1/true/yes/on` and
   `0/false/no/off`. Lane weights stay both-or-neither.
 - **CLI:** `--top-k`, `--max-windows`, `--max-evidence`, `--rrf-k`,
   `--context-budget`, `--rerank`, `--mmr-lambda`, `--verify`, `--query-expansion`,
@@ -52,3 +52,21 @@ cfg2 = default_config().with_(verify=True, grounding_threshold=0.5)
 
 `with_(**changes)` returns a validated copy; `to_dict`/`from_dict` round-trip a
 config (unknown keys ignored).
+
+### YAML serialisation
+
+`HarnessConfig` carries its own `to_yaml()` and `from_yaml(text)` methods so the
+serialisation logic lives on the dataclass rather than scattered across helpers:
+
+```python
+# Serialise
+yaml_str = cfg.to_yaml()                    # returns a YAML string
+save_config(cfg, "config/harness.yaml")     # delegates to cfg.to_yaml()
+
+# Deserialise
+cfg3 = HarnessConfig.from_yaml(yaml_str)    # flat or under a `harness:` top-level key
+cfg4 = load_config("config/harness.yaml")   # delegates to HarnessConfig.from_yaml()
+```
+
+`save_config` is a thin wrapper that ensures the parent directory exists and writes
+the output of `to_yaml()` — it does not contain its own serialisation logic.

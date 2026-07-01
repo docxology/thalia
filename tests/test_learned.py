@@ -12,6 +12,7 @@ from src.retrieval.learned import (
     DEFAULT_EMBED_MODEL,
     DEFAULT_QUERY_PREFIX,
     PARAPHRASE_PROBES,
+    _with_prefix,
     embed_model_available,
     model_metadata_from_tags,
     surrogate_recall_at_1,
@@ -54,6 +55,20 @@ class TestSurrogateAndProbes:
     def test_default_embedding_prefixes_are_nomic_search_tasks(self):
         assert DEFAULT_DOCUMENT_PREFIX == "search_document: "
         assert DEFAULT_QUERY_PREFIX == "search_query: "
+
+
+class TestWithPrefix:
+    def test_none_prefix_returns_text_unchanged(self):
+        assert _with_prefix("hello", None) == "hello"
+
+    def test_empty_prefix_returns_text_unchanged(self):
+        assert _with_prefix("hello", "") == "hello"
+
+    def test_prefix_is_applied_when_missing(self):
+        assert _with_prefix("world", "search_query: ") == "search_query: world"
+
+    def test_prefix_not_doubled_when_already_present(self):
+        assert _with_prefix("search_query: world", "search_query: ") == "search_query: world"
 
 
 @pytest.mark.skipif(

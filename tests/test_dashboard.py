@@ -23,7 +23,7 @@ class TestRender:
     def test_is_html_document(self):
         out = render_dashboard_html(METRICS, INVARIANTS, FIGURES)
         assert out.startswith("<!doctype html>")
-        assert "ATLAS" in out
+        assert "THALIA" in out
 
     def test_includes_metrics(self):
         out = render_dashboard_html(METRICS, INVARIANTS, FIGURES)

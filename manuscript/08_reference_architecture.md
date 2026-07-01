@@ -2,7 +2,7 @@
 
 ## Design principles encoded {#sec:ref-principles}
 
-| Principle | Source | Implementation in ATLAS |
+| Principle | Source | Implementation in THALIA |
 |-----------|--------|-------------------------|
 | Declarative typed signatures | DSPy [@khattab2023dspy] | Every stage is a `Signature` with typed fields (`src/signatures/`) |
 | Context as inspectable external state | RLMs [@zhang2025rlm] | `REPLEnvironment`; grep before any neural call (`src/stages/inspector.py`) |
@@ -15,13 +15,14 @@
 | Self-evolving skills | Hermes + GEPA [@nous2026selfevolution] | `MIPROCompiler`, `GEPAOptimizer`, `check_skill_constraints` (`src/compiler/`) |
 | Reproducible provenance | `template/` [@aii2026template] | Zero-Mock tests, {{CONFIG_COV_GATE}}% gate, generated tokens |
 | `AGENTS.md`/`SKILL.md` duality | `template/` [@aii2026template] | Per-stage `SKILL.md` for hallucination-free discovery |
-| Operable + configurable | this work | File/env/flag config, real LM adapters, persistent session, CLI ([@sec:operability]) |
+| Operable + configurable | this work | File/env/flag config, real LM adapters, persistent session, CLI, composable Pipeline ([@sec:operability]) |
 | Adaptive retrieval + memory recall | this work | PRF query expansion, recency weighting, read-only episodic recall ([@sec:added-methods]) |
+| Resource safety + serialisation | this work | Context managers, `to_yaml`/`from_yaml`, `to_dict`, `py.typed` ([@sec:operability]) |
 
 ## File structure {#sec:ref-files}
 
 ```text
-atlas/
+thalia/
 ├── AGENTS.md / README.md            # machine + human entry points
 ├── pyproject.toml                   # pytest/coverage config, deps
 ├── config/harness.yaml              # canonical loadable harness configuration
@@ -49,7 +50,7 @@ atlas/
 │   ├── stages/                      # inspector · retriever · reasoner · memory_gate
 │   ├── memory/                      # episodic_store · consolidation
 │   └── compiler/                    # metrics · mipro · gepa
-├── skills/                          # atlas-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
+├── skills/                          # thalia-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
 ├── scripts/                         # thin orchestrators (eval, compile, figures, dashboard, preflight, tokens, run_query)
 ├── tests/                           # Zero-Mock suite, one file per module
 └── manuscript/                      # this document (sections 00–11, 99) + config/preamble/refs
@@ -59,8 +60,8 @@ atlas/
 
 | Stage | Module | Signature | Skill |
 |-------|--------|-----------|-------|
-| 0 Inspector | `src/stages/inspector.py` | `InspectorSignature` | `skills/atlas-inspector` |
-| 1 Retriever | `src/stages/retriever.py` | `RetrieverSignature` | `skills/atlas-retriever` |
-| 2 Reasoner | `src/stages/reasoner.py` | `ReasonerSignature` | `skills/atlas-reasoner` |
-| 3 Memory Gate | `src/stages/memory_gate.py` | `MemoryGateSignature` | `skills/atlas-memory-gate` |
-| 4 Compiler | `src/compiler/` | — (operates on configs) | `skills/atlas-compiler` |
+| 0 Inspector | `src/stages/inspector.py` | `InspectorSignature` | `skills/thalia-inspector` |
+| 1 Retriever | `src/stages/retriever.py` | `RetrieverSignature` | `skills/thalia-retriever` |
+| 2 Reasoner | `src/stages/reasoner.py` | `ReasonerSignature` | `skills/thalia-reasoner` |
+| 3 Memory Gate | `src/stages/memory_gate.py` | `MemoryGateSignature` | `skills/thalia-memory-gate` |
+| 4 Compiler | `src/compiler/` | — (operates on configs) | `skills/thalia-compiler` |

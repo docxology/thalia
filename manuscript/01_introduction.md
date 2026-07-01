@@ -5,7 +5,7 @@ retrieval heuristics, memory summaries, and tool-calling exceptions until a demo
 works. That practice does not compose, does not transfer, and degrades silently:
 interfaces remain implicit, memory rewrites can erase the raw evidence that made a
 fact true, and retrieval failures are hard to distinguish from reasoning failures.
-ATLAS takes the opposite stance. An agentic harness should be **declarative**
+THALIA takes the opposite stance. An agentic harness should be **declarative**
 (typed stages, not prompt strings), **inspectable** (context is external state you
 can grep, not an opaque blob stuffed into a neural call), **evidence-grounded**
 (raw episodes are first-class and never overwritten), **lexically anchored**
@@ -44,7 +44,7 @@ configuration surface and records the full trace.
    preserved and consolidation explicitly gated.
 5. **`docxology/template`** [@aii2026template] — a two-layer reproducible-research
    substrate (Zero-Mock testing, coverage gates, cryptographic provenance,
-   `AGENTS.md`/`SKILL.md` documentation duality) that ATLAS is built inside.
+   `AGENTS.md`/`SKILL.md` documentation duality) that THALIA is built inside.
 
 The Hermes Agent ecosystem [@nous2026hermes; @nous2026selfevolution] supplies the
 concrete engineering pattern that ties these together: a strictly-ordered prompt
@@ -53,9 +53,9 @@ the consolidated `MEMORY.md` [@sqlite2026fts5], and a DSPy + GEPA-style evolutio
 loop [@agrawal2025gepa] that mutates skills against execution traces under hard
 constraints.
 
-## What ATLAS contributes
+## What THALIA contributes
 
-ATLAS is not a new model and makes no SOTA claim. Its contribution is a clean,
+THALIA is not a new model and makes no SOTA claim. Its contribution is a clean,
 composable, *operational* embodiment of these principles:
 
 - **Five stages, each a typed signature.** Inspector, Retriever, Reasoner, and
@@ -87,10 +87,12 @@ Gate, Compiler, tests, or manuscript-variable path.
 ## Reader's guide
 
 - **[@sec:foundations]** analyses the four foundational works and the substrate.
-- **[@sec:hermes]** describes the Hermes prompt-assembly and self-evolution patterns ATLAS adopts.
+- **[@sec:hermes]** describes the Hermes prompt-assembly and self-evolution patterns THALIA adopts.
 - **[@sec:harness_design]** specifies the {{CONFIG_NUM_STAGES}} stages — the methodology.
-- **[@sec:integration]** maps ATLAS onto the `template/` build/validation lifecycle.
+- **[@sec:integration]** maps THALIA onto the `template/` build/validation lifecycle.
 - **[@sec:active_inference]** relates the architecture to Active Inference.
 - **[@sec:evaluation]** reports the deterministic local evaluation, with an explicit scope boundary.
 - **[@sec:reference_architecture]** consolidates design principles and the file structure.
 - **[@sec:reproducibility]** records the provenance and how to regenerate every artifact.
+- **[@sec:operability]** covers the operable surface — configuration, the LM protocol, sessions, and the CLI.
+- **[@sec:validation]** reports the executable invariants, fuzz testing, and negative results.

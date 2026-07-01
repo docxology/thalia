@@ -94,22 +94,46 @@ class TestWith:
         assert cfg.query_expansion is False and cfg.recency_weight == 0.0
         assert cfg.recall_memory is False and cfg.recall_limit == 3
 
+    def test_adaptive_window_ratio_non_positive_raises(self):
+        with pytest.raises(ValueError, match="adaptive_window_ratio must be positive"):
+            HarnessConfig(adaptive_window_ratio=0)
+
+    def test_adaptive_window_ratio_negative_raises(self):
+        with pytest.raises(ValueError, match="adaptive_window_ratio must be positive"):
+            HarnessConfig(adaptive_window_ratio=-1)
+
+
+class TestValidateMethod:
+    """Tests for HarnessConfig.validate() (the explicit re-validation helper)."""
+
+    def test_validate_passes_on_default_config(self):
+        cfg = default_config()
+        cfg.validate()  # must not raise
+
+    def test_validate_detects_bypassed_construction_constraint(self):
+        """validate() catches invariant violations introduced after construction via object.__setattr__."""
+        cfg = default_config()
+        # Bypass frozen dataclass enforcement to simulate a deserialised/patched config.
+        object.__setattr__(cfg, "adaptive_window_ratio", 0)
+        with pytest.raises(ValueError, match="adaptive_window_ratio must be positive"):
+            cfg.validate()
+
 
 class TestEnvOverrides:
     _ENV_KEYS = (
-        "ATLAS_RERANK",
-        "ATLAS_MMR_LAMBDA",
-        "ATLAS_VERIFY",
-        "ATLAS_GROUNDING_THRESHOLD",
-        "ATLAS_PARTITION_THRESHOLD",
-        "ATLAS_PARTITION_SIZE",
-        "ATLAS_QUERY_EXPANSION",
-        "ATLAS_EXPANSION_TERMS",
-        "ATLAS_RECENCY_WEIGHT",
-        "ATLAS_RECALL_MEMORY",
-        "ATLAS_RECALL_LIMIT",
-        "ATLAS_ADAPTIVE_WINDOWS",
-        "ATLAS_ADAPTIVE_WINDOW_RATIO",
+        "THALIA_RERANK",
+        "THALIA_MMR_LAMBDA",
+        "THALIA_VERIFY",
+        "THALIA_GROUNDING_THRESHOLD",
+        "THALIA_PARTITION_THRESHOLD",
+        "THALIA_PARTITION_SIZE",
+        "THALIA_QUERY_EXPANSION",
+        "THALIA_EXPANSION_TERMS",
+        "THALIA_RECENCY_WEIGHT",
+        "THALIA_RECALL_MEMORY",
+        "THALIA_RECALL_LIMIT",
+        "THALIA_ADAPTIVE_WINDOWS",
+        "THALIA_ADAPTIVE_WINDOW_RATIO",
     )
 
     @pytest.fixture(autouse=True)
@@ -118,30 +142,30 @@ class TestEnvOverrides:
             monkeypatch.delenv(key, raising=False)
 
     def test_rerank_env(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_RERANK", "mmr")
+        monkeypatch.setenv("THALIA_RERANK", "mmr")
         from src.config import apply_env_overrides
 
         assert apply_env_overrides(default_config()).rerank == "mmr"
 
     def test_verify_env_true(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_VERIFY", "true")
+        monkeypatch.setenv("THALIA_VERIFY", "true")
         from src.config import apply_env_overrides
 
         assert apply_env_overrides(default_config()).verify is True
 
     def test_verify_env_invalid_raises(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_VERIFY", "maybe")
+        monkeypatch.setenv("THALIA_VERIFY", "maybe")
         from src.config import apply_env_overrides
 
         with pytest.raises(ValueError, match="not a valid"):
             apply_env_overrides(default_config())
 
     def test_adaptive_env(self, monkeypatch):
-        monkeypatch.setenv("ATLAS_QUERY_EXPANSION", "true")
-        monkeypatch.setenv("ATLAS_RECENCY_WEIGHT", "0.4")
-        monkeypatch.setenv("ATLAS_RECALL_MEMORY", "yes")
-        monkeypatch.setenv("ATLAS_ADAPTIVE_WINDOWS", "true")
-        monkeypatch.setenv("ATLAS_ADAPTIVE_WINDOW_RATIO", "7")
+        monkeypatch.setenv("THALIA_QUERY_EXPANSION", "true")
+        monkeypatch.setenv("THALIA_RECENCY_WEIGHT", "0.4")
+        monkeypatch.setenv("THALIA_RECALL_MEMORY", "yes")
+        monkeypatch.setenv("THALIA_ADAPTIVE_WINDOWS", "true")
+        monkeypatch.setenv("THALIA_ADAPTIVE_WINDOW_RATIO", "7")
         from src.config import apply_env_overrides
 
         cfg = apply_env_overrides(default_config())

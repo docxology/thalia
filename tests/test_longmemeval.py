@@ -4,13 +4,50 @@ import json
 
 import pytest
 
-from src.evaluation.longmemeval import DEFAULT_PATH, load_longmemeval, longmemeval_available
+from src.evaluation.longmemeval import DEFAULT_PATH, _rrf_rank, load_longmemeval, longmemeval_available
 from src.compiler.metrics import EvalExample
 from src.signatures import TaskCategory
 
 
 def test_available_returns_bool():
     assert isinstance(longmemeval_available(), bool)
+
+
+def test_rrf_rank_fusion_order():
+    # Two rankings that agree on their top item but disagree on the rest.
+    # Index 2 ranks #1 in both lists -> should come out first after RRF fusion.
+    # Index 0 ranks #2 in list A and #3 in list B (lower combined score than index 1).
+    # Index 1 ranks #3 in list A and #2 in list B.
+    ranking_a = [2, 0, 1]
+    ranking_b = [2, 1, 0]
+    result = _rrf_rank([ranking_a, ranking_b])
+    assert isinstance(result, list)
+    assert set(result) == {0, 1, 2}
+    # Index 2 must be first: it earned the top rank in both lists.
+    assert result[0] == 2
+    # Index 1 ranked #2 in list B vs index 0 ranked #2 in list A; scores are
+    # symmetric, so they tie — only verify 1 and 0 both appear after 2.
+    assert set(result[1:]) == {0, 1}
+
+
+def test_rrf_rank_single_ranking_preserves_order():
+    # With a single ranking the RRF score is 1/(k0+rank), so the original order
+    # must be preserved exactly.
+    ranking = [5, 3, 7, 1]
+    result = _rrf_rank([ranking])
+    assert result == ranking
+
+
+@pytest.mark.skipif(not longmemeval_available(), reason="LongMemEval_S not downloaded")
+def test_load_longmemeval_limit_truncates():
+    # Exercise the `if limit is not None: data = data[:limit]` branch (line 83->85).
+    full = load_longmemeval()
+    limited = load_longmemeval(limit=3)
+    assert len(limited) == 3
+    # The truncated slice must be a strict prefix of the full dataset.
+    assert len(full) > 3
+    for i in range(3):
+        assert limited[i].query == full[i].query
 
 
 def test_missing_file_raises_clearly(tmp_path):

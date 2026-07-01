@@ -29,7 +29,7 @@ def main() -> Path:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "_atlas_generate_figures", PROJECT_ROOT / "scripts" / "generate_figures.py"
+        "_thalia_generate_figures", PROJECT_ROOT / "scripts" / "generate_figures.py"
     )
     figures_mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(figures_mod)

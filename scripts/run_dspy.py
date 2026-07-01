@@ -37,6 +37,8 @@ def main() -> int | str:
         compile_program,
         configure,
         configure_ollama,
+        held_out_optimizer_lift,
+        model_in_tags,
         ollama_model_available,
         qa_metric,
     )
@@ -53,6 +55,9 @@ def main() -> int | str:
     demos = compiled.predictors()[0].demos
     score = sum(qa_metric(ex, compiled(**ex.inputs())) for ex in dataset)
 
+    # Measure the optimizer the only falsifiable way: held-out before/after.
+    lift = held_out_optimizer_lift(train_size=4)
+
     result = {
         "dspy_version": __import__("dspy").__version__,
         "deterministic_backend": "ExtractiveDSPyLM (real deterministic ExtractiveLM)",
@@ -61,6 +66,7 @@ def main() -> int | str:
         "optimizer": "BootstrapFewShot",
         "bootstrapped_demos": len(demos),
         "trainset_score": f"{score}/{len(dataset)}",
+        "held_out_optimizer_lift": lift,
         "neural_backend": None,
         "neural_prediction": None,
     }
@@ -71,6 +77,15 @@ def main() -> int | str:
         configure_ollama()
         result["neural_backend"] = f"ollama:{DEFAULT_OLLAMA_MODEL} (real neural LLM via dspy->litellm->ollama)"
         result["neural_prediction"] = build_program()(context=_CTX, question=_Q).answer
+        # Record that the model was confirmed present in the Ollama tag listing.
+        import urllib.request
+        try:
+            with urllib.request.urlopen(f"http://localhost:11434/api/tags", timeout=3) as resp:
+                import json as _json
+                tags = _json.load(resp)
+                result["neural_model_in_tags"] = model_in_tags(tags, DEFAULT_OLLAMA_MODEL)
+        except Exception:
+            result["neural_model_in_tags"] = None
         configure()  # restore the deterministic global LM
 
     out_dir = PROJECT_ROOT / "output" / "data"

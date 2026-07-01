@@ -186,3 +186,57 @@ class TestExtendedFigures:
         assert lo < 0.62 < hi
         lo2, hi2 = _zoomed_ylim([0.61, 0.70])  # spread -> tight band
         assert lo2 <= 0.61 and hi2 >= 0.70 and (hi2 - lo2) < 0.2
+
+    def test_pipeline_flow_figure(self, tmp_path):
+        from src.evaluation import pipeline_evidence_flow
+        from src.figures import plot_pipeline_flow
+
+        flow_data = pipeline_evidence_flow()
+        # Verify the data structure
+        assert len(flow_data) > 0
+        for row in flow_data:
+            assert "query" in row
+            assert "task_category" in row
+            assert "n_windows" in row
+            assert "n_ranked" in row
+            assert "n_cited" in row
+        # Verify the figure is produced
+        path = plot_pipeline_flow(flow_data, tmp_path / "pipeline_flow.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_category_components_figure(self, tmp_path):
+        from src.evaluation import category_component_breakdown
+        from src.figures import plot_category_components
+
+        breakdown = category_component_breakdown()
+        # All 6 TaskCategory values should be present
+        assert len(breakdown) == 6
+        for cat, components in breakdown.items():
+            assert set(components) == {"accuracy", "grounding", "efficiency"}
+            assert all(0.0 <= v <= 1.0 for v in components.values())
+        path = plot_category_components(breakdown, tmp_path / "category_components.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_gepa_trajectory_figure(self, tmp_path):
+        from src.evaluation import gepa_component_trajectory
+        from src.figures import plot_gepa_trajectory
+
+        trajectory = gepa_component_trajectory(iterations=3)
+
+        # Verify the trajectory data structure
+        assert len(trajectory) == 4  # 1 seed + 3 iterations
+        for record in trajectory:
+            assert set(record) == {
+                "iteration",
+                "composite",
+                "accuracy",
+                "grounding",
+                "efficiency",
+                "weakest_component",
+            }
+            assert record["weakest_component"] in ("accuracy", "grounding", "efficiency")
+            assert 0.0 <= record["composite"] <= 1.0
+
+        # Verify the figure is produced
+        path = plot_gepa_trajectory(trajectory, tmp_path / "gepa_trajectory.png")
+        assert path.exists() and path.stat().st_size > 0

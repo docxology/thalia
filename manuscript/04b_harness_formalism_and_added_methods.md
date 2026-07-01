@@ -37,7 +37,7 @@ $\mathrm{sim}(\cdot,\cdot)$, MMR greedily selects
 \end{equation}
 
 where $S$ is the set already selected. $\lambda = 1$ recovers the fusion order
-([@sec:validation] checks this); $\lambda \to 0$ maximises novelty. ATLAS exposes
+([@sec:validation] checks this); $\lambda \to 0$ maximises novelty. THALIA exposes
 $\lambda$ as `mmr_lambda` and the strategy as `rerank` ([@sec:operability]).
 
 ## Added methods {#sec:added-methods}

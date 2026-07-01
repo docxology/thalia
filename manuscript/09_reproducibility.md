@@ -1,6 +1,6 @@
 # Reproducibility {#sec:reproducibility}
 
-ATLAS inherits the `template/` reproducibility discipline [@aii2026template;
+THALIA inherits the `template/` reproducibility discipline [@aii2026template;
 @peng2011reproducible]: deterministic computation, Zero-Mock tests, a coverage
 gate, and a manuscript whose every result number is a generated token.
 
@@ -44,28 +44,28 @@ number must have a source in the live variable map.
 
 ```bash
 # 1. Tests + coverage gate (>= {{CONFIG_COV_GATE}}% on src/)
-uv run --project working/atlas pytest working/atlas/tests/ \
-  --cov=working/atlas/src --cov-fail-under=90
+uv run --project working/thalia pytest working/thalia/tests/ \
+  --cov=working/thalia/src --cov-fail-under={{CONFIG_COV_GATE}}
 
 # 2. Evaluation bundle -> output/data/eval_results.json
-uv run --project working/atlas python working/atlas/scripts/run_harness_eval.py
+uv run --project working/thalia python working/thalia/scripts/run_harness_eval.py
 
 # 3. Compiler search -> output/data/compile_result.json
-uv run --project working/atlas python working/atlas/scripts/run_compiler.py
+uv run --project working/thalia python working/thalia/scripts/run_compiler.py
 
 # 4. Real DSPy run + optional neural / learned-embedder measurements (need
 #    the `dspy` extra and live Ollama models; recorders write null rows or exit
 #    with a notice rather than fabricating unavailable model measurements)
-uv run --project working/atlas python working/atlas/scripts/run_dspy.py
-uv run --project working/atlas python working/atlas/scripts/run_neural_eval.py
-uv run --project working/atlas python working/atlas/scripts/run_learned_retrieval.py
-uv run --project working/atlas python working/atlas/scripts/run_injection_probe.py
+uv run --project working/thalia python working/thalia/scripts/run_dspy.py
+uv run --project working/thalia python working/thalia/scripts/run_neural_eval.py
+uv run --project working/thalia python working/thalia/scripts/run_learned_retrieval.py
+uv run --project working/thalia python working/thalia/scripts/run_injection_probe.py
 
 # 5. Figures -> output/figures/*.png  (reads data/neural_eval.json for the backend figure)
-uv run --project working/atlas python working/atlas/scripts/generate_figures.py
+uv run --project working/thalia python working/thalia/scripts/generate_figures.py
 
 # 6. Manuscript variables -> output/data/manuscript_variables.json
-uv run --project working/atlas python working/atlas/scripts/z_generate_manuscript_variables.py
+uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
 ```
 
 The deterministic steps (1–3, 5–6) are bit-reproducible on any host. Step 4 is the
@@ -95,7 +95,7 @@ That route is what prevents a polished PDF from becoming detached from the
 executable harness it describes.
 
 Memory-system comparisons are scoped to the cited design lineage rather than
-absorbed as ATLAS results: MemGPT [@packer2023memgpt], Mem0 [@chhikara2025mem0],
+absorbed as THALIA results: MemGPT [@packer2023memgpt], Mem0 [@chhikara2025mem0],
 TiMem [@li2026timem], and APEX-MEM [@banerjee2026apexmem] are related systems that
 motivate persistent memory interfaces, while the local result remains the narrower
 append-only episodic store plus gated consolidation policy.

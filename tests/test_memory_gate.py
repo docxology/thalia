@@ -33,6 +33,43 @@ class TestAlwaysAppend:
         )
         assert pred["episodic_entry"].turn_id == 0
 
+    def test_auto_turn_id_never_collides_with_explicit(self):
+        """Mixing an explicit turn_id with later auto-assigned ones must not collide.
+
+        With the old ``count()`` default this raised ``ValueError``: an explicit
+        ``turn_id=1`` into an empty store makes ``count() == 1``, so the next
+        auto-assign would reuse id 1 (which ``EpisodicStore.append`` rejects). The
+        ``max_turn_id() + 1`` default is collision-proof.
+        """
+        gate = MemoryGate()
+        # Explicit turn_id=1 into an empty store (count() is now 1, not 2).
+        gate(
+            query="q-explicit",
+            answer="a",
+            evidence_citations=[],
+            requires_consolidation=False,
+            turn_id=1,
+        )
+        # Auto-assign: must skip past the explicit id 1, not reuse it.
+        pred_auto1 = gate(
+            query="q-auto-1",
+            answer="a",
+            evidence_citations=[],
+            requires_consolidation=False,
+        )
+        assert pred_auto1["episodic_entry"].turn_id == 2
+        # A second auto-assign keeps incrementing collision-free.
+        pred_auto2 = gate(
+            query="q-auto-2",
+            answer="a",
+            evidence_citations=[],
+            requires_consolidation=False,
+        )
+        assert pred_auto2["episodic_entry"].turn_id == 3
+        stored_ids = [entry.turn_id for entry in gate.store.all()]
+        assert stored_ids == [1, 2, 3]
+        assert len(stored_ids) == len(set(stored_ids))
+
 
 class TestConsolidationGate:
     def test_no_consolidation_when_flag_false(self):

@@ -1,6 +1,6 @@
 # Validation and Invariants {#sec:validation}
 
-ATLAS treats correctness as a build-time property, not a hope. Three layers
+THALIA treats correctness as a build-time property, not a hope. Three layers
 enforce it: a Zero-Mock test suite, a set of executable invariants, and golden
 regression tests — all deterministic.
 
@@ -44,12 +44,12 @@ those fail, the manuscript's methodological claims are no longer true.
 
 Every test uses real computation — real BM25/embeddings, a real SQLite episodic
 store, real temporary files, and a real in-process HTTP server for the Ollama
-adapter (no `unittest.mock`, no `MagicMock`). Coverage on `src/` is gated at 90%
-and the live suite runs well above it. Selecting a real fallback path (for example
+adapter (no `unittest.mock`, no `MagicMock`). Coverage on `src/` is gated at
+{{CONFIG_COV_GATE}}% and the live suite runs well above it. Selecting a real fallback path (for example
 toggling `fts_available` to exercise the `LIKE` search branch) is permitted because
 it chooses a real branch; faking a call boundary is not.
 
-The 90% gate covers the **deterministic core**. The optional real-DSPy and neural
+The {{CONFIG_COV_GATE}}% gate covers the **deterministic core**. The optional real-DSPy and neural
 paths (`src/dspy_runtime.py`, the `dspy.Predict`/`BootstrapFewShot` glue, and the
 real Gemma-via-Ollama backend) are exercised by genuine, `DSPY_AVAILABLE`- and
 model-availability-gated tests (`tests/test_dspy_runtime.py::TestRealDspyRuntime`,
@@ -104,9 +104,11 @@ leaves token-F1 flat (the gold line is recoverable at depth one) and only lowers
 efficiency term — exactly why the Compiler's optimum is an efficiency tie-break, not
 an accuracy gain. **(iii) The lexical-anchored hybrid ties a real dense RAG:** a pure
 neural-embedding retrieval baseline (`src.retrieval.learned.dense_rag_answer`,
-nomic-embed-text) matches the harness's accuracy on the seeded set — consistent with
-the no-harness baseline ([@sec:eval-baseline]), the harness's value is provenance and
-bounded context, not retrieval superiority.
+nomic-embed-text) matches the harness's accuracy on the seeded set. A tie on this
+deliberately easy set is the *expected* outcome — [@sec:eval-real] shows the synthetic
+data cannot separate retrieval methods — so this is evidence of no regression, not of
+general parity. Consistent with the no-harness baseline ([@sec:eval-baseline]), the
+harness's value here is provenance and bounded context, not retrieval superiority.
 
 Robustness is locked in by a property-based fuzz pass (`tests/test_fuzz.py`): hundreds
 of adversarial inputs — random punctuation, SQL-like strings, injection markers,
@@ -122,7 +124,7 @@ the reproducibility story honest. **Path hygiene**: no manuscript section or
 shipped doc may reference a project path that no longer exists — a stale path
 makes a documented `pytest` command collect zero tests and exit green, a silent
 false pass the gate now forbids. **Injection-independent token coverage**: the
-manuscript-variable generator locates the template root robustly even when ATLAS
+manuscript-variable generator locates the template root robustly even when THALIA
 is checked out as a symlink *outside* the template tree, and its token-coverage
 reproducibility contract completes whether or not the optional PDF-injection step
 is reachable — the gate that guarantees every published number is a generated

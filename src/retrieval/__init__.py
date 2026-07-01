@@ -1,4 +1,4 @@
-"""Hybrid retrieval lane for the ATLAS harness.
+"""Hybrid retrieval lane for the THALIA harness.
 
 Three deterministic, offline-testable components implement the
 "lexical-first, hybrid by default" finding of Sen et al. (2026):

@@ -1,4 +1,4 @@
-"""Deterministic provenance helpers for ATLAS generated outputs.
+"""Deterministic provenance helpers for THALIA generated outputs.
 
 The template validator consumes project-local registries from ``output/``.  These
 helpers write those registries from source code so the files are regenerable and
@@ -21,9 +21,11 @@ FIGURE_LABELS: dict[str, str] = {
     "backend_comparison": "fig:backend_comparison",
     "bottleneck": "fig:bottleneck",
     "category_breakdown": "fig:category_breakdown",
+    "category_components": "fig:category_components",
     "compiler_convergence": "fig:compiler_convergence",
     "consolidation_curve": "fig:consolidation",
     "evidence_funnel": "fig:evidence_funnel",
+    "gepa_trajectory": "fig:gepa_trajectory",
     "injection_resistance": "fig:injection_resistance",
     "longmemeval": "fig:longmemeval",
     "method_ablation": "fig:method_ablation",
@@ -57,7 +59,7 @@ _MANIFEST_EXCLUDE_NAMES = {
 
 @dataclass(frozen=True)
 class VerificationSummary:
-    """Small generated record of the live gates ATLAS expects reviewers to run."""
+    """Small generated record of the live gates THALIA expects reviewers to run."""
 
     test_command: str
     coverage_gate: int
@@ -76,12 +78,12 @@ def default_verification_summary() -> VerificationSummary:
     """Return the canonical command summary for this project checkout."""
     return VerificationSummary(
         test_command=(
-            "uv run --project working/atlas pytest working/atlas/tests/ "
-            "--cov=working/atlas/src --cov-report=term-missing --cov-fail-under=90"
+            "uv run --project working/thalia pytest working/thalia/tests/ "
+            "--cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90"
         ),
         coverage_gate=_coverage_gate(),
-        render_command="uv run python scripts/03_render_pdf.py --project working/atlas",
-        validation_command="uv run python scripts/04_validate_output.py --project working/atlas",
+        render_command="uv run python scripts/03_render_pdf.py --project working/thalia",
+        validation_command="uv run python scripts/04_validate_output.py --project working/thalia",
     )
 
 
@@ -134,7 +136,7 @@ def write_artifact_manifest(
     project_root: str | Path = PROJECT_ROOT,
     output_path: str | Path | None = None,
 ) -> Path:
-    """Write a current, validator-compatible manifest for stable ATLAS outputs."""
+    """Write a current, validator-compatible manifest for stable THALIA outputs."""
     root = Path(project_root)
     out = Path(output_path) if output_path else root / "output" / "reports" / "artifact_manifest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -146,7 +148,7 @@ def write_artifact_manifest(
                 "path": artifact.relative_to(root).as_posix(),
                 "sha256": _sha256(artifact),
                 "size_bytes": artifact.stat().st_size,
-                "stage_name": "ATLAS provenance refresh",
+                "stage_name": "THALIA provenance refresh",
                 "stage_num": 0,
                 "timestamp": "deterministic",
             }
@@ -188,7 +190,10 @@ def _sha256(path: Path) -> str:
 
 
 def _coverage_gate() -> int:
-    import tomllib
+    try:
+        import tomllib  # Python >= 3.11
+    except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
+        import tomli as tomllib  # type: ignore[no-redef]
 
     pyproject = PROJECT_ROOT / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))

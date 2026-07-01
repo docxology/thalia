@@ -1,4 +1,4 @@
-"""AutoHarness — the composed five-stage ATLAS pipeline.
+"""AutoHarness — the composed five-stage THALIA pipeline.
 
 Wires the four runtime stages together:
 
@@ -30,7 +30,7 @@ from .stages.retriever import Retriever
 
 
 class AutoHarness:
-    """The composed ATLAS pipeline for a single conversational thread.
+    """The composed THALIA pipeline for a single conversational thread.
 
     Memory persists across :meth:`run` calls on the same instance (later turns
     can consolidate from earlier ones). For order-independent evaluation, build a

@@ -1,7 +1,7 @@
 """Tests for the append-only SQLite episodic store (Zero-Mock, real SQLite)."""
 
 import pytest
-from src.memory.episodic_store import EpisodicStore, _fts_match_expression, _search_terms
+from src.memory.episodic_store import EpisodicStore, _fts5_available, _fts_match_expression, _search_terms
 from src.signatures import EpisodicEntry
 
 
@@ -148,4 +148,37 @@ class TestLikeFallback:
 class TestClose:
     def test_close_does_not_raise(self):
         store = EpisodicStore()
+        store.close()
+
+
+class TestFts5Unavailable:
+    """Exercise the _fts5_available False path (lines 24-25).
+
+    ``monkeypatch`` swaps out the module-level helper so that an
+    ``EpisodicStore`` constructed in this test believes FTS5 is absent.
+    The store must initialise without the FTS virtual table and fall back
+    to LIKE-scan search correctly.
+    """
+
+    def test_fts5_available_false_path(self, monkeypatch):
+        import src.memory.episodic_store as es_mod
+
+        monkeypatch.setattr(es_mod, "_fts5_available", lambda _conn: False)
+
+        store = EpisodicStore()
+        assert store.fts_available is False
+        # Schema init must complete without error even without the FTS table.
+        assert store.count() == 0
+
+    def test_store_searches_with_like_when_fts5_unavailable(self, monkeypatch):
+        import src.memory.episodic_store as es_mod
+
+        monkeypatch.setattr(es_mod, "_fts5_available", lambda _conn: False)
+
+        store = EpisodicStore()
+        store.append(_entry(0, query="the door code", answer="4321"))
+        store.append(_entry(1, query="unrelated", answer="nothing"))
+
+        results = store.search("door")
+        assert any("door" in e.query for e in results)
         store.close()

@@ -1,4 +1,4 @@
-# `tests/` — ATLAS test suite
+# `tests/` — THALIA test suite
 
 Zero-Mock test suite, one file per `src/` module. All tests use real data, real
 SQLite, and deterministic computation — no `unittest.mock`, no `MagicMock`.
@@ -6,8 +6,8 @@ SQLite, and deterministic computation — no `unittest.mock`, no `MagicMock`.
 ## Running
 
 ```bash
-uv run --project working/atlas pytest working/atlas/tests/ \
-  --cov=working/atlas/src --cov-report=term-missing --cov-fail-under=90
+uv run --project working/thalia pytest working/thalia/tests/ \
+  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
 ```
 
 `tests/conftest.py` forces a headless matplotlib backend and adds the project root

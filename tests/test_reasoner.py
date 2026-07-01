@@ -149,6 +149,15 @@ class TestReasonerVerify:
         with pytest.raises(ValueError, match="grounding_threshold must be in"):
             Reasoner(verify=True, grounding_threshold=2.0)
 
+    def test_grounding_support_empty_answer_returns_zero(self):
+        """_grounding_support returns 0.0 when the answer tokenises to nothing (line 152)."""
+        from src.signatures import EvidenceCitation
+
+        # An answer of pure whitespace/punctuation produces no tokens → 0.0.
+        citations = [EvidenceCitation(source_index=0, excerpt="some relevant evidence")]
+        assert Reasoner._grounding_support("", citations) == 0.0
+        assert Reasoner._grounding_support("   ", citations) == 0.0
+
     def test_verify_ok_path(self):
         from src.llm import CallableLM
 

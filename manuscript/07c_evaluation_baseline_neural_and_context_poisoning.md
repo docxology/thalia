@@ -92,7 +92,7 @@ answer stays auditable and recoverable because the citation trail surfaces both 
 injected and the genuine source. The optional neural row is recorded only when a
 live model is available; the current aggregate records {{RESULT_INJECT_NEURAL_POISON}}
 neural poison cases, and if that token is unavailable (`—`) the figure omits the
-neural row rather than inferring one. The property ATLAS actually provides is
+neural row rather than inferring one. The property THALIA actually provides is
 therefore **visibility, not immunity**: grounding does not stop poisoning, but it
 refuses to hide it (`scripts/run_injection_probe.py`).
 

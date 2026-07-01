@@ -1,4 +1,4 @@
-"""ATLAS — Agentic Typed-pipeline with Lexical And Structured stages.
+"""THALIA — Agentic Typed-pipeline with Lexical And Structured stages.
 
 A typed, declaratively-specified agentic harness that fuses DSPy's
 compiler-driven optimization with the Hermes Agent layered-memory and
@@ -13,6 +13,8 @@ The full design rationale lives in ``manuscript/``; this package is the runnable
 deterministic, fully-tested implementation.
 """
 
+__version__ = "0.1.0"
+
 from .cli import run_query
 from .config import (
     HarnessConfig,
@@ -25,7 +27,8 @@ from .dashboard import render_dashboard_html, write_dashboard
 from .harness import AutoHarness, build_run_fn
 from .invariants import InvariantResult, all_invariants
 from .llm import CallableLM, OllamaError, OllamaLM
-from .module import ExtractiveLM, LMClient, Module, Prediction
+from .module import ExtractiveLM, LMClient, Module, Predict, Prediction, render_signature_prompt, tokenize
+from .pipeline import Pipeline, PipelineContext, PipelineStep
 from .recall import recall_evidence
 from .retrieval import expand_query, mmr_rerank
 from .session import Session
@@ -44,9 +47,13 @@ from .routing import classify_task
 from .stages import Inspector, MemoryGate, Reasoner, Retriever
 
 __all__ = [
+    "__version__",
     # Top-level harness
     "AutoHarness",
     "build_run_fn",
+    "Pipeline",
+    "PipelineStep",
+    "PipelineContext",
     "Session",
     "run_query",
     "HarnessConfig",
@@ -74,9 +81,12 @@ __all__ = [
     "classify_task",
     # Module/LM layer
     "Module",
+    "Predict",
     "Prediction",
     "LMClient",
     "ExtractiveLM",
+    "tokenize",
+    "render_signature_prompt",
     # Payloads
     "TaskCategory",
     "EvidenceWindow",

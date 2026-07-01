@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: run the full ATLAS evaluation and serialise results.
+"""Thin orchestrator: run the full THALIA evaluation and serialise results.
 
 All computation lives in ``src/evaluation``; this script only handles I/O.
 Writes ``output/data/eval_results.json`` and prints the path to stdout for

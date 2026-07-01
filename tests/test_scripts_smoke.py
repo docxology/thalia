@@ -15,7 +15,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 def _load(stem: str):
     """Load a script module from disk by file stem (handles digit-prefixed names)."""
     path = SCRIPTS / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(f"_atlas_script_{stem.replace('0', 'o')}", path)
+    spec = importlib.util.spec_from_file_location(f"_thalia_script_{stem.replace('0', 'o')}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -50,6 +50,15 @@ class TestScripts:
         paths = _load("run_demo").main()
         assert paths
         assert all(Path(path).exists() for path in paths.values())
+
+    def test_run_pipeline_writes_json(self):
+        path = _load("run_pipeline").main()
+        assert Path(path).exists()
+        import json
+
+        data = json.loads(Path(path).read_text())
+        assert data["n_examples"] > 0
+        assert all("intermediate_steps" in row for row in data["rows"])
 
     def test_run_query_cli(self):
         rc = _load("run_query").main(

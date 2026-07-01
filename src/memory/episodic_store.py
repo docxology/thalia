@@ -45,7 +45,7 @@ def _search_terms(query: str) -> list[str]:
 def _fts_match_expression(query: str, operator: str = "OR") -> str:
     """Build a safe FTS5 MATCH expression from natural text.
 
-    FTS5 treats punctuation such as ``?``, ``-``, and quotes as query syntax. ATLAS
+    FTS5 treats punctuation such as ``?``, ``-``, and quotes as query syntax. THALIA
     search accepts natural-language questions, so it strips to bare alphanumeric
     tokens and joins them with an explicit operator. The default ``OR`` preserves the
     existing broad-recall behavior.
@@ -137,6 +137,16 @@ class EpisodicStore:
         row = self._conn.execute("SELECT COUNT(*) AS n FROM episodes").fetchone()
         return int(row["n"])
 
+    def max_turn_id(self) -> int:
+        """Return the largest stored ``turn_id``, or ``-1`` when the store is empty.
+
+        Used to derive a collision-proof next turn id (``max_turn_id() + 1``). Unlike
+        ``count()``, this never reuses an id already taken by an explicitly-assigned
+        episode, so explicit and auto-assigned turn ids can be mixed safely.
+        """
+        row = self._conn.execute("SELECT MAX(turn_id) AS m FROM episodes").fetchone()
+        return int(row["m"]) if row["m"] is not None else -1
+
     def search(self, query: str, limit: int = 10) -> list[EpisodicEntry]:
         """Full-text search over stored episodes.
 
@@ -183,6 +193,15 @@ class EpisodicStore:
     def close(self) -> None:
         """Close the underlying SQLite connection."""
         self._conn.close()
+
+    # -- Context manager protocol --------------------------------------------------
+    # Enables ``with EpisodicStore(...) as store:`` so the connection is always
+    # closed even when an exception propagates mid-turn.
+    def __enter__(self) -> "EpisodicStore":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+        self.close()
 
     @staticmethod
     def _row_to_entry(row: sqlite3.Row) -> EpisodicEntry:

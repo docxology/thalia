@@ -1,4 +1,4 @@
-# `src/evaluation/` — ATLAS evaluation package
+# `src/evaluation/` — THALIA evaluation package
 
 Offline, deterministic evaluation of the harness: demo-dataset construction,
 budget presets, retriever/method experiments, and a JSON result bundle for the

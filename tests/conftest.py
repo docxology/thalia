@@ -1,4 +1,4 @@
-"""Pytest configuration for the ATLAS project tests.
+"""Pytest configuration for the THALIA project tests.
 
 Forces a headless matplotlib backend and ensures both the project root and the
 ``src`` package directory are importable so tests can ``from src... import``.

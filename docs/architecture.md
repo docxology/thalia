@@ -1,6 +1,6 @@
 # Architecture
 
-ATLAS is five composable stages. Four run at request time (`AutoHarness`); the
+THALIA is five composable stages. Four run at request time (`AutoHarness`); the
 fifth (Compiler) operates on the harness offline.
 
 ```text
@@ -26,9 +26,15 @@ session history + query
 - **`src/stages/`** — one module per runtime stage.
 - **`src/memory/`** — append-only `episodic_store` and gated `consolidation`.
 - **`src/compiler/`** — `metrics`, `mipro`, `gepa`.
+- **`src/pipeline.py`** — `Pipeline`/`PipelineStep`/`PipelineContext`: the same four
+  runtime stages as `AutoHarness` exposed as a composable, inspectable chain.
+  Callers can omit stages, insert custom steps, and read per-step intermediates via
+  `pipeline.intermediates` after `run()`.
 - **Operability** — `config` (load/save/env), `llm` (real adapters), `harness`,
   `session` (persistence), `cli`, plus `evaluation`, `figures`, `dashboard`,
   `invariants`, `manuscript_variables`.
+- **`src/py.typed`** — PEP 561 marker; downstream type-checkers treat the package as
+  typed without additional configuration.
 
 ## Invariants the architecture preserves
 
@@ -36,6 +42,8 @@ session history + query
 2. The LM is behind a one-method protocol; the core is deterministic and offline.
 3. Raw episodes are append-only and never overwritten.
 4. Determinism: identical inputs reproduce identical outputs.
+5. Resource safety: `Session` and `EpisodicStore` implement `__enter__`/`__exit__`
+   so connections are released even when callers exit via exception.
 
 See [`methods.md`](methods.md) for the algorithms and `manuscript/08_reference_architecture.md`
 for the full file map and design-principle table.

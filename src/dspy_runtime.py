@@ -182,7 +182,7 @@ def _require_dspy() -> None:
     if not DSPY_AVAILABLE:  # pragma: no cover - trivial guard
         raise RuntimeError(
             "dspy is not installed; install the `dspy` extra (`uv pip install 'dspy-ai>=2.5'`) "
-            "to use the real DSPy runtime. The deterministic ATLAS core does not require it."
+            "to use the real DSPy runtime. The deterministic THALIA core does not require it."
         )
 
 
@@ -200,7 +200,7 @@ if DSPY_AVAILABLE:  # pragma: no cover - requires the optional dspy extra
         expected output format. Deterministic and network-free.
         """
 
-        def __init__(self, lm: LMClient | None = None, model: str = "atlas-extractive") -> None:
+        def __init__(self, lm: LMClient | None = None, model: str = "thalia-extractive") -> None:
             super().__init__(model=model)
             self.lm: LMClient = lm or ExtractiveLM()
 

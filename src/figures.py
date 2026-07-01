@@ -1,4 +1,4 @@
-"""Figure generators for the ATLAS manuscript (matplotlib, headless).
+"""Figure generators for the THALIA manuscript (matplotlib, headless).
 
 Thin, deterministic plotting helpers driven by :mod:`src.evaluation`. Each
 function takes computed data plus an output path, writes a 300-dpi PNG, and
@@ -10,11 +10,14 @@ from __future__ import annotations
 
 from .evaluation import (
     RetrieverComparison,
+    category_component_breakdown,
     consolidation_simulation,
     evidence_funnel,
+    gepa_component_trajectory,
     method_ablation,
     mmr_lambda_sweep,
     noise_scaling_experiment,
+    pipeline_evidence_flow,
     rrf_weight_sweep,
 )
 from .figure_style import EXPORT_DPI, PALETTE, annotate_bars as _annotate_bars
@@ -207,6 +210,57 @@ def plot_evidence_funnel(output_path: str | Path) -> Path:
     ax.set_title("Evidence narrowing funnel")
     for bar, value in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.05, f"{value:.1f}", ha="center", va="bottom", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_pipeline_flow(
+    flow_data: list[dict],
+    output_path: str | Path,
+) -> Path:
+    """Grouped bar chart of per-example evidence counts at each Pipeline stage.
+
+    Shows how evidence narrows from Inspector windows → Retriever ranked →
+    Reasoner citations for every demo example.  Three bars per group:
+
+    * **windows** (lexical blue) — Inspector output.
+    * **ranked** (hybrid green) — Retriever output.
+    * **cited** (accent pink) — Reasoner citations.
+
+    Args:
+        flow_data: List of dicts as returned by
+            :func:`src.evaluation.pipeline_evidence_flow`.
+        output_path: Destination path for the 300-dpi PNG.
+
+    Returns:
+        The resolved output :class:`~pathlib.Path`.
+    """
+    path = _prepare(output_path)
+    n = len(flow_data)
+    width = 0.25
+    x = list(range(n))
+
+    windows = [row["n_windows"] for row in flow_data]
+    ranked = [row["n_ranked"] for row in flow_data]
+    cited = [row["n_cited"] for row in flow_data]
+    # Label each group by its task category (one demo example per category) rather
+    # than a truncated query string — informative, untruncated, and consistent with
+    # the category framing used throughout the evaluation.
+    labels = [_pretty(str(row.get("task_category", row.get("query", "")))).replace("_", " ") for row in flow_data]
+
+    fig, ax = plt.subplots(figsize=(max(6.2, n * 1.4), 4.4))
+    ax.bar([xi - width for xi in x], windows, width=width, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="inspector windows")
+    ax.bar(x, ranked, width=width, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="retriever ranked")
+    ax.bar([xi + width for xi in x], cited, width=width, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="reasoner cited")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=9)
+    ax.set_ylabel("Evidence count per example")
+    ax.set_title("Per-example evidence narrowing across pipeline stages")
+    ax.legend(loc="upper right", fontsize=9)
+    ax.grid(axis="y", linewidth=0.4)
     fig.tight_layout()
     fig.savefig(path, dpi=EXPORT_DPI)
     plt.close(fig)
@@ -634,10 +688,157 @@ def plot_paraphrase_retrieval(data: dict, output_path: str | Path) -> Path:
     return path
 
 
+def plot_category_components(
+    breakdown: dict[str, dict[str, float]],
+    output_path: str | Path,
+) -> Path:
+    """Horizontal stacked bar chart: weighted component breakdown per task category.
+
+    Each row is one :class:`~src.signatures.TaskCategory`.  The three stacked
+    segments show the weighted contribution to the composite:
+
+    * **0.6 · accuracy** (blue / lexical)
+    * **0.3 · grounding** (green / hybrid)
+    * **0.1 · efficiency** (pink / accent)
+
+    so the total bar length equals the per-category composite metric.
+
+    Args:
+        breakdown: Dict mapping category name to ``{"accuracy", "grounding",
+            "efficiency"}`` (e.g. from :func:`~src.evaluation.category_component_breakdown`).
+        output_path: Destination path for the 300-dpi PNG.
+
+    Returns:
+        The resolved output :class:`~pathlib.Path`.
+    """
+    path = _prepare(output_path)
+    # Sort ascending by composite so the weakest categories sit at the top of
+    # a horizontal bar chart (reading order: weakest top, strongest bottom).
+    items = sorted(
+        breakdown.items(),
+        key=lambda kv: (
+            0.6 * kv[1]["accuracy"] + 0.3 * kv[1]["grounding"] + 0.1 * kv[1]["efficiency"]
+        ),
+    )
+    labels = [_pretty(cat) for cat, _ in items]
+    acc_w = [0.6 * v["accuracy"] for _, v in items]
+    grd_w = [0.3 * v["grounding"] for _, v in items]
+    eff_w = [0.1 * v["efficiency"] for _, v in items]
+    y = list(range(len(labels)))
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    b1 = ax.barh(y, acc_w, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
+    b2 = ax.barh(y, grd_w, left=acc_w, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    left2 = [a + g for a, g in zip(acc_w, grd_w)]
+    ax.barh(y, eff_w, left=left2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
+
+    # Annotate total composite at the end of each bar
+    for i, (aw, gw, ew) in enumerate(zip(acc_w, grd_w, eff_w)):
+        total = aw + gw + ew
+        ax.text(total + 0.005, i, f"{total:.3f}", va="center", fontsize=8.5)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("Weighted component contribution (sums to composite)")
+    ax.set_title("Per-category component breakdown")
+    ax.legend(loc="lower right")
+    ax.grid(axis="x")
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_gepa_trajectory(
+    trajectory: list[dict],
+    output_path: str | Path,
+) -> Path:
+    """Multi-line component trajectory from a GEPA evolution run.
+
+    Plots the per-component scores (accuracy, grounding, efficiency) at each
+    GEPA iteration, plus markers indicating which component was the weakest
+    (and therefore targeted by the optimizer) at each step.
+
+    Args:
+        trajectory: List of dicts from :func:`~src.evaluation.gepa_component_trajectory`,
+            each with keys ``iteration``, ``composite``, ``accuracy``,
+            ``grounding``, ``efficiency``, ``weakest_component``.
+        output_path: Destination PNG path (parent dir created if needed).
+
+    Returns:
+        The output :class:`~pathlib.Path`.
+    """
+    path = _prepare(output_path)
+    iterations = [r["iteration"] for r in trajectory]
+    accuracy = [r["accuracy"] for r in trajectory]
+    grounding = [r["grounding"] for r in trajectory]
+    efficiency = [r["efficiency"] for r in trajectory]
+    composite = [r["composite"] for r in trajectory]
+
+    # Color mapping: lexical for accuracy, hybrid for grounding, accent for efficiency
+    component_color = {
+        "accuracy": PALETTE["lexical"],
+        "grounding": PALETTE["hybrid"],
+        "efficiency": PALETTE["accent"],
+    }
+
+    fig, ax = plt.subplots()
+    ax.plot(iterations, accuracy, marker="o", color=PALETTE["lexical"], linewidth=1.8,
+            label="accuracy", zorder=2)
+    ax.plot(iterations, grounding, marker="s", color=PALETTE["hybrid"], linewidth=1.8,
+            label="grounding", zorder=2)
+    ax.plot(iterations, efficiency, marker="^", color=PALETTE["accent"], linewidth=1.8,
+            label="efficiency", zorder=2)
+    ax.plot(iterations, composite, color=PALETTE["muted"], linewidth=1.2,
+            linestyle=(0, (4, 3)), label="composite", zorder=1)
+
+    # Mark the weakest component at each step with a larger halo marker
+    for record in trajectory:
+        it = record["iteration"]
+        weakest = record["weakest_component"]
+        component_values = {
+            "accuracy": record["accuracy"],
+            "grounding": record["grounding"],
+            "efficiency": record["efficiency"],
+        }
+        val = component_values[weakest]
+        ax.scatter(
+            [it], [val],
+            s=120,
+            facecolor="none",
+            edgecolor=component_color[weakest],
+            linewidth=2.0,
+            zorder=4,
+        )
+        # Small text annotation above the halo
+        ax.annotate(
+            weakest[0].upper(),  # first letter: A / G / E
+            (it, val),
+            textcoords="offset points",
+            xytext=(0, 8),
+            ha="center",
+            fontsize=7,
+            color=component_color[weakest],
+        )
+
+    ax.set_xlabel("GEPA iteration")
+    ax.set_ylabel("Component score (0–1)")
+    ax.set_title("GEPA component trajectory (weakest-targeted mutations)")
+    ax.set_ylim(0, 1)
+    ax.set_xticks(iterations)
+    ax.legend(loc="lower right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
 __all__ = [
     "PALETTE",
     "EXPORT_DPI",
     "plot_backend_comparison",
+    "plot_category_components",
     "plot_injection_resistance",
     "plot_longmemeval",
     "plot_bottleneck",
@@ -650,7 +851,9 @@ __all__ = [
     "plot_consolidation_curve",
     "plot_category_breakdown",
     "plot_evidence_funnel",
+    "plot_pipeline_flow",
     "plot_noise_scaling",
     "plot_mmr_tradeoff",
     "plot_method_ablation",
+    "plot_gepa_trajectory",
 ]

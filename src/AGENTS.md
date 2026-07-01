@@ -1,6 +1,6 @@
 # `src/` — Agent contract
 
-Public API surface and invariants for the ATLAS implementation. Import via the
+Public API surface and invariants for the THALIA implementation. Import via the
 `src.` package prefix (e.g. `from src.harness import AutoHarness`).
 
 ## Routing
@@ -27,7 +27,7 @@ Public API surface and invariants for the ATLAS implementation. Import via the
   `cli.main(argv) -> int` is the CLI entry; `resolve_config(args)` applies
   file < env < flag precedence.
 - `load_config(path, apply_env=True)`, `save_config(config, path)`,
-  `apply_env_overrides(config)` — `ATLAS_*` env vars map to config fields.
+  `apply_env_overrides(config)` — `THALIA_*` env vars map to config fields.
 - LM adapters: `CallableLM(fn)`, `OllamaLM(model?, host?, timeout?)` (raises
   `OllamaError`, never silent), both satisfy `LMClient`.
 

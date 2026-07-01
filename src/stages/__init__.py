@@ -1,4 +1,4 @@
-"""The four ATLAS pipeline stages.
+"""The four THALIA pipeline stages.
 
 Each stage is a :class:`src.module.Module` with a declarative
 :class:`src.signatures.Signature` contract:

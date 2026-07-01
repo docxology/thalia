@@ -48,3 +48,31 @@ claims:
     source_tier: generated_metric
     freshness: active
     artifact_path: output/data/eval_results.json
+  - claim_id: pipeline-composable-stages
+    kind: number
+    value: 5
+    source: src/pipeline.py Pipeline.with_all_stages (inspector + retriever + reasoner + memory_gate + output)
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/pipeline.py
+  - claim_id: package-version
+    kind: string
+    value: "0.1.0"
+    source: src/__init__.py __version__
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/__init__.py
+  - claim_id: test-count
+    kind: number
+    value: 572
+    source: pytest collected item count
+    source_tier: generated_metric
+    freshness: active
+    artifact_path: output/data/pipeline_result.json
+  - claim_id: test-coverage
+    kind: number
+    value: 98.08
+    source: pytest --cov coverage percentage
+    source_tier: generated_metric
+    freshness: active
+    artifact_path: output/data/pipeline_result.json

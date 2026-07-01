@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..compiler.metrics import EvalExample, evaluate
+from ..compiler.gepa import GEPAOptimizer
+from ..compiler.metrics import EvalExample, answer_score, evaluate, grounding_score, efficiency_score
 from ..config import HarnessConfig, default_config
 from ..harness import AutoHarness, build_run_fn
+from ..signatures import TaskCategory
 from ..stages.inspector import Inspector
 from .budget import lexical_only, metric_sweep, semantic_only, tight_eval_config
 from .dataset import build_demo_dataset, with_noise
@@ -148,6 +150,48 @@ def method_ablation(
     return {name: evaluate(build_run_fn(cfg), dataset).composite for name, cfg in configs.items()}
 
 
+def pipeline_evidence_flow(
+    dataset: list[EvalExample] | None = None,
+    config: HarnessConfig | None = None,
+) -> list[dict]:
+    """Per-example evidence counts at each Pipeline stage.
+
+    Runs every demo example through a full :class:`~src.pipeline.Pipeline`
+    (with_all_stages) and records how many items survive each of the three
+    narrowing stages:
+
+    * **n_windows** — evidence windows emitted by the Inspector.
+    * **n_ranked** — ranked evidence from the Retriever.
+    * **n_cited** — citations from the Reasoner.
+
+    Returns:
+        A list of dicts, one per example, with keys:
+        ``query``, ``task_category``, ``n_windows``, ``n_ranked``, ``n_cited``.
+    """
+    from ..pipeline import Pipeline
+
+    dataset = dataset or build_demo_dataset()
+    config = config or default_config()
+    rows: list[dict] = []
+    for ex in dataset:
+        pipe = Pipeline(config=config).with_all_stages()
+        pipe.run(query=ex.query, session_history=ex.session_history)
+        intermediates = {name: ctx for name, ctx in pipe.intermediates}
+        inspector_ctx = intermediates.get("inspector")
+        retriever_ctx = intermediates.get("retriever")
+        reasoner_ctx = intermediates.get("reasoner")
+        rows.append(
+            {
+                "query": ex.query,
+                "task_category": ex.task_category.value if hasattr(ex.task_category, "value") else str(ex.task_category),
+                "n_windows": len(inspector_ctx.evidence_windows) if inspector_ctx is not None else 0,
+                "n_ranked": len(retriever_ctx.ranked_evidence) if retriever_ctx is not None else 0,
+                "n_cited": len(reasoner_ctx.evidence_citations) if reasoner_ctx is not None else 0,
+            }
+        )
+    return rows
+
+
 def consolidation_simulation(turns: int = 12) -> dict[str, list[float]]:
     """Schematic utility curves: forced consolidation vs. episodic-first."""
     if turns < 1:
@@ -165,13 +209,125 @@ def consolidation_simulation(turns: int = 12) -> dict[str, list[float]]:
     return {"forced": forced, "episodic_first": episodic}
 
 
+def category_component_breakdown(
+    dataset: list[EvalExample] | None = None,
+    config: HarnessConfig | None = None,
+) -> dict[str, dict[str, float]]:
+    """Per-category accuracy, grounding, and efficiency using the default config.
+
+    Runs the default pipeline over the demo dataset (or a supplied dataset) and
+    returns a mapping from each :class:`~src.signatures.TaskCategory` name to a
+    dict with keys ``"accuracy"``, ``"grounding"``, and ``"efficiency"`` (each
+    a float in 0..1), averaged over examples in that category.
+
+    Returns:
+        Dict mapping ``TaskCategory.value`` (e.g. ``"temporal"``) to a dict
+        ``{"accuracy": float, "grounding": float, "efficiency": float}``.
+    """
+    dataset = dataset or build_demo_dataset()
+    config = config or default_config()
+    run_fn = build_run_fn(config)
+
+    # Accumulate per-category component sums and counts
+    acc_sum: dict[str, float] = {}
+    grd_sum: dict[str, float] = {}
+    eff_sum: dict[str, float] = {}
+    counts: dict[str, int] = {}
+
+    for example in dataset:
+        cat = example.task_category.value if example.task_category is not None else "unknown"
+        output = run_fn(example)
+        a = answer_score(output, example)
+        g = grounding_score(output, example)
+        e = efficiency_score(output)
+        acc_sum[cat] = acc_sum.get(cat, 0.0) + a
+        grd_sum[cat] = grd_sum.get(cat, 0.0) + g
+        eff_sum[cat] = eff_sum.get(cat, 0.0) + e
+        counts[cat] = counts.get(cat, 0) + 1
+
+    return {
+        cat: {
+            "accuracy": acc_sum[cat] / counts[cat],
+            "grounding": grd_sum[cat] / counts[cat],
+            "efficiency": eff_sum[cat] / counts[cat],
+        }
+        for cat in counts
+    }
+
+
+def gepa_component_trajectory(
+    dataset: list[EvalExample] | None = None,
+    seed_config: HarnessConfig | None = None,
+    iterations: int = 8,
+) -> list[dict]:
+    """Run GEPA evolution and record per-component scores at each iteration.
+
+    Runs :class:`~src.compiler.gepa.GEPAOptimizer` over the demo dataset and,
+    at each iteration, evaluates the candidate config to obtain accuracy,
+    grounding, and efficiency component scores (not just the composite).
+
+    Args:
+        dataset: Evaluation examples (defaults to :func:`build_demo_dataset`).
+        seed_config: Starting config (defaults to :func:`default_config`).
+        iterations: Number of reflective mutation rounds (default 8).
+
+    Returns:
+        A list of dicts — one per iteration (including iteration 0 for the seed
+        config) — with keys:
+
+        * ``iteration`` — 0-based index;
+        * ``composite`` — mean composite metric;
+        * ``accuracy`` — mean accuracy component;
+        * ``grounding`` — mean grounding component;
+        * ``efficiency`` — mean efficiency component;
+        * ``weakest_component`` — the component with the lowest score at that
+          step (matching :meth:`GEPAOptimizer.reflect` logic).
+    """
+    dataset = dataset or build_demo_dataset()
+    current = seed_config or default_config()
+    optimizer = GEPAOptimizer()
+
+    # Evaluate seed config (iteration 0)
+    current_report = evaluate(build_run_fn(current), dataset)
+    records: list[dict] = []
+
+    def _record(iteration: int, report) -> dict:
+        weakest = min(
+            ("accuracy", report.accuracy),
+            ("grounding", report.grounding),
+            ("efficiency", report.efficiency),
+            key=lambda pair: pair[1],
+        )[0]
+        return {
+            "iteration": iteration,
+            "composite": report.composite,
+            "accuracy": report.accuracy,
+            "grounding": report.grounding,
+            "efficiency": report.efficiency,
+            "weakest_component": weakest,
+        }
+
+    records.append(_record(0, current_report))
+
+    for i in range(iterations):
+        candidate = optimizer.reflect(current, current_report)
+        candidate_report = evaluate(build_run_fn(candidate), dataset)
+        records.append(_record(i + 1, candidate_report))
+        current, current_report = candidate, candidate_report
+
+    return records
+
+
 __all__ = [
     "RetrieverComparison",
     "retriever_comparison",
     "rrf_weight_sweep",
     "noise_scaling_experiment",
     "evidence_funnel",
+    "pipeline_evidence_flow",
     "mmr_lambda_sweep",
     "method_ablation",
     "consolidation_simulation",
+    "category_component_breakdown",
+    "gepa_component_trajectory",
 ]

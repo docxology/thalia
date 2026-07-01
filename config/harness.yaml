@@ -1,7 +1,7 @@
-# ATLAS harness configuration.
+# THALIA harness configuration.
 # Loaded by src/config.py::load_config; every field maps to HarnessConfig.
-# Override any field at runtime with an ATLAS_<FIELD> environment variable
-# (e.g. ATLAS_TOP_K=4). Lane weights are both-or-neither: set both or leave both
+# Override any field at runtime with an THALIA_<FIELD> environment variable
+# (e.g. THALIA_TOP_K=4). Lane weights are both-or-neither: set both or leave both
 # null to use the per-task-category defaults in src/stages/retriever.py.
 
 # Inspector — Stage 0

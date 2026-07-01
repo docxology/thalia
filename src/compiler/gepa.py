@@ -1,7 +1,7 @@
 """GEPA-style trace-reflective configuration evolution.
 
 GEPA (Genetic-Pareto prompt evolution) reads *execution traces* to understand
-**why** a system underperforms, then proposes targeted improvements. The ATLAS
+**why** a system underperforms, then proposes targeted improvements. The THALIA
 analogue reflects on the aggregate metric components (accuracy / grounding /
 efficiency) from :class:`~src.compiler.metrics.EvalReport`, identifies the weakest
 component, and applies a targeted, bounded mutation to the :class:`HarnessConfig`.
@@ -191,10 +191,10 @@ except ImportError:  # pragma: no cover - default offline path
 
 
 def to_dspy_signature(signature: type[Signature]) -> Any:
-    """Build a real ``dspy.Signature`` from an ATLAS signature, if DSPy is present.
+    """Build a real ``dspy.Signature`` from an THALIA signature, if DSPy is present.
 
     Args:
-        signature: An ATLAS :class:`~src.signatures.Signature` subclass.
+        signature: An THALIA :class:`~src.signatures.Signature` subclass.
 
     Returns:
         A dynamically constructed ``dspy.Signature`` class.
@@ -204,8 +204,8 @@ def to_dspy_signature(signature: type[Signature]) -> Any:
     """
     if not DSPY_AVAILABLE:  # pragma: no cover - trivial guard
         raise RuntimeError(
-            "dspy is not installed; install `dspy-ai` to bridge ATLAS signatures "
-            "to DSPy. The deterministic ATLAS core does not require it."
+            "dspy is not installed; install `dspy-ai` to bridge THALIA signatures "
+            "to DSPy. The deterministic THALIA core does not require it."
         )
     # pragma: no cover below - only runs in a DSPy-enabled environment
     fields: dict[str, Any] = {}
