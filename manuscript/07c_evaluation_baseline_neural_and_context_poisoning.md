@@ -71,6 +71,44 @@ machines and Ollama versions. Both backends and this table regenerate with
 
 ![Per-example token-F1 for the deterministic extractive Reasoner versus a real neural model (`{{RESULT_NEURAL_MODEL}}`) dropped into the same five-stage contract. Lines pair the two backends on each of the {{RESULT_NEURAL_N}} examples; horizontal guides mark the means. Recorded at temperature 0 via `scripts/run_neural_eval.py`; reproducible on a host serving the model, not bit-pinned.](../output/figures/backend_comparison.png){#fig:backend_comparison width={{CONFIG_BACKEND_FIGURE_WIDTH}}%}
 
+## Cloud neural validation via OpenRouter {#sec:eval-openrouter}
+
+To stress-test the accuracy ceiling claim beyond a single local model, we ran the
+same six-example evaluation against **`tencent/hy3-preview`** accessed through
+OpenRouter — routed via `dspy.LM` → litellm → the OpenRouter API, with no changes
+to the five-stage harness contract. The recorded results live at
+`data/openrouter_eval.json`.
+
+The headline numbers appear to favour the extractive backend: mean token-F1 of
+**0.477** (4/6 pass) for extractive versus **0.467** (2/6 pass) for Hy3. That raw
+ordering is misleading, however, because it reflects a well-known token-F1
+pathology — **concise answers are structurally penalised**. Hy3 returns
+atomic, information-dense replies ("Rust", "bluefish42", "April 12th", "5000
+dollars") while the gold strings encode the surrounding sentence ("favorite
+programming language is Rust", "wifi password is bluefish42"). Token overlap with a
+longer gold string is higher for the extractive backend precisely because it echoes
+the full transcript line verbatim; Hy3's answer is correct but lexically shorter,
+so token-F1 penalises it. The "Rust" vs. "favorite programming language is Rust"
+pair (F1 0.333 vs. 0.833) is the clearest illustration.
+
+The ordering **reverses** on the two question types that require reasoning beyond
+verbatim extraction. On the **cross-session budget synthesis** query ("What budget
+did I mention across our sessions?") the extractive backend scores 0.000 — it can
+only return the closest matching transcript line, which happens to mention vendors
+rather than the dollar figure — while Hy3 answers "5000 dollars" for an F1 of
+0.667. On the **multi-hop deploy error** query ("What error does the deploy code
+raise without CONFIG?") extractive again scores 0.000 (it surfaces the file path,
+not the exception), while Hy3 answers "KeyError" for an F1 of 0.333. These are
+precisely the synthesis and cross-document reasoning cases the harness was designed
+to surface; Hy3 wins both of them cleanly.
+
+The conclusion reinforces the Ollama finding in [@sec:eval-neural]: accuracy on
+simple retrieval questions is LM-bounded and the pipeline adds provenance, not raw
+score; on hard synthesis and multi-hop questions a capable neural model lifts the
+ceiling in ways the extractive backend structurally cannot match. The full
+per-example breakdown is at `data/openrouter_eval.json` (`temperature: 0.0`,
+`max_tokens: 1024`, `model: tencent/hy3-preview`, six examples).
+
 ## Cognitive security: context-poisoning {#sec:eval-injection}
 
 A memory harness is only as trustworthy as its behaviour under *adversarial*

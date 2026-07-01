@@ -36,6 +36,8 @@ keywords:
   - "GEPA"
   - "active inference"
   - "reproducible research"
+  - "OpenRouter"
+  - "tencent/hy3-preview"
 
 metadata:
   license: "MIT"

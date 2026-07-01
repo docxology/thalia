@@ -39,6 +39,7 @@ _LEARNED_EVAL_PATH = _DATA_DIR / "learned_retrieval.json"
 _INJECTION_EVAL_PATH = _DATA_DIR / "injection_eval.json"
 _LME_PATH = _DATA_DIR / "longmemeval_results.json"
 _LME_BN_PATH = _DATA_DIR / "longmemeval_bottleneck.json"
+_OPENROUTER_EVAL_PATH = _DATA_DIR / "openrouter_eval.json"
 
 
 def _fmt(value: float, places: int = 3) -> str:
@@ -270,6 +271,24 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_NEURAL_MULTI_F1": _fmt(neural["category_neural_f1"]["multi_session"]),
         }
     )
+
+    # OpenRouter/Hy3 neural evaluation (cloud backend, tencent/hy3-preview).
+    if _OPENROUTER_EVAL_PATH.exists():
+        or_data = json.loads(_OPENROUTER_EVAL_PATH.read_text())
+        variables.update(
+            {
+                "RESULT_OPENROUTER_MODEL": str(or_data["model"]),
+                "RESULT_OPENROUTER_N": str(or_data["n_examples"]),
+                "RESULT_OPENROUTER_EXT_MEAN_F1": _fmt(or_data["extractive"]["mean_f1"]),
+                "RESULT_OPENROUTER_NEURAL_MEAN_F1": _fmt(or_data["neural"]["mean_f1"]),
+                "RESULT_OPENROUTER_EXT_PASS": str(or_data["extractive"]["pass_count"]),
+                "RESULT_OPENROUTER_NEURAL_PASS": str(or_data["neural"]["pass_count"]),
+                "RESULT_OPENROUTER_LIFT_F1": _fmt(or_data["lift"]["mean_f1_delta"]),
+                "RESULT_OPENROUTER_LIFT_PASS": f"{or_data['lift']['pass_delta']:+d}",
+                "RESULT_OPENROUTER_TEMPERATURE": str(or_data["temperature"]),
+                "RESULT_OPENROUTER_MAX_TOKENS": str(or_data["max_tokens"]),
+            }
+        )
 
     # Real surrogate-vs-learned semantic-lane measurement (paraphrase recall@1).
     learned = _load_learned_eval()

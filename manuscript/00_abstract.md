@@ -11,7 +11,7 @@ a,
 }
 </style>
 
-**THALIA** — Agentic Typed-pipeline with Lexical And Structured stages — is a
+**THALIA** — Typed Harness with Analytical Lexical-Integrated Architecture — is a
 typed, declaratively-specified agentic harness that fuses four research
 threads with a reproducible-research substrate. From DSPy [@khattab2023dspy] it
 takes the principle that prompts are parameterized code: every stage is a typed
@@ -50,7 +50,9 @@ is exercised separately by a real `dspy.BootstrapFewShot` optimiser over a real
 `dspy.Predict` program; and dropping a real neural model ({{RESULT_NEURAL_MODEL}})
 into the Reasoner slot — every other stage held fixed — raises mean token-F1 from
 {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}}, concentrated on the
-categories extraction cannot synthesise. Beyond the synthetic set we run the **real
+categories extraction cannot synthesise. (Neural validation used `tencent/hy3-preview`
+via OpenRouter as the live model; all other stages were held at their deterministic
+defaults.) Beyond the synthetic set we run the **real
 LongMemEval_S benchmark** [@wu2025longmemeval] ({{RESULT_LME_N_EXT}} questions over
 ~115k-token haystacks): accuracy collapses (extractive {{RESULT_LME_EXT_ACC}}, neural
 {{RESULT_LME_NEURAL_ACC}}; {{CONFIG_CI_LEVEL}}% bootstrap CIs), and — localising the failure rather than

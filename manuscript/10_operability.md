@@ -17,6 +17,10 @@ is loadable, overridable, and serialisable:
 - **Environment** — any field is overridable via `THALIA_<FIELD>` (e.g.
   `THALIA_TOP_K=4`, `THALIA_LEXICAL_WEIGHT=0.8 THALIA_SEMANTIC_WEIGHT=0.2`). Lane
   weights remain both-or-neither; setting only one against an unset pair raises.
+  Two additional environment variables control the OpenRouter adapter:
+  `THALIA_OPENROUTER_API_KEY` (required to activate the adapter; absent → null
+  rows in evaluation output) and `THALIA_OPENROUTER_MODEL` (selects the
+  OpenRouter model; defaults to `openai/gpt-4o-mini` when unset).
 - **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
   `save_config` make a config serialisable and reproducible; `from_dict` and
   `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
@@ -99,6 +103,12 @@ behind the one-method `LMClient` protocol:
   raise `OllamaError` rather than degrading into an empty answer, and
   `is_available()` offers a best-effort liveness probe. It is opt-in and never
   invoked by the default core.
+- **`configure_openrouter(model, api_key)`** — configure the harness to use an
+  OpenRouter-hosted model via the OpenRouter chat completions API. The model is
+  controlled by the `THALIA_OPENROUTER_MODEL` environment variable (default:
+  `openai/gpt-4o-mini`); the API key is read from `THALIA_OPENROUTER_API_KEY`.
+  Like `OllamaLM`, this adapter is opt-in and raises on failure rather than
+  silently degrading.
 
 Both are validated against a real HTTP server spun up in the test process — the
 adapter's request construction and response parsing are exercised for real, with

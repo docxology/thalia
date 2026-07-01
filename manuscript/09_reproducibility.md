@@ -78,6 +78,14 @@ metadata — requested model, resolved tag, digest when Ollama reports one,
 generation options, embedding query/document prefixes, and null fields when a
 model is unavailable — so figures do not carry stale neural rows.
 
+An additional evaluation bundle, `data/openrouter_eval.json`, records results from
+the OpenRouter-backed adapter path ([@sec:op-lm]). This bundle is produced by
+`scripts/run_openrouter_eval.py` and requires the environment variable
+`THALIA_OPENROUTER_API_KEY` to be set to a valid OpenRouter API key. Like all
+recorder outputs, the file carries null rows when the key is absent, so the
+remaining pipeline steps proceed without error — the OpenRouter rows simply do not
+contribute to aggregate figures.
+
 ## Provenance chain {#sec:repro-provenance}
 
 The artifact inventory produced alongside this manuscript: the evaluation bundle
