@@ -178,47 +178,34 @@ class GEPAOptimizer:
 
 
 # ---------------------------------------------------------------------------
-# Optional bridge to real DSPy (gated; never required for the deterministic core)
+# DSPy signature bridge (real dspy.Signature from any THALIA signature)
 # ---------------------------------------------------------------------------
 
-try:  # pragma: no cover - exercised only when dspy is installed
-    import dspy as _dspy
+import dspy as _dspy
 
-    DSPY_AVAILABLE = True
-except ImportError:  # pragma: no cover - default offline path
-    _dspy = None
-    DSPY_AVAILABLE = False
+DSPY_AVAILABLE = True
 
 
 def to_dspy_signature(signature: type[Signature]) -> Any:
-    """Build a real ``dspy.Signature`` from an THALIA signature, if DSPy is present.
+    """Build a real ``dspy.Signature`` from a THALIA signature.
 
     Args:
-        signature: An THALIA :class:`~src.signatures.Signature` subclass.
+        signature: A THALIA :class:`~src.signatures.Signature` subclass.
 
     Returns:
         A dynamically constructed ``dspy.Signature`` class.
-
-    Raises:
-        RuntimeError: If DSPy is not installed.
     """
-    if not DSPY_AVAILABLE:  # pragma: no cover - trivial guard
-        raise RuntimeError(
-            "dspy is not installed; install `dspy-ai` to bridge THALIA signatures "
-            "to DSPy. The deterministic THALIA core does not require it."
-        )
-    # pragma: no cover below - only runs in a DSPy-enabled environment
     fields: dict[str, Any] = {}
     annotations: dict[str, Any] = {}
-    for name, fld in signature.inputs().items():  # pragma: no cover
+    for name, fld in signature.inputs().items():
         fields[name] = _dspy.InputField(desc=fld.desc)
         annotations[name] = fld.annotation
-    for name, fld in signature.outputs().items():  # pragma: no cover
+    for name, fld in signature.outputs().items():
         fields[name] = _dspy.OutputField(desc=fld.desc)
         annotations[name] = fld.annotation
-    fields["__doc__"] = signature.instructions()  # pragma: no cover
-    fields["__annotations__"] = annotations  # pragma: no cover
-    return type(signature.__name__, (_dspy.Signature,), fields)  # pragma: no cover
+    fields["__doc__"] = signature.instructions()
+    fields["__annotations__"] = annotations
+    return type(signature.__name__, (_dspy.Signature,), fields)
 
 
 __all__ = [
@@ -227,5 +214,4 @@ __all__ = [
     "check_skill_constraints",
     "GEPAOptimizer",
     "to_dspy_signature",
-    "DSPY_AVAILABLE",
 ]

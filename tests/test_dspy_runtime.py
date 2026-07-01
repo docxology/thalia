@@ -1,9 +1,9 @@
 """Tests for the real DSPy runtime (Zero-Mock).
 
-The pure adapter helpers are tested directly (no dspy needed). The real dspy glue
-— real ``dspy.Predict`` and a real ``dspy.BootstrapFewShot`` optimizer backed by the
-project's real ExtractiveLM — is validated when the ``dspy`` extra is installed and
-skipped otherwise. Nothing here is mocked, faked, or stubbed.
+The pure adapter helpers are tested directly. The real dspy glue — real
+``dspy.Predict`` and a real ``dspy.BootstrapFewShot`` optimizer backed by the
+project's real ExtractiveLM — runs unconditionally. Nothing here is mocked,
+faked, or stubbed.
 """
 
 from types import SimpleNamespace
@@ -12,7 +12,6 @@ import pytest
 
 from src.dspy_runtime import (
     DEFAULT_OLLAMA_MODEL,
-    DSPY_AVAILABLE,
     format_dspy_completion,
     model_in_tags,
     ollama_model_metadata_from_tags,
@@ -102,16 +101,6 @@ class TestPureAdapterHelpers:
         assert ollama_model_available(model="gemma3:4b", api_base="http://localhost:1") is False
 
 
-def test_runtime_requires_dspy_when_absent():
-    if DSPY_AVAILABLE:
-        pytest.skip("dspy installed; offline guard not exercised")
-    from src.dspy_runtime import build_program
-
-    with pytest.raises(RuntimeError, match="dspy is not installed"):
-        build_program()
-
-
-@pytest.mark.skipif(not DSPY_AVAILABLE, reason="real dspy not installed; runtime needs the `dspy` extra")
 class TestRealDspyRuntime:
     """Exercises genuine dspy objects end-to-end (real Predict + real optimizer)."""
 
@@ -178,7 +167,7 @@ class TestRealDspyRuntime:
 
 
 @pytest.mark.skipif(
-    not (DSPY_AVAILABLE and ollama_model_available()),
+    not ollama_model_available(),
     reason=f"needs a running Ollama serving {DEFAULT_OLLAMA_MODEL}",
 )
 class TestRealNeuralDspy:

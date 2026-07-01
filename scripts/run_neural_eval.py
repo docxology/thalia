@@ -23,13 +23,13 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from src.dspy_runtime import DSPY_AVAILABLE, DEFAULT_OLLAMA_MODEL, ollama_model_available  # noqa: E402
+from src.dspy_runtime import DEFAULT_OLLAMA_MODEL, ollama_model_available  # noqa: E402
 
 
 def main() -> int | str:
     """Record the real backend comparison to data/neural_eval.json."""
-    if not (DSPY_AVAILABLE and ollama_model_available()):
-        print(f"[skip] needs the dspy extra and a live Ollama serving {DEFAULT_OLLAMA_MODEL}; data/neural_eval.json left as-is.")
+    if not ollama_model_available():
+        print(f"[skip] needs a live Ollama serving {DEFAULT_OLLAMA_MODEL}; data/neural_eval.json left as-is.")
         return 0
 
     from src.dspy_runtime import evaluate_backends

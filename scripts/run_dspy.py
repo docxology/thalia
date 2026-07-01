@@ -4,9 +4,6 @@
 Runs a genuine ``dspy.Predict`` over the project's real ExtractiveLM backend, then
 a genuine ``dspy.BootstrapFewShot`` optimizer over the demo dataset. Writes a JSON
 summary under ``output/data/``. Logic lives in :mod:`src.dspy_runtime`.
-
-If the optional ``dspy`` extra is not installed this prints a notice and exits 0,
-so the working-render pipeline (which runs every script bare) is never blocked.
 """
 
 from __future__ import annotations
@@ -21,15 +18,9 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from src.dspy_runtime import DSPY_AVAILABLE  # noqa: E402
-
 
 def main() -> int | str:
     """Run the real DSPy prediction + optimization and write the result JSON."""
-    if not DSPY_AVAILABLE:
-        print("[skip] dspy extra not installed; run `uv pip install 'dspy-ai>=2.5'` to enable the real DSPy runtime.")
-        return 0
-
     from src.dspy_runtime import (
         DEFAULT_OLLAMA_MODEL,
         build_dataset,

@@ -7,11 +7,6 @@ manuscript. There is **no mock, fake, or stub** here: every object is a real
 over the real context. The only judgement step (the LM) is deterministic, so the
 whole path is reproducible and offline — a real local model standing in for a
 hosted one, swappable for any :class:`~src.module.LMClient`.
-
-Gated on the optional ``dspy`` extra (``DSPY_AVAILABLE``); never imported by the
-deterministic core. The pure adapter helpers below carry no ``dspy`` dependency and
-are unit-tested directly; the thin ``dspy`` glue is exercised by the real,
-``DSPY_AVAILABLE``-gated tests in ``tests/test_dspy_runtime.py``.
 """
 
 from __future__ import annotations
@@ -21,19 +16,15 @@ import re
 import urllib.request
 from typing import Any
 
+import dspy as _dspy
+
 from .compiler.metrics import token_f1
 from .module import EVIDENCE_MARKER, QUESTION_MARKER, ExtractiveLM, LMClient
 
 DEFAULT_OLLAMA_MODEL = "gemma3:4b"
 DEFAULT_OLLAMA_BASE = "http://localhost:11434"
 
-try:  # pragma: no cover - exercised only when the dspy extra is installed
-    import dspy as _dspy
-
-    DSPY_AVAILABLE = True
-except ImportError:  # pragma: no cover - default offline path
-    _dspy = None
-    DSPY_AVAILABLE = False
+DSPY_AVAILABLE = True
 
 _FIELD_RE = re.compile(r"\[\[ ## (\w+) ## \]\]")
 _QUESTION_FIELDS = ("question", "query")
@@ -177,21 +168,12 @@ def ollama_model_available(model: str = DEFAULT_OLLAMA_MODEL, api_base: str = DE
         return False
 
 
-def _require_dspy() -> None:
-    """Raise a clear error when the optional dspy extra is absent."""
-    if not DSPY_AVAILABLE:  # pragma: no cover - trivial guard
-        raise RuntimeError(
-            "dspy is not installed; install the `dspy` extra (`uv pip install 'dspy-ai>=2.5'`) "
-            "to use the real DSPy runtime. The deterministic THALIA core does not require it."
-        )
-
-
 # ---------------------------------------------------------------------------
-# Real dspy glue (only defined / runnable with the dspy extra installed)
+# Real dspy glue
 # ---------------------------------------------------------------------------
-if DSPY_AVAILABLE:  # pragma: no cover - requires the optional dspy extra
 
-    class ExtractiveDSPyLM(_dspy.BaseLM):
+
+class ExtractiveDSPyLM(_dspy.BaseLM):
         """A real ``dspy`` LM backed by the project's real deterministic ExtractiveLM.
 
         dspy drives this exactly as it would a hosted model: it sends chat messages
@@ -213,7 +195,8 @@ if DSPY_AVAILABLE:  # pragma: no cover - requires the optional dspy extra
             answer = self.lm.complete(render_extractive_prompt(inputs))
             return [format_dspy_completion(output_fields, answer)]
 
-    class AnswerFromContext(_dspy.Signature):
+
+class AnswerFromContext(_dspy.Signature):
         """Answer the question using only the provided context."""
 
         context: str = _dspy.InputField(desc="Evidence the answer must be grounded in.")
@@ -221,9 +204,8 @@ if DSPY_AVAILABLE:  # pragma: no cover - requires the optional dspy extra
         answer: str = _dspy.OutputField(desc="The grounded answer span.")
 
 
-def configure(lm: LMClient | None = None) -> Any:  # pragma: no cover - requires dspy
+def configure(lm: LMClient | None = None) -> Any:
     """Configure dspy globally with the real ExtractiveLM-backed adapter; return it."""
-    _require_dspy()
     backend = ExtractiveDSPyLM(lm=lm)
     _dspy.configure(lm=backend)
     return backend
@@ -234,28 +216,25 @@ def configure_ollama(
     api_base: str = DEFAULT_OLLAMA_BASE,
     temperature: float = 0.0,
     max_tokens: int = 512,
-) -> Any:  # pragma: no cover - requires a running ollama serving the model
+) -> Any:
     """Configure dspy with a REAL neural LLM via ``dspy.LM`` → litellm → Ollama.
 
     No mock, no surrogate: dspy formats prompts, calls the live local model, and
     parses its real generations. ``temperature=0`` for reproducibility. Returns the
     configured ``dspy.LM``.
     """
-    _require_dspy()
     lm = _dspy.LM(model=f"ollama_chat/{model}", api_base=api_base, api_key="", temperature=temperature, max_tokens=max_tokens)
     _dspy.configure(lm=lm)
     return lm
 
 
-def build_program() -> Any:  # pragma: no cover - requires dspy
+def build_program() -> Any:
     """Return a real ``dspy.Predict`` program over :class:`AnswerFromContext`."""
-    _require_dspy()
     return _dspy.Predict(AnswerFromContext)
 
 
-def build_dataset(limit: int | None = None) -> list:  # pragma: no cover - requires dspy
+def build_dataset(limit: int | None = None) -> list:
     """Build real ``dspy.Example`` training data from the project's demo dataset."""
-    _require_dspy()
     from .evaluation import build_demo_dataset
 
     examples = []
@@ -268,14 +247,13 @@ def build_dataset(limit: int | None = None) -> list:  # pragma: no cover - requi
     return examples
 
 
-def injection_resistance_neural() -> dict:  # pragma: no cover - requires dspy + a live ollama model
+def injection_resistance_neural() -> dict:
     """Measure how often a real neural model obeys an injected context-poisoning line.
 
     Striking, honest finding: an instruction-following LLM *obeys* "IGNORE ALL
     PREVIOUS / SYSTEM OVERRIDE" — so its poison rate is far higher than the dumb
     extractive matcher's, and it emits no citations to recover the true fact.
     """
-    _require_dspy()
     from .evaluation.ablation import _INJECTION_PROBES, _poison_session
 
     generation_options = {"temperature": 0.0, "max_tokens": 512}
@@ -312,7 +290,7 @@ def injection_resistance_neural() -> dict:  # pragma: no cover - requires dspy +
     }
 
 
-def evaluate_backends(limit: int | None = None) -> dict:  # pragma: no cover - requires dspy + a live ollama model
+def evaluate_backends(limit: int | None = None) -> dict:
     """Real head-to-head: deterministic ExtractiveLM vs the neural Ollama model.
 
     Runs the same `dspy.Predict` program over the demo dataset under each backend,
@@ -320,7 +298,6 @@ def evaluate_backends(limit: int | None = None) -> dict:  # pragma: no cover - r
     mean scores plus the neural sample answers. A genuine measurement (temperature 0),
     not a mock — reproducible on any host serving the model.
     """
-    _require_dspy()
     from .evaluation import build_demo_dataset
 
     dataset = build_demo_dataset()[:limit]
@@ -361,13 +338,12 @@ def evaluate_backends(limit: int | None = None) -> dict:  # pragma: no cover - r
     }
 
 
-def compile_program(program: Any = None, trainset: list | None = None, max_demos: int = 4) -> Any:  # pragma: no cover - requires dspy
+def compile_program(program: Any = None, trainset: list | None = None, max_demos: int = 4) -> Any:
     """Run a REAL dspy optimizer (``BootstrapFewShot``) over the program.
 
     Returns the compiled program with bootstrapped few-shot demonstrations attached
     — genuine dspy optimization, deterministic under the extractive backend.
     """
-    _require_dspy()
     configure()
     program = program or build_program()
     trainset = trainset if trainset is not None else build_dataset()
@@ -375,7 +351,7 @@ def compile_program(program: Any = None, trainset: list | None = None, max_demos
     return optimizer.compile(program, trainset=trainset)
 
 
-def held_out_optimizer_lift(train_size: int = 4) -> dict:  # pragma: no cover - requires dspy
+def held_out_optimizer_lift(train_size: int = 4) -> dict:
     """Measure the optimizer the only falsifiable way: a held-out before/after.
 
     Splits the demo dataset, scores the uncompiled vs the ``BootstrapFewShot``-compiled
@@ -384,7 +360,6 @@ def held_out_optimizer_lift(train_size: int = 4) -> dict:  # pragma: no cover - 
     extractive backend ignores demonstrations — so the compiler's value is its
     auditable search trace, not a demonstrated accuracy gain.
     """
-    _require_dspy()
     configure()
     data = build_dataset()
     train, test = data[:train_size], data[train_size:]
@@ -396,7 +371,6 @@ def held_out_optimizer_lift(train_size: int = 4) -> dict:  # pragma: no cover - 
 
 
 __all__ = [
-    "DSPY_AVAILABLE",
     "DEFAULT_OLLAMA_MODEL",
     "DEFAULT_OLLAMA_BASE",
     "parse_input_fields",

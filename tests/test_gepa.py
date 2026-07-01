@@ -2,7 +2,6 @@
 
 import pytest
 from src.compiler.gepa import (
-    DSPY_AVAILABLE,
     GEPAOptimizer,
     SKILL_MAX_BYTES,
     check_skill_constraints,
@@ -198,14 +197,14 @@ class TestEvolve:
 
 
 class TestDSPyBridge:
-    def test_dspy_availability_flag_is_bool(self):
-        assert isinstance(DSPY_AVAILABLE, bool)
+    def test_bridge_requires_dspy(self):
+        """to_dspy_signature is always available and converts signatures."""
+        from src.signatures import InspectorSignature
 
-    def test_bridge_raises_without_dspy(self):
-        if DSPY_AVAILABLE:
-            pytest.skip("dspy installed; offline guard not exercised")
-        with pytest.raises(RuntimeError, match="dspy is not installed"):
-            to_dspy_signature(InspectorSignature)
+        converted = to_dspy_signature(InspectorSignature)
+        import dspy
+
+        assert issubclass(converted, dspy.Signature)
 
 
 class _ScalarSig(Signature):
@@ -216,13 +215,10 @@ class _ScalarSig(Signature):
     answer: str = OutputField("the grounded answer")
 
 
-@pytest.mark.skipif(not DSPY_AVAILABLE, reason="real dspy not installed; bridge body needs the `dspy` extra")
 class TestRealDspyBridge:
-    """Validate ``to_dspy_signature`` against a real installed dspy (Zero-Mock).
+    """Validate ``to_dspy_signature`` against real installed dspy (Zero-Mock).
 
-    These exercise the ``pragma: no cover`` bridge body that only runs when the
-    ``dspy`` extra is present, proving it emits genuine, usable ``dspy.Signature``
-    classes rather than a stub.
+    Proves it emits genuine, usable ``dspy.Signature`` classes rather than a stub.
     """
 
     def test_scalar_signature_roundtrips_to_real_dspy(self):

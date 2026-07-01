@@ -73,15 +73,10 @@ class TestScripts:
         assert _load("run_query").main([]) == 0
 
     def test_run_dspy(self):
-        # Real DSPy runtime when the extra is installed (writes JSON); a clean
-        # exit-0 notice otherwise. Either way the bare run must not blow up.
-        from src.dspy_runtime import DSPY_AVAILABLE
-
+        # Real DSPy runtime writes JSON. Must not blow up.
         result = _load("run_dspy").main()
-        if DSPY_AVAILABLE:
-            assert Path(result).exists()
-        else:
-            assert result == 0
+        assert isinstance(result, str)
+        assert Path(result).exists()
 
     def test_run_learned_retrieval(self):
         # Real learned-embedder measurement when a model is live; clean exit-0

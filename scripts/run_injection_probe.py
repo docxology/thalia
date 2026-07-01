@@ -23,14 +23,14 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from src.dspy_runtime import DSPY_AVAILABLE, ollama_model_available  # noqa: E402
+from src.dspy_runtime import ollama_model_available  # noqa: E402
 from src.evaluation import injection_resistance  # noqa: E402
 
 
 def main() -> int | str:
     """Record the injection-resistance comparison to data/injection_eval.json."""
     result = dict(injection_resistance())
-    if DSPY_AVAILABLE and ollama_model_available():
+    if ollama_model_available():
         from src.dspy_runtime import injection_resistance_neural
 
         neural = injection_resistance_neural()

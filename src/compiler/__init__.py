@@ -10,7 +10,6 @@ Closes the loop between the pipeline and its evaluation:
 """
 
 from .gepa import (
-    DSPY_AVAILABLE,
     GEPAOptimizer,
     SkillConstraintReport,
     check_skill_constraints,
@@ -44,5 +43,4 @@ __all__ = [
     "SkillConstraintReport",
     "check_skill_constraints",
     "to_dspy_signature",
-    "DSPY_AVAILABLE",
 ]
