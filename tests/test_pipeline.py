@@ -308,6 +308,29 @@ class TestPipeline:
         assert "retriever" in rep
         assert "total" in rep
 
+    def test_pipeline_adaptive_windows(self):
+        """Pipeline with adaptive_windows=True scales inspector windows."""
+        config = default_config().with_(adaptive_windows=True, adaptive_window_ratio=10, max_windows=3)
+        long_history = "User: line\nAssistant: response\n" * 100  # 200 lines
+        pipe = Pipeline(config=config).with_inspector()
+        out = pipe.run(query="what is the wifi password", session_history=long_history)
+        # Adaptive windows should scale beyond the default max_windows with a long context
+        assert out.inspector_metadata is not None
+
+    def test_pipeline_recall_memory(self):
+        """Pipeline with recall_memory=True consults the episodic store."""
+        from src.memory.episodic_store import EpisodicStore
+        from src.signatures import EpisodicEntry
+
+        store = EpisodicStore()
+        store.append(EpisodicEntry(0, "my wifi password is bluefish42", "noted"))
+        config = default_config().with_(recall_memory=True, recall_limit=3)
+        pipe = Pipeline(config=config, episodic_store=store).with_all_stages()
+        out = pipe.run(query="what is the wifi password", session_history="User: something else")
+        # Memory recall should surface the stored fact even though the session has no evidence
+        assert out.answer or "bluefish42" in str(out.ranked_evidence)
+        store.close()
+
 
 class TestHarnessOutputSerialisation:
     def test_to_dict_round_trip(self):

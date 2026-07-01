@@ -1,0 +1,96 @@
+{
+  "extractive": {
+    "examples": [
+      {
+        "f1": 0.6153846153846153,
+        "gold": "car service April 12th",
+        "prediction": "User: Also the car service is on April 12th.",
+        "query": "When is the car service scheduled?"
+      },
+      {
+        "f1": 0.8333333333333333,
+        "gold": "favorite programming language is Rust",
+        "prediction": "User: My favorite programming language is Rust.",
+        "query": "What is my favorite programming language?"
+      },
+      {
+        "f1": 0.0,
+        "gold": "KeyError when CONFIG is missing",
+        "prediction": "User: The deploy script lives in scripts/deploy.py.",
+        "query": "What error does the deploy code raise without CONFIG?"
+      },
+      {
+        "f1": 0.0,
+        "gold": "budget was 5000 dollars",
+        "prediction": "Assistant: Yes, three vendors across our sessions.",
+        "query": "What budget did I mention across our sessions?"
+      },
+      {
+        "f1": 0.6153846153846153,
+        "gold": "now live in Lisbon",
+        "prediction": "User: I no longer live there; I now live in Lisbon.",
+        "query": "Where do I now live? Please remember this."
+      },
+      {
+        "f1": 0.8,
+        "gold": "wifi password is bluefish42",
+        "prediction": "User: The wifi password is bluefish42.",
+        "query": "What is the wifi password?"
+      }
+    ],
+    "mean_f1": 0.47735042735042726,
+    "n": 6,
+    "pass_count": 4
+  },
+  "lift": {
+    "mean_f1_delta": -0.010683760683760646,
+    "pass_delta": -2
+  },
+  "max_tokens": 1024,
+  "model": "tencent/hy3-preview",
+  "n_examples": 6,
+  "neural": {
+    "examples": [
+      {
+        "f1": 0.6666666666666666,
+        "gold": "car service April 12th",
+        "prediction": "April 12th",
+        "query": "When is the car service scheduled?"
+      },
+      {
+        "f1": 0.33333333333333337,
+        "gold": "favorite programming language is Rust",
+        "prediction": "Rust",
+        "query": "What is my favorite programming language?"
+      },
+      {
+        "f1": 0.33333333333333337,
+        "gold": "KeyError when CONFIG is missing",
+        "prediction": "KeyError",
+        "query": "What error does the deploy code raise without CONFIG?"
+      },
+      {
+        "f1": 0.6666666666666666,
+        "gold": "budget was 5000 dollars",
+        "prediction": "5000 dollars",
+        "query": "What budget did I mention across our sessions?"
+      },
+      {
+        "f1": 0.4,
+        "gold": "now live in Lisbon",
+        "prediction": "Lisbon",
+        "query": "Where do I now live? Please remember this."
+      },
+      {
+        "f1": 0.4,
+        "gold": "wifi password is bluefish42",
+        "prediction": "bluefish42",
+        "query": "What is the wifi password?"
+      }
+    ],
+    "mean_f1": 0.4666666666666666,
+    "n": 6,
+    "pass_count": 2
+  },
+  "temperature": 0.0
+}
