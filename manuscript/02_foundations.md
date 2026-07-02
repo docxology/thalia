@@ -98,3 +98,5 @@ its discipline: every stage carries a `SKILL.md`, the eight build stages map ont
 the harness's compile-and-validate lifecycle ([@sec:integration]), and the
 manuscript's numbers are generated tokens, not hand-typed values
 ([@sec:reproducibility]).
+
+![Foundations-to-THALIA stage map. Each foundation work maps to one or more THALIA stages, colour-coded by the stage palette.](../output/figures/foundations_map.png){#fig:foundations_map width=90%}

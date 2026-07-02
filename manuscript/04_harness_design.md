@@ -8,12 +8,12 @@ end-to-end flow:
 
 ```text
 session history + query
-  ─► Stage 0  Inspector    RLM-style context narrowing  (peek → grep → windows)
-  ─► Stage 1  Retriever    lexical-first hybrid + weighted RRF + budgeting
-  ─► Stage 2  Reasoner     typed reasoning; CoT or ReAct; typed citations
-  ─► Stage 3  MemoryGate   always append raw episode; gated consolidation
-  ─► HarnessOutput
-  ╌► Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution
+  -> Stage 0  Inspector    RLM-style context narrowing  (peek -> grep -> windows)
+  -> Stage 1  Retriever    lexical-first hybrid + weighted RRF + budgeting
+  -> Stage 2  Reasoner     typed reasoning; CoT or ReAct; typed citations
+  -> Stage 3  MemoryGate   always append raw episode; gated consolidation
+  -> HarnessOutput
+  ~> Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution
 ```
 
 The language model is abstracted behind a one-method protocol
@@ -32,6 +32,10 @@ tests, and dashboard all report these same typed objects rather than post-hoc
 natural-language summaries.
 
 This spine preserves the stable auto-harness design anchor. The detailed method contract, stage-by-stage design, formalism, added-method diagnostics, and implementation traceability now live in adjacent `04a_` through `04c_` modules.
+
+![Memory lifecycle: the raw episode is always appended to the SQLite EpisodicStore. Consolidation into MEMORY.md only fires when the Reasoner requests it AND an explicit criterion holds — a dual-key gate that prevents the per-turn consolidation fault documented by @zhang2026memory](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
+
+![GEPA evolution loop: the Compiler evaluates a config, reflects on the weakest metric component, mutates the config, and repeats, recording the full search trace. This mirrors the trace-reflective evolution loop described in [@sec:eval-compiler].](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
 
 Modular harness-design files:
 

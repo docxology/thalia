@@ -23,37 +23,37 @@
 
 ```text
 thalia/
-├── AGENTS.md / README.md            # machine + human entry points
-├── pyproject.toml                   # pytest/coverage config, deps
-├── config/harness.yaml              # canonical loadable harness configuration
-├── domain_profile.yaml              # advisory research-domain overlay
-├── experiment_plan.yaml             # deterministic experiment declaration
-├── data/claim_ledger.yaml           # sourced numeric-claim registry
-├── src/
-│   ├── signatures/                  # framework, payloads, stage contracts
-│   ├── routing.py                   # classify_task
-│   ├── evaluation/                  # dataset, experiments, run_full_eval bundle
-│   ├── module.py                    # Module / Prediction / LMClient / ExtractiveLM
-│   ├── config.py                    # HarnessConfig + load/save/env overrides
-│   ├── llm.py                       # real LM adapters (CallableLM, OllamaLM)
-│   ├── harness.py                   # AutoHarness (composes the four stages)
-│   ├── recall.py                    # read-only memory recall (episodic + MEMORY.md)
-│   ├── session.py                   # persistent multi-turn Session
-│   ├── cli.py                       # query CLI (run_query, arg parsing, Inspector diagnostics)
-│   ├── demo.py                      # deterministic demo artifact builder
-│   ├── provenance.py                # verification, figure, and artifact registries
-│   ├── figures.py                   # deterministic figure generators
-│   ├── dashboard.py                 # self-contained static HTML dashboard renderer
-│   ├── invariants.py                # executable runtime invariants
-│   ├── manuscript_variables.py      # generated-token map
-│   ├── retrieval/                   # lexical.py · semantic.py · fusion.py · mmr.py · expansion.py
-│   ├── stages/                      # inspector · retriever · reasoner · memory_gate
-│   ├── memory/                      # episodic_store · consolidation
-│   └── compiler/                    # metrics · mipro · gepa
-├── skills/                          # thalia-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
-├── scripts/                         # thin orchestrators (eval, compile, figures, dashboard, preflight, tokens, run_query)
-├── tests/                           # Zero-Mock suite, one file per module
-└── manuscript/                      # this document (sections 00–11, 99) + config/preamble/refs
++-- AGENTS.md / README.md            # machine + human entry points
++-- pyproject.toml                   # pytest/coverage config, deps
++-- config/harness.yaml              # canonical loadable harness configuration
++-- domain_profile.yaml              # advisory research-domain overlay
++-- experiment_plan.yaml             # deterministic experiment declaration
++-- data/claim_ledger.yaml           # sourced numeric-claim registry
++-- src/
+|   +-- signatures/                  # framework, payloads, stage contracts
+|   +-- routing.py                   # classify_task
+|   +-- evaluation/                  # dataset, experiments, run_full_eval bundle
+|   +-- module.py                    # Module / Prediction / LMClient / ExtractiveLM
+|   +-- config.py                    # HarnessConfig + load/save/env overrides
+|   +-- llm.py                       # real LM adapters (CallableLM, OllamaLM)
+|   +-- harness.py                   # AutoHarness (composes the four stages)
+|   +-- recall.py                    # read-only memory recall (episodic + MEMORY.md)
+|   +-- session.py                   # persistent multi-turn Session
+|   +-- cli.py                       # query CLI (run_query, arg parsing, Inspector diagnostics)
+|   +-- demo.py                      # deterministic demo artifact builder
+|   +-- provenance.py                # verification, figure, and artifact registries
+|   +-- figures.py                   # deterministic figure generators
+|   +-- dashboard.py                 # self-contained static HTML dashboard renderer
+|   +-- invariants.py                # executable runtime invariants
+|   +-- manuscript_variables.py      # generated-token map
+|   +-- retrieval/                   # lexical / semantic / fusion / mmr / expansion
+|   +-- stages/                      # inspector / retriever / reasoner / memory_gate
+|   +-- memory/                      # episodic_store / consolidation
+|   +-- compiler/                    # metrics / mipro / gepa
++-- skills/                          # thalia-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
++-- scripts/                         # thin orchestrators (eval, compile, figures, dashboard, preflight, tokens, run_query)
++-- tests/                           # Zero-Mock suite, one file per module
++-- manuscript/                      # this document (sections 00-11, 99) + config/preamble/refs
 ```
 
 ## Stage-to-signature-to-skill map {#sec:ref-map}

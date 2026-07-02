@@ -28,6 +28,8 @@ first and only then decides whether a derived memory delta is warranted. The
 Compiler does not rewrite source code or mutate prose; it searches a bounded
 configuration surface and records the full trace.
 
+![THALIA system overview: query + history flow through Inspector → Retriever → Reasoner → Memory Gate, with the Compiler as an offline optimization loop.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
+
 ## The four foundations and the substrate
 
 1. **DSPy** [@khattab2023dspy] — prompts as parameterized code; pipelines as typed

@@ -36,6 +36,10 @@ FIGURE_LABELS: dict[str, str] = {
     "retriever_comparison": "fig:retriever_comparison",
     "rrf_sensitivity": "fig:rrf_sensitivity",
     "scaling_ci": "fig:scaling_ci",
+    "thalia_overview": "fig:thalia_overview",
+    "foundations_map": "fig:foundations_map",
+    "memory_lifecycle": "fig:memory_lifecycle",
+    "gepa_evolution_loop": "fig:gepa_evolution_loop",
 }
 
 _MANIFEST_EXCLUDE_NAMES = {
