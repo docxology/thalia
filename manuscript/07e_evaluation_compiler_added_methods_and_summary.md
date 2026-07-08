@@ -34,6 +34,18 @@ does not.
 
 ![MIPRO-style compiler search: candidate composite scores and the best-so-far curve. Every candidate ties exactly on this easy dataset, so the curve is intentionally flat and the optimum is a tie-break rather than a measured improvement. The inset decomposes the composite into its weighted accuracy/grounding/efficiency components, each constant across candidates — the flatness is a proven structural tie, not a rendering accident.](../output/figures/compiler_convergence.png){#fig:compiler_convergence width=70%}
 
+The GEPA-style optimizer, by contrast, *can* move on a harder distribution because
+it reflects on the weakest component and mutates accordingly. [@fig:gepa_trajectory]
+shows one such reflective run: each iteration plots accuracy, grounding, efficiency,
+and the composite, and the open halo marks the component the optimizer identified as
+weakest at that step (the target of the next bounded mutation). On the easy set the
+composite still plateaus, but the trajectory is no longer a single flat line — it
+exposes *which* component the search would push first, and records the full trace so
+a reader can audit the mutation strategy on real data rather than trust a prose
+summary.
+
+![GEPA component trajectory: per-iteration accuracy, grounding, efficiency, and composite (dashed) over a reflective evolution run. The open halo marks the weakest component at each step — the target of the next bounded mutation — so the reader can audit which component GEPA would push first on harder data.](../output/figures/gepa_trajectory.png){#fig:gepa_trajectory width=70%}
+
 ![RRF lane-weight sensitivity under a tight retrieval budget: composite as the lexical weight sweeps from 0 to 1 (semantic = 1 − weight). On this clean set the sub-word semantic surrogate ranks the gold line marginally better than BM25, so semantic-heavy fusion (lexical weight $\le 0.4$) scores highest; the curve then steps down non-monotonically — with a single dip at the balanced midpoint (lexical weight 0.5, where neither lane's ranking dominates) before settling onto a slightly lower lexical-heavy plateau. Under the loose default budget every weight ties — the tight budget is what surfaces the tradeoff.](../output/figures/rrf_sensitivity.png){#fig:rrf_sensitivity width=70%}
 
 ![Schematic memory-utility curves: forced per-turn consolidation rises then degrades below the no-memory baseline, while the episodic-first gated regime rises and never falls below it. Illustrative of the mechanism in @zhang2026memory, not an empirical measurement.](../output/figures/consolidation_curve.png){#fig:consolidation width=70%}
@@ -61,7 +73,26 @@ budget surfaces the real diversity penalty without tuning the dataset.
 
 ![Evidence narrowing funnel: mean counts per query from raw session lines through Inspector windows, ranked evidence, and cited sources. Counts come from `src.evaluation.evidence_funnel` on the fixed six-example dataset; the figure measures context narrowing, not answer quality by itself.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
 
+The funnel is a mean view; [@fig:pipeline_flow] makes the per-example narrowing
+concrete by plotting, for each of the six demo examples (one per task category),
+the evidence count at each pipeline stage — Inspector windows → Retriever ranked
+→ Reasoner cited. The gaps between the three bars are exactly the drops the funnel
+averages: an example that enters with two windows and cites both shows the
+harness lost nothing in transit, while an example whose cited count falls below its
+ranked count is a concrete grounding-failure case to inspect.
+
+![Per-example evidence narrowing across pipeline stages: Inspector windows (lexical blue), Retriever ranked (hybrid green), and Reasoner cited (accent pink) for each of the six demo examples (one per task category). The three bars per group show context is preserved or narrowed, never silently fabricated; a cited count below the ranked count flags a concrete grounding miss.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
+
 ![Composite metric per task category on the fixed deterministic dataset. Each bar averages the same token-F1, grounding, and efficiency metric used for the headline results; the categories are diagnostic slices, not population estimates.](../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
+
+The composite hides the components that produced it. [@fig:category_components]
+decomposes each category's composite into its weighted accuracy/grounding/efficiency
+contributions (the same 0.6/0.3/0.1 weights behind [@eq:composite]); the two weak
+category bars in [@fig:category_breakdown] read, on inspection, as accuracy-bounded
+(code, multi-session) rather than grounding or efficiency failures — consistent with
+the LM-bounded-accuracy story in [@sec:eval-neural].
+
+![Per-category weighted component breakdown: each bar stacks 0.6·accuracy (blue), 0.3·grounding (green), and 0.1·efficiency (pink) to its composite. The two weakest categories are accuracy-bounded (the extractive LM cannot synthesise the answer), not retrieval- or efficiency-bounded.](../output/figures/category_components.png){#fig:category_components width=70%}
 
 ![Composite metric per retrieval lane as lexical false-friend distractors are appended under the tight budget (`top_k=2`, `max_evidence=2`). The semantic line is the deterministic hashing surrogate, so the measured ordering is local to this surrogate and does not reproduce learned dense retrieval.](../output/figures/noise_scaling.png){#fig:noise_scaling width=70%}
 

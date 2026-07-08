@@ -54,7 +54,7 @@ recording the full trace. The size/non-empty constraints on evolved skill
 artifacts are enforced by `check_skill_constraints` (15 KB budget mirrored from
 the Hermes roadmap), and an optional `to_dspy_signature` bridge produces a real
 `dspy.Signature` when DSPy is installed — gated so the deterministic core never
-requires it ([@sec:stage-compiler]). With the `dspy` extra present, `src/dspy_runtime.py`
+requires it ([@sec:stage-compiler]). With the `dspy` extra present, `src/dspy_runtime/`
 goes further than the signature bridge: it runs a genuine `dspy.Predict` program and
 a genuine `dspy.BootstrapFewShot` optimizer, both backed by the project's real
 deterministic `ExtractiveLM` so the path stays offline and reproducible. The

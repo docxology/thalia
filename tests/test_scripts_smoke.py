@@ -36,6 +36,14 @@ class TestScripts:
     def test_generate_figures_writes_pngs(self):
         paths = _load("generate_figures").main()
         assert paths and all(Path(p).exists() for p in paths)
+        stems = {Path(p).stem for p in paths if Path(p).suffix == ".png"}
+        for required in (
+            "thalia_overview",
+            "foundations_map",
+            "memory_lifecycle",
+            "gepa_evolution_loop",
+        ):
+            assert required in stems
 
     def test_manuscript_variables_token_coverage(self):
         path = _load("z_generate_manuscript_variables").main()

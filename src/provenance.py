@@ -17,30 +17,7 @@ from typing import Iterable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 
-FIGURE_LABELS: dict[str, str] = {
-    "backend_comparison": "fig:backend_comparison",
-    "bottleneck": "fig:bottleneck",
-    "category_breakdown": "fig:category_breakdown",
-    "category_components": "fig:category_components",
-    "compiler_convergence": "fig:compiler_convergence",
-    "consolidation_curve": "fig:consolidation",
-    "evidence_funnel": "fig:evidence_funnel",
-    "gepa_trajectory": "fig:gepa_trajectory",
-    "injection_resistance": "fig:injection_resistance",
-    "longmemeval": "fig:longmemeval",
-    "method_ablation": "fig:method_ablation",
-    "mmr_tradeoff": "fig:mmr_tradeoff",
-    "noise_scaling": "fig:noise_scaling",
-    "orchestration_value": "fig:orchestration_value",
-    "paraphrase_retrieval": "fig:paraphrase_retrieval",
-    "retriever_comparison": "fig:retriever_comparison",
-    "rrf_sensitivity": "fig:rrf_sensitivity",
-    "scaling_ci": "fig:scaling_ci",
-    "thalia_overview": "fig:thalia_overview",
-    "foundations_map": "fig:foundations_map",
-    "memory_lifecycle": "fig:memory_lifecycle",
-    "gepa_evolution_loop": "fig:gepa_evolution_loop",
-}
+from .figures.manifest import FIGURE_LABELS
 
 _MANIFEST_EXCLUDE_NAMES = {
     "artifact_manifest.json",
@@ -130,7 +107,7 @@ def write_figure_registry(
             "filename": figure_path.name,
             "label": label,
             "generated_by": "scripts/generate_figures.py",
-            "source": "src/figures.py",
+            "source": "src/figures/",
         }
     path.write_text(json.dumps(entries, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path

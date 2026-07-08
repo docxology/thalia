@@ -11,9 +11,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 _CORE_ALLOWLIST = {
     Path("src/llm.py"),
-    Path("src/dspy_runtime.py"),
     Path("src/retrieval/learned.py"),
 }
+_CORE_ALLOWLIST_PREFIXES = (
+    "src/dspy_runtime/",
+)
 _FORBIDDEN_IMPORTS = {
     "openai",
     "anthropic",
@@ -48,7 +50,7 @@ def scan_core_determinism(project_root: str | Path = PROJECT_ROOT) -> tuple[Dete
     issues: list[DeterminismIssue] = []
     for path in sorted((root / "src").rglob("*.py")):
         rel = path.relative_to(root)
-        if rel in _CORE_ALLOWLIST:
+        if rel in _CORE_ALLOWLIST or rel.as_posix().startswith(_CORE_ALLOWLIST_PREFIXES):
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(rel))
         for node in ast.walk(tree):

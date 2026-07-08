@@ -29,7 +29,7 @@ fallback is covered via the `fts_available` toggle. The `to_dspy_signature` body
 `gepa.py` is `pragma: no cover` (only runs with `dspy` installed); when the `dspy`
 extra is present, `test_gepa.py::TestRealDspyBridge` functionally validates it
 (real `dspy.Signature` round-trip + `dspy.Predict` usability) and otherwise skips.
-`src/dspy_runtime.py` follows the same split: its pure adapter helpers are unit-tested
+`src/dspy_runtime/` (package) follows the same split: its pure adapter helpers are unit-tested
 unconditionally in `test_dspy_runtime.py`, while the gated `dspy` glue (real
 `dspy.Predict` + real `BootstrapFewShot` optimizer) is `pragma: no cover` and validated
 by the `DSPY_AVAILABLE`-gated `TestRealDspyRuntime` (skipped when the extra is absent).

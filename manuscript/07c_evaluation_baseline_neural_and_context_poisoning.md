@@ -33,7 +33,7 @@ measure that claim rather than assert it. The same five-stage contract runs
 unchanged under (i) a real `dspy.Predict` program compiled by a real
 `dspy.BootstrapFewShot` optimizer and (ii) a real neural model
 (`{{RESULT_NEURAL_MODEL}}`, served locally through Ollama) dropped into the Reasoner
-slot via `src/dspy_runtime.py`. Inputs are identical across backends; only the
+slot via `src/dspy_runtime/`. Inputs are identical across backends; only the
 language model changes.
 
 We also tested the optimiser the only way that can falsify it — a held-out

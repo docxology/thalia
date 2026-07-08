@@ -86,3 +86,22 @@ honestly scoped. Two real bugs that contradicted headline claims are fixed. The
 manuscript is structurally complete and unusually candid. **It is ready to publish
 the package now and ready to submit the manuscript as soon as the commissioned
 citations are verified.**
+
+## 2026-07-06 follow-up (post restructure)
+
+- **Figure count is now 23, not 19.** The `src/dspy_runtime.py` module was split
+  into the `src/dspy_runtime/` package (the import surface `from src.dspy_runtime
+  import …` is unchanged); the evaluation package and `src/figures.py` were likewise
+  split (`src/figures/{plots,diagrams,manifest}.py`). All prose references to the
+  old `src/dspy_runtime.py` / `src/figures.py` single-file paths were updated to the
+  package form. Three figures that were generated but never embedded
+  (`pipeline_flow`, `gepa_trajectory`, `category_components`) were added to §07e with
+  honest captions, closing the last orphaned-figure gap.
+- **Token coverage:** 85 of 100 generated tokens are referenced. The 15 unused are
+  all gated on absent recorder artifacts — 14 are the OpenRouter block (only emitted
+  when `data/openrouter_eval.json` exists, i.e. `THALIA_OPENROUTER_API_KEY` set) and
+  one is `CONFIG_CONTEXT_BUDGET`. None are dead hand-authored literals.
+- **Suite health (2026-07-06):** 649 passed, 4 skipped, `src/` coverage 99.54%. A
+  transient import-graph break (an untracked `src/dspy/` shadow package colliding
+  with the third-party `dspy-ai` dependency) was removed; the suite now collects and
+  passes end to end.

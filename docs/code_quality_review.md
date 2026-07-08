@@ -1,14 +1,28 @@
 # Thermo-Nuclear Code Quality Review — THALIA
 
-**Date:** 2026-06-02
+**Date:** 2026-06-02 (initial) · **2026-07-05** (follow-up pass)
 **Scope:** Full tree under `working/thalia` (`src/`, `tests/`, `scripts/`)
 **Rubric:** [thermo-nuclear-code-quality-review](https://github.com/cursor/cursor-team-kit) (cursor-team-kit plugin)
 
-## Executive verdict: **PASS** (after remediation)
+## Executive verdict: **PASS**
 
-Pre-remediation: **PASS WITH BLOCKERS**. Structural fixes below were applied in the same pass; the authoritative suite command is now recorded in `output/reports/verification_summary.json` and must meet the `src/` coverage gate from `pyproject.toml`. This avoids pinning transient pass/skip counts in a review document.
+**2026-06-02:** Pre-remediation **PASS WITH BLOCKERS**; structural fixes applied in the same pass.
 
-## Remediation summary
+**2026-07-05:** Pre-remediation **PASS WITH BLOCKERS** (unwired architectural figures, `figures.py` >1k LOC, harness/pipeline duplication). All ranked blockers and moderate findings remediated; suite gate confirmed below.
+
+## 2026-07-05 remediation summary
+
+| Finding | Action taken |
+|---------|----------------|
+| F1 — Architectural figures orphaned from generator | Wired `plot_thalia_overview`, `plot_foundations_map`, `plot_memory_lifecycle`, `plot_gepa_evolution_loop` in `scripts/generate_figures.py`; tests assert PNG existence |
+| F2 — `figures.py` at 1024 lines | Split into `src/figures/{plots,diagrams,manifest}.py`; stable `from src.figures import …` surface |
+| F3 — `Pipeline` / `AutoHarness` duplication | `AutoHarness.forward` delegates to `Pipeline.with_all_stages().run(...)`; shared `memory_gate`; `session_ending` + `turn_id` on `Pipeline.run` |
+| F4 — Loose `dict` on committed JSON plots | `src/evaluation/schemas.py` dataclasses; parse at script boundary; typed plot function signatures |
+| F13 — Figure registry ahead of generator | `src/figures/manifest.py` SSOT (`FIGURE_MANIFEST`, `FIGURE_LABELS`, `COMMITTED_FIGURES`); `provenance.py` imports labels |
+| F6 — `dspy_runtime.py` mixed concerns | Package `src/dspy_runtime/{adapters,runtime,live_eval}.py`; barrel re-exports preserve import surface |
+| F9 — `PipelineContext` erases types | Fields typed to `signatures.payloads`; `adaptive_max_windows` import at module top |
+
+## 2026-06-02 remediation summary
 
 | Finding | Action taken |
 |---------|----------------|
@@ -72,7 +86,7 @@ Stage signatures in [`src/signatures/stages.py`](../src/signatures/stages.py) no
 
 ## What already passed
 
-- Figure styling helpers are split into `src/figure_style.py`; the public `src.figures` plotting API remains stable for scripts/tests.
+- Figure styling helpers in `src/figure_style.py`; plotting API in `src/figures/` (plots + diagrams + manifest SSOT).
 - Thin orchestrator scripts (except pre-fix `z_generate`, now slim).
 - Zero-mock tests, executable invariants, linear five-stage pipeline.
 - Clear stage boundaries and LM-behind-protocol invariant preserved.
@@ -80,9 +94,25 @@ Stage signatures in [`src/signatures/stages.py`](../src/signatures/stages.py) no
 ## Verification
 
 ```bash
+# From canonical repo
+cd /Users/4d/Documents/GitHub/thalia && uv run pytest tests/ \
+  --cov=src --cov-report=term-missing --cov-fail-under=90
+
+# From template checkout
 uv run --project working/thalia pytest working/thalia/tests/ \
   --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
 ```
+
+The authoritative pass/skip/coverage counts are recorded by the verification
+gates in `src/provenance.py` (consumed by `scripts/build_dashboard.py` and
+`scripts/run_demo.py`) into
+[`output/reports/verification_summary.json`](../output/reports/verification_summary.json).
+That generated file is the single source of truth for the current numbers; this
+document does not re-state them so they cannot drift from the suite.
+
+**Status:** PASS for the 2026-07-05 remediation pass (suite gate confirmed by the
+manuscript-integrity test `test_count_bearing_docs_use_generated_verification_summary`,
+which fails if any count-bearing doc hard-codes a stale pass/skip/coverage literal).
 
 ## Follow-up completed (evaluation package)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Thin orchestrator: generate all manuscript figures.
 
-Plotting logic lives in ``src/figures.py``; data comes from ``src/evaluation``
+Plotting logic lives in ``src/figures/``; data comes from ``src/evaluation``
 and ``src/compiler/``. Writes PNGs under ``output/figures/`` and prints each path.
 """
 
@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
@@ -28,14 +30,26 @@ from src.evaluation import (  # noqa: E402
     retriever_comparison,
     run_full_eval,
 )
+from src.evaluation.schemas import (  # noqa: E402
+    BottleneckPayload,
+    InjectionEvalPayload,
+    LearnedRetrievalPayload,
+    LongMemEvalPayload,
+    NeuralEvalPayload,
+    OrchestrationBaseline,
+    ScalingCiPayload,
+)
 from src.figures import (  # noqa: E402
     plot_backend_comparison,
     plot_category_breakdown,
     plot_category_components,
     plot_bottleneck,
+    plot_foundations_map,
+    plot_gepa_evolution_loop,
     plot_gepa_trajectory,
     plot_injection_resistance,
     plot_longmemeval,
+    plot_memory_lifecycle,
     plot_orchestration_value,
     plot_paraphrase_retrieval,
     plot_pipeline_flow,
@@ -48,9 +62,28 @@ from src.figures import (  # noqa: E402
     plot_noise_scaling,
     plot_retriever_comparison,
     plot_rrf_weight_sensitivity,
+    plot_thalia_overview,
 )
+from src.figures.manifest import COMMITTED_FIGURES  # noqa: E402
 from src.harness import build_run_fn  # noqa: E402
 from src.provenance import write_artifact_manifest, write_figure_registry  # noqa: E402
+
+_COMMITTED_PLOTTERS: dict[str, Callable[[dict[str, Any], Path], Path]] = {
+    "neural_eval.json": lambda data, out: plot_backend_comparison(NeuralEvalPayload.from_json(data), out),
+    "learned_retrieval.json": lambda data, out: plot_paraphrase_retrieval(LearnedRetrievalPayload.from_json(data), out),
+    "injection_eval.json": lambda data, out: plot_injection_resistance(InjectionEvalPayload.from_json(data), out),
+    "longmemeval_results.json": lambda data, out: plot_longmemeval(LongMemEvalPayload.from_json(data), out),
+    "longmemeval_bottleneck.json": lambda data, out: plot_bottleneck(BottleneckPayload.from_json(data), out),
+}
+
+
+def _plot_if_committed(stem: str, data_file: str, fig_dir: Path) -> Path | None:
+    """Load committed JSON when present and render the matching figure."""
+    source = PROJECT_ROOT / "data" / data_file
+    if not source.exists():
+        return None
+    plotter = _COMMITTED_PLOTTERS[data_file]
+    return plotter(json.loads(source.read_text()), fig_dir / f"{stem}.png")
 
 
 def main() -> list[Path]:
@@ -74,42 +107,22 @@ def main() -> list[Path]:
         plot_noise_scaling(fig_dir / "noise_scaling.png"),
         plot_mmr_tradeoff(fig_dir / "mmr_tradeoff.png"),
         plot_method_ablation(fig_dir / "method_ablation.png"),
-        plot_orchestration_value(no_harness_baseline(), fig_dir / "orchestration_value.png"),
-        plot_scaling_ci(large_dataset_eval(), fig_dir / "scaling_ci.png"),
+        plot_orchestration_value(OrchestrationBaseline.from_json(no_harness_baseline()), fig_dir / "orchestration_value.png"),
+        plot_scaling_ci(ScalingCiPayload.from_json(large_dataset_eval()), fig_dir / "scaling_ci.png"),
         plot_category_components(category_component_breakdown(), fig_dir / "category_components.png"),
         plot_pipeline_flow(pipeline_evidence_flow(), fig_dir / "pipeline_flow.png"),
         plot_gepa_trajectory(gepa_component_trajectory(), fig_dir / "gepa_trajectory.png"),
+        plot_thalia_overview(fig_dir / "thalia_overview.png"),
+        plot_foundations_map(fig_dir / "foundations_map.png"),
+        plot_memory_lifecycle(fig_dir / "memory_lifecycle.png"),
+        plot_gepa_evolution_loop(fig_dir / "gepa_evolution_loop.png"),
     ]
 
-    # Real extractive-vs-neural comparison from the committed measurement.
-    neural_eval = PROJECT_ROOT / "data" / "neural_eval.json"
-    if neural_eval.exists():
-        data = json.loads(neural_eval.read_text())
-        paths.append(plot_backend_comparison(data, fig_dir / "backend_comparison.png"))
-
-    # Real surrogate-vs-learned semantic-lane comparison from the committed measurement.
-    learned_eval = PROJECT_ROOT / "data" / "learned_retrieval.json"
-    if learned_eval.exists():
-        data = json.loads(learned_eval.read_text())
-        paths.append(plot_paraphrase_retrieval(data, fig_dir / "paraphrase_retrieval.png"))
-
-    # Context-poisoning resistance from the committed measurement.
-    injection_eval = PROJECT_ROOT / "data" / "injection_eval.json"
-    if injection_eval.exists():
-        data = json.loads(injection_eval.read_text())
-        paths.append(plot_injection_resistance(data, fig_dir / "injection_resistance.png"))
-
-    # Real LongMemEval_S benchmark from the committed aggregates.
-    lme = PROJECT_ROOT / "data" / "longmemeval_results.json"
-    if lme.exists():
-        data = json.loads(lme.read_text())
-        paths.append(plot_longmemeval(data, fig_dir / "longmemeval.png"))
-
-    # Bottleneck localisation + the max_windows fix.
-    bn = PROJECT_ROOT / "data" / "longmemeval_bottleneck.json"
-    if bn.exists():
-        data = json.loads(bn.read_text())
-        paths.append(plot_bottleneck(data, fig_dir / "bottleneck.png"))
+    for spec in COMMITTED_FIGURES:
+        assert spec.data_file is not None
+        committed = _plot_if_committed(spec.stem, spec.data_file, fig_dir)
+        if committed is not None:
+            paths.append(committed)
 
     registry = write_figure_registry(paths)
     write_artifact_manifest(PROJECT_ROOT)

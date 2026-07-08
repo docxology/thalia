@@ -66,7 +66,7 @@ extractive grounding from {{RESULT_BN_GROUNDING_LO}} to {{RESULT_BN_GROUNDING_HI
 extractive *accuracy* barely moves, because it is LM-bound (it cannot phrase the answer
 even when shown the evidence). The two fixes compose: with a real Reasoner
 (`{{RESULT_BN_MODEL}}`), the same widening converts recovered recall into accuracy,
-**nearly doubling it from {{RESULT_BN_NEURAL_ACC_LO}} to {{RESULT_BN_NEURAL_ACC_HI}}**.
+**raising it ~1.6×, from {{RESULT_BN_NEURAL_ACC_LO}} to {{RESULT_BN_NEURAL_ACC_HI}}**.
 (This analysis uses a {{RESULT_BN_N_NEURAL}}-question neural subset, so its absolute
 values sit slightly below the {{RESULT_LME_N_NEURAL}}-question headline of
 [@sec:eval-real]; the *relative* gain from relaxing the narrowing is the claim.)

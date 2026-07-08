@@ -180,7 +180,7 @@ sub-word surrogate rather than a learned dense retriever — so the lexical-vs-d
 
 Install the optional `dspy` extra and the DSPy integration becomes the real thing,
 not a stand-in: `to_dspy_signature` builds a genuine `dspy.Signature` from any THALIA
-signature, and [`src/dspy_runtime.py`](src/dspy_runtime.py) runs a real `dspy.Predict`
+signature, and [`src/dspy_runtime/`](src/dspy_runtime/) runs a real `dspy.Predict`
 program and a real `dspy.BootstrapFewShot` optimizer — both backed by the project's
 real deterministic `ExtractiveLM`, so the whole path is offline, reproducible, and
 mock-free. The deterministic core and headline results are unchanged.

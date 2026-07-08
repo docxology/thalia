@@ -20,7 +20,7 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 2. **The LM is behind a protocol.** The only model-calling code in the
    deterministic core is the Reasoner via `src.module.LMClient`. The default
    `ExtractiveLM` is deterministic. Do not import an LLM SDK in the core. The
-   optional, gated DSPy seams (`src/compiler/gepa.py`, `src/dspy_runtime.py`) may
+   optional, gated DSPy seams (`src/compiler/gepa.py`, `src/dspy_runtime/`) may
    import `dspy`, but the core never imports them and never depends on `dspy`.
 3. **Raw episodes are never overwritten.** `EpisodicStore` is append-only.
    Consolidation produces a *derived* MEMORY.md delta only, and only when both the
@@ -57,11 +57,12 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 | `src/compiler/metrics.py` | `harness_metric`, dataset/eval primitives |
 | `src/compiler/mipro.py` | MIPRO-style config search |
 | `src/compiler/gepa.py` | GEPA-style reflective evolution + skill constraints + DSPy signature bridge |
-| `src/dspy_runtime.py` | Real DSPy runtime (gated): real `dspy.Predict` + real `BootstrapFewShot` optimizer + real neural Gemma backend, backed by `ExtractiveLM` |
+| `src/dspy_runtime/` | Real DSPy runtime (gated): `adapters.py` (parse/render), `runtime.py` (configure + program builders), `live_eval.py` (opt-in neural eval) |
 | `src/retrieval/learned.py` | Optional learned dense embedder (Ollama) + dense-RAG baseline (gated) |
 | `src/harness.py` | `AutoHarness`, `build_run_fn` (incl. opt-in `adaptive_windows`) |
 | `src/evaluation/` | `dataset.py` (+ seeded `build_large_dataset`), `budget.py`, `experiments.py`, `bundle.py` (`run_full_eval`), `ablation.py` (no-harness baseline, weight-sensitivity, memory, injection), `scaling.py` (bootstrap CIs), `longmemeval.py` (real benchmark loader + bottleneck analysis) |
-| `src/figures.py` | deterministic figure generators |
+| `src/figures/` | `plots.py` (data-driven matplotlib), `diagrams.py` (architecture figures), `manifest.py` (figure SSOT) |
+| `src/evaluation/schemas.py` | Typed payloads for committed JSON → plot pipeline |
 | `src/manuscript_variables.py` | `{{…}}` token generation (reads committed aggregate JSONs) |
 
 ## Commands
@@ -113,7 +114,7 @@ uv run --project working/thalia python working/thalia/scripts/run_longmemeval_bo
   `top_k(query, k)` contract).
 - **Real DSPy:** install the `dspy` extra. Two real seams open up without changing
   the core: `to_dspy_signature` (THALIA signature → real `dspy.Signature`) and the
-  full `src/dspy_runtime.py` runtime — a real `dspy.Predict` program and a real
+  full `src/dspy_runtime/` runtime — a real `dspy.Predict` program and a real
   `dspy.BootstrapFewShot` optimizer, both backed by the real deterministic
   `ExtractiveLM` (no mock/stub; offline and reproducible). Run via `scripts/run_dspy.py`.
 - **Real neural LLM:** `configure_ollama(model="gemma3:4b")` wires `dspy.LM` → litellm
@@ -139,6 +140,6 @@ the lexical-vs-dense magnitude of the agentic-search study is not reproduced
 locally. Do not let generated or edited text claim otherwise. The in-house
 `MIPRO`/`GEPA` compilers are the project's own deterministic engine, honestly
 labelled "-style"/"analogue" — not a fake of `dspy`. When `dspy` is installed,
-`src/dspy_runtime.py` runs the *real* dspy `Predict`/optimizer; the deterministic
+`src/dspy_runtime/` runs the *real* dspy `Predict`/optimizer; the deterministic
 core and the headline results remain extractive-bounded as documented. Citations marked
 "as provided" in `manuscript/references.bib` come from the commissioning brief.

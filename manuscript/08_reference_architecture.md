@@ -42,7 +42,7 @@ thalia/
 |   +-- cli.py                       # query CLI (run_query, arg parsing, Inspector diagnostics)
 |   +-- demo.py                      # deterministic demo artifact builder
 |   +-- provenance.py                # verification, figure, and artifact registries
-|   +-- figures.py                   # deterministic figure generators
+|   +-- figures/                     # deterministic figure generators (plots, diagrams, manifest)
 |   +-- dashboard.py                 # self-contained static HTML dashboard renderer
 |   +-- invariants.py                # executable runtime invariants
 |   +-- manuscript_variables.py      # generated-token map

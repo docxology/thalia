@@ -20,7 +20,7 @@ is loadable, overridable, and serialisable:
   Two additional environment variables control the OpenRouter adapter:
   `THALIA_OPENROUTER_API_KEY` (required to activate the adapter; absent → null
   rows in evaluation output) and `THALIA_OPENROUTER_MODEL` (selects the
-  OpenRouter model; defaults to `openai/gpt-4o-mini` when unset).
+  OpenRouter model; defaults to `tencent/hy3-preview` when unset).
 - **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
   `save_config` make a config serialisable and reproducible; `from_dict` and
   `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
@@ -105,8 +105,8 @@ behind the one-method `LMClient` protocol:
   invoked by the default core.
 - **`configure_openrouter(model, api_key)`** — configure the harness to use an
   OpenRouter-hosted model via the OpenRouter chat completions API. The model is
-  controlled by the `THALIA_OPENROUTER_MODEL` environment variable (default:
-  `openai/gpt-4o-mini`); the API key is read from `THALIA_OPENROUTER_API_KEY`.
+ controlled by the `THALIA_OPENROUTER_MODEL` environment variable (default:
+ `tencent/hy3-preview`); the API key is read from `THALIA_OPENROUTER_API_KEY`.
   Like `OllamaLM`, this adapter is opt-in and raises on failure rather than
   silently degrading.
 

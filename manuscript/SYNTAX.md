@@ -20,9 +20,13 @@ generated PNG and a registered figure label:
 image caption -> ../output/figures/name.png with label fig-label and width 70%
 ```
 
-Figure slugs: `retriever_comparison`, `rrf_sensitivity`, `compiler_convergence`,
-`consolidation`, `evidence_funnel`, `category_breakdown`, `noise_scaling`,
-`mmr_tradeoff`, `method_ablation`.
+Figure slugs: `thalia_overview`, `foundations_map`, `memory_lifecycle`,
+`gepa_evolution_loop`, `retriever_comparison`, `rrf_sensitivity`,
+`compiler_convergence`, `consolidation`, `evidence_funnel`, `category_breakdown`,
+`category_components`, `pipeline_flow`, `noise_scaling`, `mmr_tradeoff`,
+`method_ablation`, `orchestration_value`, `scaling_ci`, `gepa_trajectory`,
+`backend_comparison`, `paraphrase_retrieval`, `injection_resistance`,
+`longmemeval`, `bottleneck`.
 
 ## Tables
 

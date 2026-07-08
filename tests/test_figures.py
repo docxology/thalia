@@ -83,99 +83,152 @@ class TestExtendedFigures:
         assert path.exists() and path.stat().st_size > 0
 
     def test_backend_comparison(self, tmp_path):
+        from src.evaluation.schemas import NeuralEvalPayload, NeuralEvalRow
         from src.figures import plot_backend_comparison
 
-        data = {
-            "model": "gemma3:4b",
-            "mean_extractive_f1": 0.477,
-            "mean_neural_f1": 0.621,
-            "n": 3,
-            "rows": [
-                {"category": "code", "extractive_f1": 0.0, "neural_f1": 0.77},
-                {"category": "single_session", "extractive_f1": 0.8, "neural_f1": 0.4},
-                {"category": "temporal", "extractive_f1": 0.62, "neural_f1": 0.67},
-            ],
-            "category_extractive_f1": {"code": 0.0, "single_session": 0.8, "temporal": 0.62},
-            "category_neural_f1": {"code": 0.77, "single_session": 0.4, "temporal": 0.67},
-        }
+        data = NeuralEvalPayload(
+            model="gemma3:4b",
+            mean_extractive_f1=0.477,
+            mean_neural_f1=0.621,
+            n=3,
+            rows=(
+                NeuralEvalRow(category="code", extractive_f1=0.0, neural_f1=0.77),
+                NeuralEvalRow(category="single_session", extractive_f1=0.8, neural_f1=0.4),
+                NeuralEvalRow(category="temporal", extractive_f1=0.62, neural_f1=0.67),
+            ),
+        )
         path = plot_backend_comparison(data, tmp_path / "backend.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_bottleneck(self, tmp_path):
+        from src.evaluation.schemas import BottleneckAdaptive, BottleneckNeuralRow, BottleneckPayload, BottleneckRankingModes
         from src.figures import plot_bottleneck
 
-        data = {
-            "n_ranking": 40, "ranking_recall_at_10": 1.0, "inspector_recall": 0.6, "neural_model": "gemma3:4b",
-            "ranking_recall_by_mode": {"available": True, "n": 8, "k": 10, "lexical": 1.0, "dense": 1.0, "hybrid": 1.0},
-            "sweep_values": [15, 30, 50, 100],
-            "extractive_grounding_by_maxwindows": {"15": 0.422, "30": 0.468, "50": 0.511, "100": 0.575},
-            "neural_by_maxwindows": {"15": {"accuracy": 0.092, "grounding": 0.359}, "100": {"accuracy": 0.178, "grounding": 0.533}},
-            "neural_adaptive": {"accuracy": 0.183, "grounding": 0.533},
-        }
+        data = BottleneckPayload(
+            n_ranking=40,
+            ranking_recall_at_10=1.0,
+            inspector_recall=0.6,
+            neural_model="gemma3:4b",
+            ranking_recall_by_mode=BottleneckRankingModes(
+                available=True, n=8, k=10, lexical=1.0, dense=1.0, hybrid=1.0
+            ),
+            extractive_grounding_by_maxwindows={15: 0.422, 30: 0.468, 50: 0.511, 100: 0.575},
+            neural_by_maxwindows={
+                15: BottleneckNeuralRow(accuracy=0.092, grounding=0.359),
+                100: BottleneckNeuralRow(accuracy=0.178, grounding=0.533),
+            },
+            neural_adaptive=BottleneckAdaptive(accuracy=0.183, grounding=0.533),
+            n_neural=50,
+        )
         path = plot_bottleneck(data, tmp_path / "bn.png")
         assert path.exists() and path.stat().st_size > 0
-        # also renders without the adaptive field (back-compat)
-        assert plot_bottleneck({k: v for k, v in data.items() if k != "neural_adaptive"}, tmp_path / "bn2.png").exists()
+        assert plot_bottleneck(
+            BottleneckPayload(
+                n_ranking=data.n_ranking,
+                ranking_recall_at_10=data.ranking_recall_at_10,
+                inspector_recall=data.inspector_recall,
+                neural_model=data.neural_model,
+                ranking_recall_by_mode=data.ranking_recall_by_mode,
+                extractive_grounding_by_maxwindows=data.extractive_grounding_by_maxwindows,
+                neural_by_maxwindows=data.neural_by_maxwindows,
+                neural_adaptive=None,
+                n_neural=data.n_neural,
+            ),
+            tmp_path / "bn2.png",
+        ).exists()
 
     def test_longmemeval(self, tmp_path):
+        from src.evaluation.schemas import LongMemEvalPayload
         from src.figures import plot_longmemeval
 
-        data = {
-            "n_extractive": 500, "n_neural": 50, "neural_model": "gemma3:4b",
-            "extractive_accuracy": (0.048, 0.043, 0.055), "neural_accuracy": (0.119, 0.083, 0.159),
-            "extractive_grounding": (0.430, 0.409, 0.451), "neural_grounding": (0.381, 0.310, 0.448),
-        }
+        data = LongMemEvalPayload(
+            n_extractive=500,
+            n_neural=50,
+            neural_model="gemma3:4b",
+            extractive_accuracy=(0.048, 0.043, 0.055),
+            neural_accuracy=(0.119, 0.083, 0.159),
+            extractive_grounding=(0.430, 0.409, 0.451),
+            neural_grounding=(0.381, 0.310, 0.448),
+        )
         path = plot_longmemeval(data, tmp_path / "lme.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_scaling_ci(self, tmp_path):
+        from src.evaluation.schemas import ScalingCiPayload
         from src.figures import plot_scaling_ci
 
-        data = {
-            "n": 60, "per_category": 10, "composite_mean": 0.816, "composite_lo": 0.80, "composite_hi": 0.83,
-            "category_accuracy": {"code": (0.76, 0.74, 0.78), "temporal": (0.66, 0.65, 0.67), "preference": (0.81, 0.80, 0.82)},
-        }
+        data = ScalingCiPayload(
+            n=60,
+            per_category=10,
+            category_accuracy={
+                "code": (0.76, 0.74, 0.78),
+                "temporal": (0.66, 0.65, 0.67),
+                "preference": (0.81, 0.80, 0.82),
+            },
+        )
         path = plot_scaling_ci(data, tmp_path / "scaling.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_injection_resistance(self, tmp_path):
+        from src.evaluation.schemas import InjectionEvalPayload, InjectionProbeRow
         from src.figures import plot_injection_resistance
 
-        data = {
-            "n_probes": 3, "harness_poison_rate": 0.33, "harness_audit_rate": 1.0,
-            "naive_poison_rate": 0.33, "naive_audit_rate": 0.0,
-            "neural_model": "gemma3:4b", "neural_poison_rate": 1.0,
-            "rows": [
-                {"probe": 1, "harness_poisoned": True, "harness_auditable": True, "naive_poisoned": True, "naive_auditable": False},
-                {"probe": 2, "harness_poisoned": False, "harness_auditable": True, "naive_poisoned": False, "naive_auditable": False},
-                {"probe": 3, "harness_poisoned": False, "harness_auditable": True, "naive_poisoned": False, "naive_auditable": False},
-            ],
-            "neural_rows": [
-                {"probe": 1, "neural_poisoned": True, "neural_auditable": False},
-                {"probe": 2, "neural_poisoned": True, "neural_auditable": False},
-                {"probe": 3, "neural_poisoned": True, "neural_auditable": False},
-            ],
-        }
+        data = InjectionEvalPayload(
+            n_probes=3,
+            harness_poison_rate=0.33,
+            harness_audit_rate=1.0,
+            naive_poison_rate=0.33,
+            naive_audit_rate=0.0,
+            rows=(
+                InjectionProbeRow(probe=1, harness_poisoned=True, harness_auditable=True, naive_poisoned=True, naive_auditable=False),
+                InjectionProbeRow(probe=2, harness_poisoned=False, harness_auditable=True, naive_poisoned=False, naive_auditable=False),
+                InjectionProbeRow(probe=3, harness_poisoned=False, harness_auditable=True, naive_poisoned=False, naive_auditable=False),
+            ),
+            neural_model="gemma3:4b",
+            neural_poison_rate=1.0,
+            neural_rows=(
+                InjectionProbeRow(probe=1, harness_poisoned=False, harness_auditable=False, naive_poisoned=False, naive_auditable=False, neural_poisoned=True, neural_auditable=False),
+                InjectionProbeRow(probe=2, harness_poisoned=False, harness_auditable=False, naive_poisoned=False, naive_auditable=False, neural_poisoned=True, neural_auditable=False),
+                InjectionProbeRow(probe=3, harness_poisoned=False, harness_auditable=False, naive_poisoned=False, naive_auditable=False, neural_poisoned=True, neural_auditable=False),
+            ),
+        )
         path = plot_injection_resistance(data, tmp_path / "inj.png")
         assert path.exists() and path.stat().st_size > 0
-        # also the no-neural variant (neural row absent)
-        data2 = dict(data, neural_poison_rate=None)
+        data2 = InjectionEvalPayload(
+            n_probes=data.n_probes,
+            harness_poison_rate=data.harness_poison_rate,
+            harness_audit_rate=data.harness_audit_rate,
+            naive_poison_rate=data.naive_poison_rate,
+            naive_audit_rate=data.naive_audit_rate,
+            rows=data.rows,
+            neural_model=None,
+            neural_poison_rate=None,
+            neural_rows=(),
+        )
         assert plot_injection_resistance(data2, tmp_path / "inj2.png").exists()
 
     def test_orchestration_value(self, tmp_path):
+        from src.evaluation.schemas import OrchestrationBaseline
         from src.figures import plot_orchestration_value
 
-        baseline = {
-            "naive_accuracy": 0.477, "naive_grounding": 0.0, "naive_efficiency": 0.0, "naive_composite": 0.286,
-            "pipeline_accuracy": 0.477, "pipeline_grounding": 0.83, "pipeline_efficiency": 0.85, "pipeline_composite": 0.621,
-        }
+        baseline = OrchestrationBaseline(
+            naive_accuracy=0.477,
+            naive_grounding=0.0,
+            naive_efficiency=0.0,
+            naive_composite=0.286,
+            pipeline_accuracy=0.477,
+            pipeline_grounding=0.83,
+            pipeline_efficiency=0.85,
+            pipeline_composite=0.621,
+        )
         path = plot_orchestration_value(baseline, tmp_path / "orch.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_paraphrase_retrieval(self, tmp_path):
+        from src.evaluation.schemas import LearnedRetrievalPayload
         from src.figures import plot_paraphrase_retrieval
 
-        data = {"model": "nomic-embed-text", "n_probes": 4, "surrogate_recall_at_1": 0.25, "learned_recall_at_1": 1.0}
+        data = LearnedRetrievalPayload(model="nomic-embed-text", n_probes=4, surrogate_recall_at_1=0.25, learned_recall_at_1=1.0)
         path = plot_paraphrase_retrieval(data, tmp_path / "para.png")
         assert path.exists() and path.stat().st_size > 0
 
@@ -239,4 +292,30 @@ class TestExtendedFigures:
 
         # Verify the figure is produced
         path = plot_gepa_trajectory(trajectory, tmp_path / "gepa_trajectory.png")
+        assert path.exists() and path.stat().st_size > 0
+
+
+class TestArchitecturalFigures:
+    def test_thalia_overview(self, tmp_path):
+        from src.figures import plot_thalia_overview
+
+        path = plot_thalia_overview(tmp_path / "thalia_overview.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_foundations_map(self, tmp_path):
+        from src.figures import plot_foundations_map
+
+        path = plot_foundations_map(tmp_path / "foundations_map.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_memory_lifecycle(self, tmp_path):
+        from src.figures import plot_memory_lifecycle
+
+        path = plot_memory_lifecycle(tmp_path / "memory_lifecycle.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_gepa_evolution_loop(self, tmp_path):
+        from src.figures import plot_gepa_evolution_loop
+
+        path = plot_gepa_evolution_loop(tmp_path / "gepa_evolution_loop.png")
         assert path.exists() and path.stat().st_size > 0

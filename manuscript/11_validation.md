@@ -50,7 +50,7 @@ toggling `fts_available` to exercise the `LIKE` search branch) is permitted beca
 it chooses a real branch; faking a call boundary is not.
 
 The {{CONFIG_COV_GATE}}% gate covers the **deterministic core**. The optional real-DSPy and neural
-paths (`src/dspy_runtime.py`, the `dspy.Predict`/`BootstrapFewShot` glue, and the
+paths (`src/dspy_runtime/`, the `dspy.Predict`/`BootstrapFewShot` glue, and the
 real Gemma-via-Ollama backend) are exercised by genuine, `DSPY_AVAILABLE`- and
 model-availability-gated tests (`tests/test_dspy_runtime.py::TestRealDspyRuntime`,
 `TestRealNeuralDspy`) that run real dspy objects and a real model when present and
