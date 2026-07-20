@@ -8,7 +8,6 @@ from ..compiler.gepa import GEPAOptimizer
 from ..compiler.metrics import EvalExample, answer_score, evaluate, grounding_score, efficiency_score
 from ..config import HarnessConfig, default_config
 from ..harness import AutoHarness, build_run_fn
-from ..signatures import TaskCategory
 from ..stages.inspector import Inspector
 from .budget import lexical_only, metric_sweep, semantic_only, tight_eval_config
 from .dataset import build_demo_dataset, with_noise

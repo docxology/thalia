@@ -1,7 +1,12 @@
 # Quickstart
 
-All commands run from the repository root and point `uv` at the thalia project
-environment.
+All commands run from the **template repository root** (this doc's parent
+checkout), pointing `uv` at the THALIA project environment via
+`--project working/thalia`. In the template checkout, `working/thalia` is the
+private sidecar project path. If you have cloned THALIA standalone (not
+through the template), drop the `--project working/thalia` prefix and the
+`working/thalia/` path segments below, and run everything from that repo's own
+root instead.
 
 ## Install & verify
 
@@ -53,4 +58,9 @@ uv run --project working/thalia python working/thalia/scripts/build_dashboard.py
 uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
 uv run --project working/thalia python working/thalia/scripts/run_demo.py
 uv run --project working/thalia python working/thalia/scripts/run_pipeline.py
+uv run --project working/thalia python working/thalia/scripts/validate_artifacts.py
+
+# Re-render the PDF and validate output (run LAST, once every artifact above is fresh)
+uv run python scripts/03_render_pdf.py --project working/thalia
+uv run python scripts/04_validate_output.py --project working/thalia
 ```

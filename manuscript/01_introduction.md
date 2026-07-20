@@ -28,7 +28,7 @@ first and only then decides whether a derived memory delta is warranted. The
 Compiler does not rewrite source code or mutate prose; it searches a bounded
 configuration surface and records the full trace.
 
-![THALIA system overview: query + history flow through Inspector → Retriever → Reasoner → Memory Gate, with the Compiler as an offline optimization loop.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
+![THALIA system overview: query and history become inspectable evidence, then move through the typed verbs scan/narrow → rank/fuse → verify/answer → append/gate. The Compiler is shown as a bounded offline loop whose full trace is recorded rather than hidden behind a single optimized prompt.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
 
 ## The four foundations and the substrate
 

@@ -47,9 +47,9 @@ configuration reports composite {{RESULT_COMPOSITE}} (accuracy
 {{RESULT_NUM_CANDIDATES}} candidate configurations and ties to full precision on
 this easy set — an auditable trace, not a measured win. The genuinely adaptive step
 is exercised separately by a real `dspy.BootstrapFewShot` optimiser over a real
-`dspy.Predict` program; and dropping a real neural model ({{RESULT_NEURAL_MODEL}})
-and dropping a real neural model ({{RESULT_NEURAL_MODEL}}, served locally through
-Ollama) into the Reasoner slot — every other stage held fixed — raises mean
+`dspy.Predict` program; and dropping a real neural model ({{RESULT_NEURAL_MODEL}},
+served locally through Ollama) into the Reasoner slot — every other stage held
+fixed — raises mean
 token-F1 from {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}},
 concentrated on the categories extraction cannot synthesise. (A second, harder
 cloud validation against `tencent/hy3-preview` via OpenRouter is reported in

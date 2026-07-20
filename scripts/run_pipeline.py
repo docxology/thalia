@@ -21,9 +21,9 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from src.config import default_config
-from src.evaluation import build_demo_dataset
-from src.pipeline import Pipeline
+from src.config import default_config  # noqa: E402
+from src.evaluation import build_demo_dataset  # noqa: E402
+from src.pipeline import Pipeline  # noqa: E402
 
 
 def main() -> Path:

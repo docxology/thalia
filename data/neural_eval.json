@@ -38,8 +38,8 @@
     },
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
-    "modified_at": "2026-06-08T14:02:59.340727371-07:00",
-    "ollama_version": "0.30.5",
+    "modified_at": "2026-06-24T16:28:26.558822059-07:00",
+    "ollama_version": "0.32.1",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },

@@ -13,6 +13,7 @@ validation_gates:
   - evidence_grounding
   - render_validation
 figure_types:
+  # Kept in src/figures/manifest.py::FIGURE_MANIFEST order (the SSOT — 24 entries).
   - retriever_comparison
   - rrf_sensitivity
   - compiler_convergence
@@ -24,6 +25,14 @@ figure_types:
   - method_ablation
   - orchestration_value
   - scaling_ci
+  - category_components
+  - pipeline_flow
+  - gepa_trajectory
+  - thalia_cover
+  - thalia_overview
+  - foundations_map
+  - memory_lifecycle
+  - gepa_evolution_loop
   - backend_comparison
   - paraphrase_retrieval
   - injection_resistance
@@ -52,6 +61,14 @@ artifact_expectations:
   - output/figures/method_ablation.png
   - output/figures/orchestration_value.png
   - output/figures/scaling_ci.png
+  - output/figures/category_components.png
+  - output/figures/pipeline_flow.png
+  - output/figures/gepa_trajectory.png
+  - output/figures/thalia_cover.png
+  - output/figures/thalia_overview.png
+  - output/figures/foundations_map.png
+  - output/figures/memory_lifecycle.png
+  - output/figures/gepa_evolution_loop.png
   - output/figures/backend_comparison.png
   - output/figures/paraphrase_retrieval.png
   - output/figures/injection_resistance.png

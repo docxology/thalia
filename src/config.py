@@ -117,6 +117,8 @@ class HarnessConfig:
             raise ValueError("lexical_weight and semantic_weight must both be set or both None")
         if lw is not None and (lw < 0 or (sw is not None and sw < 0)):
             raise ValueError("lane weights must be non-negative")
+        if lw == 0 and sw == 0:
+            raise ValueError("at least one lane weight must be positive")
         if self.rerank not in RERANK_STRATEGIES:
             raise ValueError(f"rerank must be one of {RERANK_STRATEGIES}, got {self.rerank!r}")
         if not 0.0 <= self.mmr_lambda <= 1.0:

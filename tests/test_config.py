@@ -41,6 +41,10 @@ class TestValidation:
         cfg = HarnessConfig(lexical_weight=0.7, semantic_weight=0.3)
         assert cfg.lexical_weight == 0.7
 
+    def test_zero_lane_weights_rejected(self):
+        with pytest.raises(ValueError, match="at least one lane weight"):
+            HarnessConfig(lexical_weight=0.0, semantic_weight=0.0)
+
 
 class TestWith:
     def test_with_replaces_field(self):

@@ -52,7 +52,7 @@ class Session:
             lm=lm,
             episodic_store=store,
             memory_snapshot=MemorySnapshot(memory_md=memory_md),
-            start_turn=store.count(),
+            start_turn=store.max_turn_id() + 1,
         )
 
         # Reconstruct the running transcript from any persisted episodes so the
@@ -124,7 +124,7 @@ class Session:
             lm=self.harness.reasoner.lm,
             episodic_store=store,
             memory_snapshot=MemorySnapshot(memory_md=memory_md),
-            start_turn=store.count(),
+            start_turn=store.max_turn_id() + 1,
         )
         for episode in store.all():
             self._transcript.append(f"User: {episode.query}")

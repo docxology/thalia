@@ -49,6 +49,9 @@ class TestScripts:
         path = _load("z_generate_manuscript_variables").main()
         assert Path(path).exists()
 
+    def test_validate_artifacts_passes(self):
+        assert _load("validate_artifacts").main() == 0
+
     def test_build_dashboard_writes_html(self):
         path = _load("build_dashboard").main()
         assert Path(path).exists()

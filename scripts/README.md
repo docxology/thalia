@@ -10,7 +10,7 @@ prints output paths to stdout for manifest collection.
 | `run_harness_eval.py` | `output/data/eval_results.json` (full eval + noise scaling) |
 | `run_compiler.py` | `output/data/compile_result.json` (MIPRO + GEPA traces) |
 | `run_pipeline.py` | `output/data/pipeline_result.json` (composable Pipeline trace with intermediates) |
-| `generate_figures.py` | `output/figures/*.png` (18 unconditional eval/diagram figures; up to 5 more when `data/*.json` committed aggregates exist) |
+| `generate_figures.py` | `output/figures/*.png` (19 unconditional eval/diagram figures, including the title-page cover; up to 5 more when `data/*.json` committed aggregates exist) |
 | `build_dashboard.py` | `output/dashboard.html` (static diagnostics dashboard) |
 | `z_generate_manuscript_variables.py` | `output/data/manuscript_variables.json` + token-coverage check |
 | `run_query.py` | Runs one query against the harness (CLI; `--json`, `--config`, `THALIA_*` env, flags) |

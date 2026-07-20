@@ -14,6 +14,8 @@
    (JSON serialised with `sort_keys=True`).
 5. **Fail loudly.** `z_generate_manuscript_variables.py` raises `SystemExit` if the
    manuscript uses a token the generator does not emit — never silence it.
+6. **Validate after generation.** Run `validate_artifacts.py` after the final
+   generator; it refuses missing, mutated, or unsafe manifest entries.
 
 ## Outputs (all under `output/`, gitignored / regeneratable)
 

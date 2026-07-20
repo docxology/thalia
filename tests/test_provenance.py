@@ -1,12 +1,12 @@
 """Tests for generated provenance registries (Zero-Mock)."""
 
 import json
-from pathlib import Path
 
 from src.provenance import (
     FIGURE_LABELS,
     default_verification_summary,
     load_verification_summary,
+    validate_artifact_manifest,
     write_artifact_manifest,
     write_figure_registry,
     write_verification_summary,
@@ -49,3 +49,36 @@ class TestArtifactManifest:
         assert entries[0]["path"] == "output/data/demo_result.json"
         assert entries[0]["contract_match"] is True
         assert len(entries[0]["sha256"]) == 64
+
+    def test_validator_accepts_current_manifest(self, tmp_path):
+        root = tmp_path / "thalia"
+        data = root / "output" / "data"
+        data.mkdir(parents=True)
+        artifact = data / "demo_result.json"
+        artifact.write_text("{}\n")
+        write_artifact_manifest(root)
+        report = validate_artifact_manifest(root, required_paths=("output/data/demo_result.json",))
+        assert report.ok
+        assert report.checked == 1
+        assert report.required == 1
+
+    def test_validator_refuses_mutated_artifact(self, tmp_path):
+        root = tmp_path / "thalia"
+        data = root / "output" / "data"
+        data.mkdir(parents=True)
+        artifact = data / "demo_result.json"
+        artifact.write_text("{}\n")
+        write_artifact_manifest(root)
+        artifact.write_text('{"changed": true}\n')
+        report = validate_artifact_manifest(root)
+        assert not report.ok
+        assert any("mismatch" in issue for issue in report.issues)
+
+    def test_validator_refuses_unsafe_manifest_path(self, tmp_path):
+        root = tmp_path / "thalia"
+        manifest = root / "output" / "reports" / "artifact_manifest.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('{"entries": [{"path": "../secret.txt"}], "issues": []}\n')
+        report = validate_artifact_manifest(root)
+        assert not report.ok
+        assert "unsafe artifact path" in report.issues[0]

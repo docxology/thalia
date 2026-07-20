@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+import dspy as _dspy
+
 from ..config import HarnessConfig, default_config
 from ..signatures import HarnessOutput, Signature
 from .metrics import EvalExample, EvalReport, evaluate
@@ -180,8 +182,6 @@ class GEPAOptimizer:
 # ---------------------------------------------------------------------------
 # DSPy signature bridge (real dspy.Signature from any THALIA signature)
 # ---------------------------------------------------------------------------
-
-import dspy as _dspy
 
 DSPY_AVAILABLE = True
 

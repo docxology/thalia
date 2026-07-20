@@ -64,6 +64,15 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 | `src/figures/` | `plots.py` (data-driven matplotlib), `diagrams.py` (architecture figures), `manifest.py` (figure SSOT) |
 | `src/evaluation/schemas.py` | Typed payloads for committed JSON → plot pipeline |
 | `src/manuscript_variables.py` | `{{…}}` token generation (reads committed aggregate JSONs) |
+| `src/dashboard.py` | `build_dashboard.py`'s logic — assembles `output/dashboard.html` from generated artifacts |
+| `src/demo.py` | `build_demo_artifacts` — the canonical deterministic demo (`run_demo.py`), writes `verification_summary.json` |
+| `src/determinism.py` | Static determinism guard (no unseeded RNG / wall-clock / network in the deterministic core) |
+| `src/figure_style.py` | Shared matplotlib styling helpers used by `src/figures/plots.py` |
+| `src/invariants.py` | The 13 executable invariants (BM25 idf non-negativity, RRF monotonicity, etc.) |
+| `src/provenance.py` | `VerificationSummary`, artifact manifest writers/validator (regenerable `output/reports/*.json`) |
+| `src/recall.py` | Episodic-store + `MEMORY.md` recall surfaced to the Reasoner when `recall_memory` is on |
+| `src/retrieval/expansion.py` | Pseudo-relevance-feedback query expansion |
+| `src/retrieval/mmr.py` | MMR relevance/diversity re-ranking |
 
 ## Commands
 
@@ -82,14 +91,19 @@ uv run --project working/thalia python working/thalia/scripts/run_pipeline.py
 uv run --project working/thalia python working/thalia/scripts/generate_figures.py
 uv run --project working/thalia python working/thalia/scripts/build_dashboard.py
 uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
+uv run --project working/thalia python working/thalia/scripts/validate_artifacts.py
+
+# Re-render the PDF and validate output (run LAST, after every artifact above is
+# fresh, or the PDF silently ships stale figures/tokens — see PUBLICATION_READINESS.md)
+uv run python scripts/03_render_pdf.py --project working/thalia
+uv run python scripts/04_validate_output.py --project working/thalia
 
 # Run a query (configurable: file < THALIA_* env < CLI flags)
 uv run --project working/thalia python working/thalia/scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
 
-# Real DSPy runtime (needs the `dspy` extra; otherwise prints a notice and exits 0)
-uv pip install --python working/thalia/.venv/bin/python "dspy-ai>=2.5"
+# Real DSPy runtime (dspy-ai is a mandatory dependency, installed by `uv sync`)
 uv run --project working/thalia python working/thalia/scripts/run_dspy.py
 
 # Record the real extractive-vs-neural measurement (needs a live Ollama model);
@@ -112,7 +126,8 @@ uv run --project working/thalia python working/thalia/scripts/run_longmemeval_bo
   `AutoHarness` / `Reasoner`.
 - **Real embedder:** replace `src/retrieval/semantic.py::SemanticIndex` (same
   `top_k(query, k)` contract).
-- **Real DSPy:** install the `dspy` extra. Two real seams open up without changing
+- **Real DSPy:** `dspy-ai` is a mandatory dependency (installed by `uv sync`, no
+  separate extra required). Two real seams are always available without changing
   the core: `to_dspy_signature` (THALIA signature → real `dspy.Signature`) and the
   full `src/dspy_runtime/` runtime — a real `dspy.Predict` program and a real
   `dspy.BootstrapFewShot` optimizer, both backed by the real deterministic

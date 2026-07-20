@@ -143,3 +143,8 @@ The dashboard is a compact audit surface rather than a separate analysis. It
 shows the same metrics and figures used in this manuscript, alongside invariant
 status, so a reviewer can move from prose to rendered diagnostic to JSON artifact
 without needing to infer which run produced which number.
+
+Before rendering, `scripts/validate_artifacts.py` adds a separate artifact gate:
+the manifest must cover the required outputs in `domain_profile.yaml`, and every
+recorded size and hash must still match the current file. This catches stale or
+mutated figures and JSON that unit tests cannot see.

@@ -1,6 +1,8 @@
 """Tests for the persistent multi-turn Session (Zero-Mock, real SQLite files)."""
 
 from src.session import Session
+from src.memory.episodic_store import EpisodicStore
+from src.signatures import EpisodicEntry
 
 
 class TestEphemeralSession:
@@ -24,6 +26,19 @@ class TestEphemeralSession:
 
 
 class TestFilePersistence:
+    def test_reopen_resumes_after_sparse_explicit_turn_ids(self, tmp_path):
+        """Restarting a session must use max(turn_id)+1, not the row count."""
+        db = str(tmp_path / "sparse.db")
+        with EpisodicStore(db) as store:
+            store.append(EpisodicEntry(0, "first", "a"))
+            store.append(EpisodicEntry(2, "third", "a"))
+
+        session = Session(db_path=db)
+        out = session.ask("fourth")
+        assert out.memory_written.turn_id == 3
+        assert session.turn_count == 3
+        session.close()
+
     def test_persists_and_reopens(self, tmp_path):
         db = str(tmp_path / "episodes.db")
         mem = str(tmp_path / "MEMORY.md")

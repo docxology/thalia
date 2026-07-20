@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from src.determinism import DeterminismIssue, scan_core_determinism, scan_zero_mock
+from src.determinism import scan_core_determinism, scan_zero_mock
 
 # Marker strings split so this test file doesn't trip the scanner itself.
 _UT_MOCK = "unittest" + ".mock"

@@ -2999,14 +2999,10 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-httpserver" },
 ]
-dspy = [
-    { name = "dspy-ai" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "dspy-ai", specifier = ">=3.2.1" },
-    { name = "dspy-ai", marker = "extra == 'dspy'", specifier = ">=2.5" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100.0" },
     { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "numpy", specifier = ">=1.24.0" },
@@ -3016,7 +3012,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
 ]
-provides-extras = ["dev", "dspy"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "tiktoken"

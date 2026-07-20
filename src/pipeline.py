@@ -7,6 +7,7 @@ custom stages, inspect intermediates, or build variants.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -97,7 +98,15 @@ class Pipeline:
 
     @property
     def intermediates(self) -> list[tuple[str, PipelineContext]]:
-        return list(self._intermediates)
+        """Return defensive copies of the per-step context snapshots.
+
+        Steps mutate one working context in sequence. Returning that same object
+        for every step would make an inspection trace appear to contain history
+        while every entry actually pointed at the final state. The run loop stores
+        snapshots and this accessor copies them again so callers cannot mutate
+        the pipeline's diagnostic record.
+        """
+        return [(name, deepcopy(context)) for name, context in self._intermediates]
 
     def add_step(self, name: str, fn: Callable[[PipelineContext], PipelineContext]) -> "Pipeline":
         self._steps.append(PipelineStep(name=name, fn=fn))
@@ -241,7 +250,7 @@ class Pipeline:
         self._intermediates = []
         for step in self._steps:
             ctx = step.fn(ctx)
-            self._intermediates.append((step.name, ctx))
+            self._intermediates.append((step.name, deepcopy(ctx)))
 
         return HarnessOutput(
             answer=ctx.answer,

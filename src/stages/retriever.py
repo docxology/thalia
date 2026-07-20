@@ -72,8 +72,18 @@ class Retriever(Module):
     ) -> None:
         if top_k <= 0:
             raise ValueError(f"top_k must be positive, got {top_k}")
+        if k < 0:
+            raise ValueError(f"k must be non-negative, got {k}")
+        if (lexical_weight is None) ^ (semantic_weight is None):
+            raise ValueError("lexical_weight and semantic_weight must both be set or both None")
+        if lexical_weight is not None and (lexical_weight < 0 or semantic_weight < 0):
+            raise ValueError("lane weights must be non-negative")
+        if lexical_weight == 0 and semantic_weight == 0:
+            raise ValueError("at least one lane weight must be positive")
         if rerank not in ("rrf", "mmr"):
             raise ValueError(f"rerank must be 'rrf' or 'mmr', got {rerank!r}")
+        if not 0.0 <= mmr_lambda <= 1.0:
+            raise ValueError(f"mmr_lambda must be in [0, 1], got {mmr_lambda}")
         if expansion_terms <= 0:
             raise ValueError(f"expansion_terms must be positive, got {expansion_terms}")
         if not 0.0 <= recency_weight <= 1.0:

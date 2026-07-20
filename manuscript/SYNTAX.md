@@ -20,7 +20,7 @@ generated PNG and a registered figure label:
 image caption -> ../output/figures/name.png with label fig-label and width 70%
 ```
 
-Figure slugs: `thalia_overview`, `foundations_map`, `memory_lifecycle`,
+Figure slugs: `thalia_cover`, `thalia_overview`, `foundations_map`, `memory_lifecycle`,
 `gepa_evolution_loop`, `retriever_comparison`, `rrf_sensitivity`,
 `compiler_convergence`, `consolidation`, `evidence_funnel`, `category_breakdown`,
 `category_components`, `pipeline_flow`, `noise_scaling`, `mmr_tradeoff`,

@@ -94,8 +94,8 @@ Stage signatures in [`src/signatures/stages.py`](../src/signatures/stages.py) no
 ## Verification
 
 ```bash
-# From canonical repo
-cd /Users/4d/Documents/GitHub/thalia && uv run pytest tests/ \
+# From the canonical THALIA checkout
+cd /path/to/thalia && uv run pytest tests/ \
   --cov=src --cov-report=term-missing --cov-fail-under=90
 
 # From template checkout
@@ -103,16 +103,41 @@ uv run --project working/thalia pytest working/thalia/tests/ \
   --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
 ```
 
-The authoritative pass/skip/coverage counts are recorded by the verification
-gates in `src/provenance.py` (consumed by `scripts/build_dashboard.py` and
-`scripts/run_demo.py`) into
+`src/provenance.py::write_verification_summary` (called from `src/demo.py::
+build_demo_artifacts`, itself invoked by `scripts/run_demo.py`, and separately
+from `scripts/build_dashboard.py`) writes
 [`output/reports/verification_summary.json`](../output/reports/verification_summary.json).
-That generated file is the single source of truth for the current numbers; this
-document does not re-state them so they cannot drift from the suite.
+**Corrected 2026-07-15:** that file is *not* a live results record — every call
+site invokes it with no `summary=` argument, so it always falls back to
+`default_verification_summary()`'s placeholder (`status: "commands-documented"`,
+blank observed fields). It documents which commands to run, not what a run
+produced. This project deliberately does not track a machine-written coverage
+snapshot as its numeric SSOT (see `.gitignore`'s note on `coverage_project.json`,
+removed 2026-07-15 as a stale, gitignored-but-still-tracked artifact) — the
+authoritative pass/fail/coverage numbers for any given checkout are whatever a
+fresh run of the documented gate reports, cross-checked against
+[`PUBLICATION_READINESS.md`](../PUBLICATION_READINESS.md)'s most recent dated run.
 
 **Status:** PASS for the 2026-07-05 remediation pass (suite gate confirmed by the
 manuscript-integrity test `test_count_bearing_docs_use_generated_verification_summary`,
-which fails if any count-bearing doc hard-codes a stale pass/skip/coverage literal).
+which fails if any count-bearing doc hard-codes a stale pass/skip/coverage literal
+— it does not, and cannot, confirm that `verification_summary.json` itself holds
+real numbers, since the test never inspects that file's content).
+
+## 2026-07-18 iterative follow-up
+
+The source-to-artifact chain was rechecked after a first-principles review of
+state, determinism, and evidence boundaries. The authoritative local gate now
+reports **665 passed, 0 skipped, 98.82% `src/` coverage**. Additional regression
+coverage protects defensive pipeline snapshots, sparse persisted turn ids,
+restart-safe Memory Gate novelty, strict retrieval/config weights, and a
+fail-closed artifact manifest validator. The generated output manifest checked
+34 artifacts (32 required) before the final template render, including the
+generated title-page cover visual abstract.
+
+The LongMemEval recorder was not silently treated as refreshed: its live
+benchmark path did not finish during this pass, so the existing aggregate is
+retained as prior evidence and is not cited as a new measurement.
 
 ## Follow-up completed (evaluation package)
 

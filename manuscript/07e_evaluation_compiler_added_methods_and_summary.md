@@ -71,7 +71,7 @@ curve steps up to its plateau as soon as relevance is weighted at all ($\lambda 
 Under the loose default budget the sweep would be flat by construction; the tight
 budget surfaces the real diversity penalty without tuning the dataset.
 
-![Evidence narrowing funnel: mean counts per query from raw session lines through Inspector windows, ranked evidence, and cited sources. Counts come from `src.evaluation.evidence_funnel` on the fixed six-example dataset; the figure measures context narrowing, not answer quality by itself.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
+![Evidence narrowing funnel: mean counts per query from raw session lines through Inspector windows, ranked evidence, and cited sources. The in-figure retention rates make the design tradeoff explicit: the Inspector narrows early, while the Reasoner cites selectively. Counts come from `src.evaluation.evidence_funnel` on the fixed six-example dataset; the figure measures context narrowing, not answer quality by itself.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
 
 The funnel is a mean view; [@fig:pipeline_flow] makes the per-example narrowing
 concrete by plotting, for each of the six demo examples (one per task category),
@@ -81,7 +81,7 @@ averages: an example that enters with two windows and cites both shows the
 harness lost nothing in transit, while an example whose cited count falls below its
 ranked count is a concrete grounding-failure case to inspect.
 
-![Per-example evidence narrowing across pipeline stages: Inspector windows (lexical blue), Retriever ranked (hybrid green), and Reasoner cited (accent pink) for each of the six demo examples (one per task category). The three bars per group show context is preserved or narrowed, never silently fabricated; a cited count below the ranked count flags a concrete grounding miss.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
+![Per-example evidence path across pipeline stages: Inspector windows (lexical blue), Retriever ranked (hybrid green), and Reasoner cited (accent pink) for each of the six demo examples (one per task category). The annotation reports the overall citation retention and marks each concrete ranked-to-cited gap, turning the visual into a diagnostic for where grounding is lost rather than a generic count chart.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
 
 ![Composite metric per task category on the fixed deterministic dataset. Each bar averages the same token-F1, grounding, and efficiency metric used for the headline results; the categories are diagnostic slices, not population estimates.](../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
 

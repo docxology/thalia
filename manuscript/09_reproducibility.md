@@ -53,9 +53,10 @@ uv run --project working/thalia python working/thalia/scripts/run_harness_eval.p
 # 3. Compiler search -> output/data/compile_result.json
 uv run --project working/thalia python working/thalia/scripts/run_compiler.py
 
-# 4. Real DSPy run + optional neural / learned-embedder measurements (need
-#    the `dspy` extra and live Ollama models; recorders write null rows or exit
-#    with a notice rather than fabricating unavailable model measurements)
+# 4. Real DSPy run + optional neural / learned-embedder measurements (dspy-ai is
+#    installed by the project; live Ollama models are still optional. Recorders
+#    write null rows or exit with a notice rather than fabricating unavailable
+#    model measurements.)
 uv run --project working/thalia python working/thalia/scripts/run_dspy.py
 uv run --project working/thalia python working/thalia/scripts/run_neural_eval.py
 uv run --project working/thalia python working/thalia/scripts/run_learned_retrieval.py
@@ -66,6 +67,9 @@ uv run --project working/thalia python working/thalia/scripts/generate_figures.p
 
 # 6. Manuscript variables -> output/data/manuscript_variables.json
 uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
+
+# 7. Artifact hashes + required-output completeness (must pass before rendering)
+uv run --project working/thalia python working/thalia/scripts/validate_artifacts.py
 ```
 
 The deterministic steps (1–3, 5–6) are bit-reproducible on any host. Step 4 is the
@@ -101,6 +105,13 @@ source. If a reader wants to audit a claim, the route is source code and fixed
 data → script output → manuscript token → hydrated manuscript → rendered artifact.
 That route is what prevents a polished PDF from becoming detached from the
 executable harness it describes.
+
+The final local refusal boundary is `validate_artifacts.py`. It checks the
+generated manifest's relative paths, file sizes, and SHA-256 values against the
+current output tree and verifies the required paths declared by
+`domain_profile.yaml`. The manifest writer is not itself evidence of freshness:
+the validator is run after the last generator, so a later mutation or omitted
+artifact fails before rendering.
 
 Memory-system comparisons are scoped to the cited design lineage rather than
 absorbed as THALIA results: MemGPT [@packer2023memgpt], Mem0 [@chhikara2025mem0],

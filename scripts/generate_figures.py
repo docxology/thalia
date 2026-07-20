@@ -62,6 +62,7 @@ from src.figures import (  # noqa: E402
     plot_noise_scaling,
     plot_retriever_comparison,
     plot_rrf_weight_sensitivity,
+    plot_thalia_cover,
     plot_thalia_overview,
 )
 from src.figures.manifest import COMMITTED_FIGURES  # noqa: E402
@@ -112,6 +113,7 @@ def main() -> list[Path]:
         plot_category_components(category_component_breakdown(), fig_dir / "category_components.png"),
         plot_pipeline_flow(pipeline_evidence_flow(), fig_dir / "pipeline_flow.png"),
         plot_gepa_trajectory(gepa_component_trajectory(), fig_dir / "gepa_trajectory.png"),
+        plot_thalia_cover(fig_dir / "thalia_cover.png"),
         plot_thalia_overview(fig_dir / "thalia_overview.png"),
         plot_foundations_map(fig_dir / "foundations_map.png"),
         plot_memory_lifecycle(fig_dir / "memory_lifecycle.png"),

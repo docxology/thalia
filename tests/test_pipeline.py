@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -16,22 +15,13 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src"):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from src import __version__
-from src.config import HarnessConfig, default_config, load_config, save_config
-from src.harness import AutoHarness
-from src.memory.episodic_store import EpisodicStore
-from src.pipeline import Pipeline, PipelineContext, PipelineStep
-from src.session import Session
-from src.signatures import (
-    DeliveryMode,
-    EpisodicEntry,
-    EvidenceCitation,
-    EvidenceWindow,
-    HarnessOutput,
-    InspectorMetadata,
-    RankedEvidence,
-    TaskCategory,
-)
+from src import __version__  # noqa: E402
+from src.config import HarnessConfig, default_config, load_config  # noqa: E402
+from src.harness import AutoHarness  # noqa: E402
+from src.memory.episodic_store import EpisodicStore  # noqa: E402
+from src.pipeline import Pipeline, PipelineContext  # noqa: E402
+from src.session import Session  # noqa: E402
+from src.signatures import EpisodicEntry, HarnessOutput, TaskCategory  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +221,14 @@ class TestPipeline:
     def test_pipeline_intermediates_recorded(self):
         pipe = Pipeline().with_all_stages()
         pipe.run(query="what is the wifi password", session_history="User: my wifi password is bluefish42")
-        names = [name for name, _ in pipe.intermediates]
+        intermediates = pipe.intermediates
+        names = [name for name, _ in intermediates]
         assert names == ["inspector", "retriever", "reasoner", "memory_gate"]
+        assert len({id(ctx) for _, ctx in intermediates}) == len(intermediates)
+        assert intermediates[0][1].ranked_evidence == []
+        assert intermediates[1][1].ranked_evidence
+        assert intermediates[2][1].answer
+        assert intermediates[3][1].episodic_entry is not None
 
     def test_pipeline_steps_property(self):
         pipe = Pipeline().with_inspector().with_retriever()
@@ -358,8 +354,6 @@ class TestHarnessConfigValidation:
 
     def test_validate_raises_on_bad_ratio(self):
         """validate() raises when adaptive_window_ratio is invalid."""
-        import dataclasses
-
         # Bypass the frozen dataclass __post_init__ so we can construct an
         # invalid config and test that validate() catches it.
         cfg = HarnessConfig.__new__(HarnessConfig)

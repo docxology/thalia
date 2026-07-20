@@ -62,6 +62,20 @@ claims:
     source_tier: project_source
     freshness: active
     artifact_path: src/__init__.py
+  - claim_id: typing-specification
+    kind: number
+    value: 561
+    source: PEP 561 inline-typing marker documented by src/py.typed
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/py.typed
+  - claim_id: demo-budget-example
+    kind: number
+    value: 5000
+    source: src/evaluation/dataset.py build_demo_dataset multi-session budget example
+    source_tier: data_source
+    freshness: active
+    artifact_path: src/evaluation/dataset.py
   - claim_id: test-count
     kind: number
     value: 572

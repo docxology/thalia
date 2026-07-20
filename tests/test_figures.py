@@ -296,6 +296,12 @@ class TestExtendedFigures:
 
 
 class TestArchitecturalFigures:
+    def test_thalia_cover(self, tmp_path):
+        from src.figures import plot_thalia_cover
+
+        path = plot_thalia_cover(tmp_path / "thalia_cover.png")
+        assert path.exists() and path.stat().st_size > 0
+
     def test_thalia_overview(self, tmp_path):
         from src.figures import plot_thalia_overview
 

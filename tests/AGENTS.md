@@ -26,10 +26,12 @@
 `episodic_store.py` lines 23–24 (FTS5-unavailable probe) only execute on a SQLite
 build without FTS5; the FTS5 path is covered on builds that have it, and the LIKE
 fallback is covered via the `fts_available` toggle. The `to_dspy_signature` body in
-`gepa.py` is `pragma: no cover` (only runs with `dspy` installed); when the `dspy`
-extra is present, `test_gepa.py::TestRealDspyBridge` functionally validates it
-(real `dspy.Signature` round-trip + `dspy.Predict` usability) and otherwise skips.
+`gepa.py` is `pragma: no cover` in principle (only reachable with `dspy` installed),
+but since `dspy-ai` is a mandatory dependency (as of 2026-07-01), `test_gepa.py::
+TestRealDspyBridge` now always runs and functionally validates it (real
+`dspy.Signature` round-trip + `dspy.Predict` usability) rather than skipping.
 `src/dspy_runtime/` (package) follows the same split: its pure adapter helpers are unit-tested
-unconditionally in `test_dspy_runtime.py`, while the gated `dspy` glue (real
-`dspy.Predict` + real `BootstrapFewShot` optimizer) is `pragma: no cover` and validated
-by the `DSPY_AVAILABLE`-gated `TestRealDspyRuntime` (skipped when the extra is absent).
+unconditionally in `test_dspy_runtime.py`, and the gated `dspy` glue (real
+`dspy.Predict` + real `BootstrapFewShot` optimizer) — `pragma: no cover` in
+principle, validated by the `DSPY_AVAILABLE`-gated `TestRealDspyRuntime` — also
+always runs now rather than skipping, since the dependency is no longer optional.

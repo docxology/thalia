@@ -22,6 +22,9 @@ dependencies = [
     # Python >= 3.11; tomli is the identical-API backport for 3.10 (the declared
     # minimum). Pure-Python, offline — does not touch the deterministic core.
     "tomli>=2.0 ; python_version < '3.11'",
+    # Mandatory as of 2026-07-01 (bridges THALIA signatures to real DSPy/GEPA
+    # evolution, see src/compiler/gepa.py::DSPY_AVAILABLE). The deterministic
+    # core still never imports it directly — only the gated seams do.
     "dspy-ai>=3.2.1",
 ]
 
@@ -31,11 +34,6 @@ dev = [
     "pytest-cov>=4.1.0",
     "hypothesis>=6.100.0",
     "pytest-httpserver>=1.0.0",
-]
-# Optional: bridge THALIA signatures to real DSPy/GEPA evolution. Never required
-# for the deterministic core (see src/compiler/gepa.py::DSPY_AVAILABLE).
-dspy = [
-    "dspy-ai>=2.5",
 ]
 
 [tool.pytest.ini_options]

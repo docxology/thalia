@@ -159,8 +159,6 @@ class TestReasonerVerify:
         assert Reasoner._grounding_support("   ", citations) == 0.0
 
     def test_verify_ok_path(self):
-        from src.llm import CallableLM
-
         r = Reasoner(verify=True)
         pred = r(
             query="what is the answer",

@@ -35,7 +35,11 @@ class MemoryGate(Module):
     ) -> None:
         self.store = episodic_store if episodic_store is not None else EpisodicStore()
         self.memory_md = memory_md
-        self._seen_categories: set[str] = set()
+        # Novelty is session-scoped but must survive a process restart when the
+        # caller reopens an existing append-only store. Otherwise the first turn
+        # after reopen is misclassified as novel and can trigger redundant
+        # consolidation.
+        self._seen_categories: set[str] = {entry.task_category for entry in self.store.all()}
 
     def forward(  # type: ignore[override]
         self,

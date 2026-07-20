@@ -2,14 +2,53 @@
 
 _Deep review performed 2026-06-27. Verdict: **the package is publication-ready; the manuscript is ready pending one author-only action (citation verification).**_
 
+## Current loop status — 2026-07-18
+
+The historical snapshots below are retained for provenance. The current source
+tree was re-audited through the Science and First-Principles workflows, with
+iterative regeneration and refusal-path checks:
+
+- **Suite:** 665 tests passed, 0 skipped; `src/` coverage is **98.82%** against
+  the 90% gate. The run included the real DSPy path and live Ollama-gated tests
+  available on this host.
+- **Artifact integrity:** the generated manifest validates **34 artifacts**,
+  including all 32 required paths declared by `domain_profile.yaml`; mutated or
+  unsafe manifest entries are covered by regression tests.
+- **Traceability:** pipeline intermediates are defensive snapshots, session
+  restart allocation uses the maximum persisted turn id, and Memory Gate
+  novelty survives reopening an episodic store.
+- **Scope boundary:** the deterministic core remains extractive-bounded and the
+  semantic lane remains a hashing sub-word surrogate. The live neural and
+  learned-retrieval recorders are evidence from the available local models, not
+  deterministic headline results.
+- **Visual and layout refinement:** the architecture figure now exposes the
+  stage verbs and deterministic glyphs, the evidence figures annotate retention
+  and concrete citation gaps, and the manuscript adds a generated title-page
+  visual abstract (`thalia_cover`) that maps the five-stage harness, evidence
+  flow, compiler boundary, and scope limits. The manuscript uses a checked
+  compact geometry (`left/right=0.38in`, `top=0.42in`, `bottom=0.45in`). The
+  rendered PDF is 45 pages; the TeX geometry log reports 27.46pt side margins
+  and 30.35/32.52pt top/bottom margins.
+- **Rendered release gate:** the template-side PDF, HTML, and slide outputs pass
+  PDF validity, transmission, Markdown, structure, figure-registry (24 figures),
+  evidence-registry, project-overlay, and artifact-manifest checks. The project
+  remains a sidecar checkout symlinked from the template repository; the source
+  files are present in the canonical sidecar and the project-local artifact
+  manifest passes.
+- **Remaining evidence caveat:** the LongMemEval recorder refresh is deferred
+  because its live benchmark path did not complete within this pass; the
+  existing aggregate is retained as prior evidence and is not presented as a
+  new measurement.
+
+## Historical 2026-06-27 snapshot
+
 ## What was independently verified (real, working, validated)
 
 A clean Linux environment was built from `pyproject.toml` (the committed `.venv`
 is a macOS venv and does not run here) and the suite was executed end to end.
 
-- **Tests:** 571 pass, 0 fail, 15 skipped. Every skip is an optional-dependency
-  gate (8 require the `dspy` extra, 7 require a live Ollama model). With those
-  extras installed the count reaches the README's ~580. No test is mocked
+- **Tests (historical environment):** 571 pass, 0 fail, 15 skipped. Every skip
+  was an optional-dependency gate in that environment. No test is mocked
   (zero-mock policy holds).
 - **Coverage:** **98.13%** on `src/` (gate 90%), matching the README's claim.
   My first run showed 96% only because 20 tests were fast-failing on the bug below.
@@ -56,19 +95,29 @@ is a macOS venv and does not run here) and the suite was executed end to end.
   - Trimmed editorializing prose ("…and worth it").
 - **Docs:** README test/coverage/token counts corrected to the precise figures.
 
-## The one blocker for external publication (author-only)
+## Citation status (author-only) — corrected 2026-07-15
 
-The commissioned bibliography contains **future-dated 2026 arXiv identifiers** and
-one implausible ID — `zhang2025rlm` = `arXiv:2512.24601` (2512 is a future month;
-24601 is Jean Valjean's prisoner number). These are transcribed "as provided" from
-the commissioning brief, so I did **not** invent replacements (that would be
-fabrication). I made the disclosure honest and uniform: every commissioned/future
-entry is now tagged `(as provided)`, matching §09's statement.
+**This section previously (2026-06-27) described `zhang2025rlm`'s implausible
+arXiv ID as still present and instructed replacing it. That is now stale: a
+reader following the old wording would search `manuscript/references.bib` for
+an ID that no longer exists there.**
 
-**Before submitting to any venue, you must replace these with verified
-identifiers** (or mark the works as unpublished/forthcoming without a spurious
-number). A reviewer will flag `2512.24601` immediately. This is the single item
-standing between the manuscript and external submission.
+The commissioned bibliography contained **future-dated 2026 arXiv identifiers**
+and one implausible ID — `zhang2025rlm` = `arXiv:2512.24601` (2512 is a future
+month; 24601 is Jean Valjean's prisoner number). These were transcribed "as
+provided" from the commissioning brief. The remediation actually applied was
+**disclosure, not replacement**: `zhang2025rlm`'s entry now reads `journal =
+{Preprint, forthcoming; arXiv identifier unverified}` with a note that the
+implausible ID "has been withheld pending independent verification; do not
+cite a spurious identifier." Five other commissioned/forward-dated 2026 entries
+carry the same honest-disclosure treatment, matching §09's statement.
+
+**Before submitting to any venue, verify each `(as provided)`/"identifier
+unverified" entry** — find its real arXiv/DOI identifier if one exists, or mark
+it as unpublished/forthcoming with no identifier at all. Disclosure prevents a
+reviewer from catching a fabricated number, but does not substitute for
+verification; a venue may still require every citation resolve to a real,
+checkable source before acceptance.
 
 ## Recommended (non-blocking) polish
 

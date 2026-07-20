@@ -12,13 +12,11 @@ from hypothesis import given, strategies as st
 
 from src.config import HarnessConfig
 from src.memory.consolidation import (
-    ConsolidationAction,
     ConsolidationCriteria,
-    decide_action,
     should_consolidate,
 )
 from src.memory.episodic_store import EpisodicStore
-from src.module import ExtractiveLM, LMClient, tokenize
+from src.module import tokenize
 from src.retrieval.fusion import ScoredChunk, rrf_fuse
 from src.retrieval.lexical import BM25Index
 from src.retrieval.mmr import mmr_rerank
@@ -128,8 +126,6 @@ class TestMMRInvariant:
     )
     def test_mmr_preserves_all_elements(self, scores, lambda_val):
         """MMR reranking returns the same elements in some order."""
-        import numpy as np
-
         windows = [EvidenceWindow(text=f"text {i}", source_index=i) for i in range(len(scores))]
         ranked = [RankedEvidence(window=w, score=s) for w, s in zip(windows, scores)]
         # Ensure at least one unique score to avoid tie-break ambiguity

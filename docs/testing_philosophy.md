@@ -21,7 +21,16 @@ coverage floor met.
 (`all_invariants()`); `tests/test_invariants.py` asserts every one passes. They are
 also surfaced on the dashboard. Adding a method means adding its invariant.
 
-## 3. Golden regression
+## 3. Artifact integrity
+
+`src.provenance.validate_artifact_manifest` is the refusal boundary for generated
+outputs. It checks that every manifest entry is a safe relative path whose current
+size and SHA-256 match the recorded values, and that the required paths declared in
+`domain_profile.yaml` are present. Run `scripts/validate_artifacts.py` after the
+last generator and before rendering; a green test suite alone does not certify
+that a PDF or dashboard was built from the current JSON and figures.
+
+## 4. Golden regression
 
 `tests/test_regression.py` pins headline metrics and published manuscript tokens to
 golden values within a tight tolerance, and asserts `run_full_eval()` /

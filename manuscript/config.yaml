@@ -42,6 +42,9 @@ keywords:
 metadata:
   license: "MIT"
   language: "en"
+  # Keep the renderer-level declaration aligned with manuscript/preamble.md.
+  # The final PDF geometry is inspected after every publication render.
+  geometry: "top=0.42in,bottom=0.45in,left=0.38in,right=0.38in,includeheadfoot"
 
 render:
   formats:
@@ -66,7 +69,14 @@ testing:
   max_project_test_failures: 0
 
 # Project-specific provenance accepted by the template config schema. Runtime
-# harness configuration remains canonical in ../config/harness.yaml.
+# harness configuration remains canonical in ../config/harness.yaml, which
+# leaves lexical_weight/semantic_weight null (per-task-category defaults from
+# src/stages/retriever.py::_CATEGORY_WEIGHTS, ranging (0.75,0.25) to
+# (0.55,0.45) across the 6 categories). The pair below is illustrative only:
+# it is src/retrieval/fusion.py's DEFAULT_LEXICAL_WEIGHT/DEFAULT_SEMANTIC_WEIGHT
+# module-level fallback (also the MULTI_SESSION category's value), used when no
+# category-specific override applies — not a claim that 0.65/0.35 is the single
+# active runtime setting.
 project_config:
   harness:
     num_stages: 5

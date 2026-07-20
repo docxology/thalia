@@ -21,6 +21,17 @@ stage I/O, `src/stages/` implements runtime stages, `src/memory/` owns persisten
 dataset plus diagnostics. Scripts call these modules; they do not contain method
 logic.
 
+## Visual evidence contract
+
+Figures are part of the method surface, not decorative output. Architectural
+figures use deterministic vector glyphs to make each stage's operation visible:
+scan/narrow, rank/fuse, verify/answer, and append/gate. Quantitative diagnostics
+derive their annotations from the same aggregate values as the bars or lines: the
+evidence funnel reports retention at each boundary, and the pipeline-flow plot
+marks every ranked-to-cited gap. This keeps visual emphasis tied to inspectable
+evidence while preserving the two scope boundaries: extractive answer limits and
+the hashing semantic surrogate are labelled where they matter.
+
 ## Lexical lane — BM25 (`src/retrieval/lexical.py`)
 
 Okapi BM25 with `k1=1.5`, `b=0.75`. idf uses the `+1`-inside-log form so values
@@ -139,6 +150,15 @@ treated as evolved capabilities.
 
 `evaluation.method_ablation` reports the composite for base + each method + all
 combined (visualised by `figures.plot_method_ablation`).
+
+## Provenance and artifact integrity (`src/provenance.py`)
+
+Generators write a deterministic manifest over the current output data, figures,
+dashboard, and verification summary. `validate_artifact_manifest` independently
+checks relative-path safety, file size, SHA-256, and required artifact coverage
+from `domain_profile.yaml`. This separates “the generator ran” from “the rendered
+artifact still matches the generated inputs”; the latter is the gate used before
+publication rendering.
 
 ## Evaluation protocol (`src/evaluation/`)
 

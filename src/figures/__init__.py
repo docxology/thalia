@@ -12,6 +12,7 @@ from .diagrams import (
     plot_foundations_map,
     plot_gepa_evolution_loop,
     plot_memory_lifecycle,
+    plot_thalia_cover,
     plot_thalia_overview,
 )
 from .manifest import COMMITTED_FIGURES, DIAGRAM_FIGURES, FIGURE_LABELS, FIGURE_MANIFEST, FigureSpec
@@ -64,6 +65,7 @@ __all__ = [
     "plot_mmr_tradeoff",
     "plot_method_ablation",
     "plot_gepa_trajectory",
+    "plot_thalia_cover",
     "plot_thalia_overview",
     "plot_foundations_map",
     "plot_memory_lifecycle",

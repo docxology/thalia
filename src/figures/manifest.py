@@ -31,6 +31,7 @@ FIGURE_MANIFEST: tuple[FigureSpec, ...] = (
     FigureSpec("category_components", "fig:category_components", "eval"),
     FigureSpec("pipeline_flow", "fig:pipeline_flow", "eval"),
     FigureSpec("gepa_trajectory", "fig:gepa_trajectory", "eval"),
+    FigureSpec("thalia_cover", "fig:thalia_cover", "diagram"),
     FigureSpec("thalia_overview", "fig:thalia_overview", "diagram"),
     FigureSpec("foundations_map", "fig:foundations_map", "diagram"),
     FigureSpec("memory_lifecycle", "fig:memory_lifecycle", "diagram"),

@@ -52,12 +52,13 @@ metric; the GEPA-style optimizer (`src/compiler/gepa.py`) reflects on the weakes
 metric component of an evaluation report and applies a targeted, bounded mutation,
 recording the full trace. The size/non-empty constraints on evolved skill
 artifacts are enforced by `check_skill_constraints` (15 KB budget mirrored from
-the Hermes roadmap), and an optional `to_dspy_signature` bridge produces a real
-`dspy.Signature` when DSPy is installed — gated so the deterministic core never
-requires it ([@sec:stage-compiler]). With the `dspy` extra present, `src/dspy_runtime/`
-goes further than the signature bridge: it runs a genuine `dspy.Predict` program and
-a genuine `dspy.BootstrapFewShot` optimizer, both backed by the project's real
-deterministic `ExtractiveLM` so the path stays offline and reproducible. The
+the Hermes roadmap), and a `to_dspy_signature` bridge produces a real
+`dspy.Signature`; `dspy-ai` is installed as a package dependency while the
+deterministic core itself never imports it ([@sec:stage-compiler]). The
+`src/dspy_runtime/` package goes further than the signature bridge: it runs a
+genuine `dspy.Predict` program and a genuine `dspy.BootstrapFewShot` optimizer,
+both backed by the project's real deterministic `ExtractiveLM` so the offline
+path stays reproducible. The
 `MIPRO`/`GEPA` compilers above are the project's own deterministic engine, distinct
 from — and not a stand-in for — that real DSPy machinery; the headline evaluation
 remains extractive-bounded either way.

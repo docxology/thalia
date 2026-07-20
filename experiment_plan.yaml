@@ -36,8 +36,6 @@ expected_figures:
   - fig:bottleneck
 expected_tables:
   - tbl:headline_results
-artifact_expectations:
-  - output/data/pipeline_result.json
 baselines:
   - lexical_only
 ablations:

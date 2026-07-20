@@ -32,6 +32,22 @@ class TestRetrieverInit:
         with pytest.raises(ValueError, match="top_k must be positive"):
             Retriever(top_k=0)
 
+    def test_negative_rrf_k_raises(self):
+        with pytest.raises(ValueError, match="k must be non-negative"):
+            Retriever(k=-1)
+
+    def test_one_weight_set_raises(self):
+        with pytest.raises(ValueError, match="both be set or both None"):
+            Retriever(lexical_weight=0.8)
+
+    def test_zero_lane_weights_rejected(self):
+        with pytest.raises(ValueError, match="at least one lane weight"):
+            Retriever(lexical_weight=0.0, semantic_weight=0.0)
+
+    def test_mmr_lambda_range(self):
+        with pytest.raises(ValueError, match="mmr_lambda must be in"):
+            Retriever(mmr_lambda=1.5)
+
 
 class TestWeights:
     def test_explicit_override(self):

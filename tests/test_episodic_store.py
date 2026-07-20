@@ -1,7 +1,7 @@
 """Tests for the append-only SQLite episodic store (Zero-Mock, real SQLite)."""
 
 import pytest
-from src.memory.episodic_store import EpisodicStore, _fts5_available, _fts_match_expression, _search_terms
+from src.memory.episodic_store import EpisodicStore, _fts_match_expression, _search_terms
 from src.signatures import EpisodicEntry
 
 

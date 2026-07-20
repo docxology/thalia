@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
-from enum import Enum, auto
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any
+
+
 class TaskCategory(str, Enum):
     """Detected task class used for harness-conditioned prompting."""
 

@@ -1,7 +1,7 @@
 """Tests for Stage 3 — the episodic-first Memory Gate (Zero-Mock)."""
 
 from src.memory.episodic_store import EpisodicStore
-from src.signatures import EvidenceCitation, TaskCategory
+from src.signatures import EpisodicEntry, EvidenceCitation, TaskCategory
 from src.stages.memory_gate import MemoryGate
 
 
@@ -96,6 +96,32 @@ class TestConsolidationGate:
             explicit_request=False,
         )
         assert pred["consolidation_action"] == "none"
+
+    def test_existing_store_categories_are_not_novel_after_reopen(self):
+        store = EpisodicStore()
+        store.append(
+            EpisodicEntry(
+                turn_id=0,
+                query="previous temporal query",
+                answer="previous answer",
+                evidence_indices=(),
+                task_category=TaskCategory.TEMPORAL.value,
+            )
+        )
+        gate = MemoryGate(episodic_store=store)
+
+        pred = gate(
+            query="another temporal query",
+            answer="another answer",
+            evidence_citations=[],
+            requires_consolidation=True,
+            task_category=TaskCategory.TEMPORAL,
+            explicit_request=False,
+            session_ending=False,
+        )
+
+        assert pred["consolidation_action"] == "none"
+        assert store.count() == 2
 
     def test_append_memory_on_novel_class_with_flag(self):
         gate = MemoryGate()

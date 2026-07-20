@@ -20,6 +20,7 @@ from src.manuscript_integrity import (  # noqa: E402
     verify_token_coverage,
 )
 from src.manuscript_variables import generate_variables  # noqa: E402
+from src.provenance import write_artifact_manifest  # noqa: E402
 
 TEMPLATE_ROOT = find_template_root(starts=(Path.cwd(), PROJECT_ROOT))
 if TEMPLATE_ROOT is not None and str(TEMPLATE_ROOT) not in sys.path:
@@ -45,9 +46,11 @@ def main() -> Path:
 
     output_path = output_dir / "manuscript_variables.json"
     output_path.write_text(json.dumps(variables, indent=2, sort_keys=True))
+    manifest_path = write_artifact_manifest(PROJECT_ROOT)
 
     if TEMPLATE_ROOT is None:
         print(str(output_path))
+        print(str(manifest_path))
         print(
             f"[ok] {len(used)} manuscript token(s) all generated; "
             "[skip] output/manuscript/ injection — template 'infrastructure' "
@@ -59,6 +62,7 @@ def main() -> Path:
 
     injected = write_resolved_manuscript_tree(PROJECT_ROOT, variables)
     print(str(output_path))
+    print(str(manifest_path))
     print(f"[ok] {len(used)} manuscript token(s) all generated; injected -> {injected}")
     return output_path
 

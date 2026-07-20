@@ -205,7 +205,7 @@ def plot_category_breakdown(category_means: dict[str, float], output_path: str |
 
 
 def plot_evidence_funnel(output_path: str | Path) -> Path:
-    """Funnel of mean evidence counts: session lines -> windows -> ranked -> cited."""
+    """Funnel of mean evidence counts, with retention rates that explain the narrowing."""
     path = _prepare(output_path)
     funnel = evidence_funnel()
     stages = ["session\nlines", "inspector\nwindows", "ranked\nevidence", "cited\nsources"]
@@ -215,9 +215,22 @@ def plot_evidence_funnel(output_path: str | Path) -> Path:
     fig, ax = plt.subplots()
     bars = ax.bar(stages, values, color=colors, edgecolor="black", linewidth=0.6)
     ax.set_ylabel("Mean count per query")
-    ax.set_title("Evidence narrowing funnel")
+    ax.set_title("Evidence funnel: narrow early, cite selectively", pad=28)
+    session_retention = values[1] / values[0] if values[0] else 0.0
+    citation_retention = values[3] / values[2] if values[2] else 0.0
+    ax.text(
+        0.5,
+        1.02,
+        f"{session_retention:.0%} of raw lines enter the Inspector · {citation_retention:.0%} of ranked evidence is cited",
+        transform=ax.transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=8,
+        color=PALETTE["muted"],
+    )
     for bar, value in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.05, f"{value:.1f}", ha="center", va="bottom", fontsize=9)
+    ax.set_ylim(0, max(values) * 1.18)
     fig.tight_layout()
     fig.savefig(path, dpi=EXPORT_DPI)
     plt.close(fig)
@@ -266,7 +279,39 @@ def plot_pipeline_flow(
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=9)
     ax.set_ylabel("Evidence count per example")
-    ax.set_title("Per-example evidence narrowing across pipeline stages")
+    mean_ranked = sum(ranked) / n if n else 0.0
+    mean_cited = sum(cited) / n if n else 0.0
+    citation_rate = mean_cited / mean_ranked if mean_ranked else 0.0
+    losses = [ranked[i] - cited[i] for i in range(n)]
+    max_loss = max(losses, default=0)
+    loss_labels = [labels[i] for i, loss in enumerate(losses) if loss == max_loss and loss > 0]
+    if loss_labels:
+        loss_text = f"largest citation gap: {', '.join(loss_labels)} (−{max_loss})"
+    else:
+        loss_text = "no citation gap in the recorded examples"
+    ax.set_title("Per-example evidence path: inspect / rank / cite", pad=30)
+    ax.text(
+        0.5,
+        1.02,
+        f"{citation_rate:.0%} of ranked evidence is cited · {loss_text}",
+        transform=ax.transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=8,
+        color=PALETTE["muted"],
+    )
+    for xi, ranked_value, cited_value, loss in zip(x, ranked, cited, losses):
+        if loss > 0:
+            ax.annotate(
+                f"−{loss}",
+                (xi + width, cited_value),
+                textcoords="offset points",
+                xytext=(0, 7),
+                ha="center",
+                fontsize=8,
+                fontweight="bold",
+                color=PALETTE["accent"],
+            )
     ax.legend(loc="upper right", fontsize=9)
     ax.grid(axis="y", linewidth=0.4)
     fig.tight_layout()
@@ -617,22 +662,36 @@ def plot_injection_resistance(data: InjectionEvalPayload, output_path: str | Pat
             face = PALETTE["accent"] if poisoned else PALETTE["hybrid"]
             marker = "X" if poisoned else "o"
             ax.scatter(x, y, s=280, marker=marker, color=face, edgecolor=PALETTE["ink"], linewidth=0.8, zorder=3)
-            ax.text(
-                x,
-                y,
-                "A" if auditable else "no cite",
-                ha="center",
-                va="center",
-                fontsize=7.5,
-                color="white" if auditable else PALETTE["ink"],
-                zorder=4,
-            )
+            if auditable:
+                ax.text(
+                    x,
+                    y,
+                    "A",
+                    ha="center",
+                    va="center",
+                    fontsize=7.5,
+                    color="white",
+                    zorder=4,
+                )
+            else:
+                # Keep the audit failure label outside the marker: the longer
+                # text otherwise collides with the X/o glyph at publication size.
+                ax.text(
+                    x,
+                    y + 0.24,
+                    "no cite",
+                    ha="center",
+                    va="top",
+                    fontsize=6.5,
+                    color=PALETTE["ink"],
+                    zorder=4,
+                )
     ax.set_xticks(list(range(len(rows))))
     ax.set_xticklabels([f"Probe {r.probe}" for r in rows])
     ax.set_yticks(list(range(len(conditions))))
     ax.set_yticklabels([c[0] for c in conditions])
     ax.set_xlim(-0.55, len(rows) - 0.45)
-    ax.set_ylim(-0.6, len(conditions) - 0.4)
+    ax.set_ylim(-0.65, len(conditions) - 0.25)
     ax.invert_yaxis()
     ax.grid(False)
     ax.set_title(f"Context-poisoning exact cases (n={n}; X = poisoned, A = true source cited)")
@@ -657,8 +716,8 @@ def plot_orchestration_value(baseline: OrchestrationBaseline, output_path: str |
     eff = [0.1 * baseline.naive_efficiency, 0.1 * baseline.pipeline_efficiency]
 
     fig, ax = plt.subplots(figsize=(5.6, 4.2))
-    b1 = ax.bar(labels, acc, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
-    b2 = ax.bar(labels, grd, bottom=acc, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    ax.bar(labels, acc, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
+    ax.bar(labels, grd, bottom=acc, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
     bottom2 = [a + g for a, g in zip(acc, grd)]
     ax.bar(labels, eff, bottom=bottom2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
     for i, total in enumerate([baseline.naive_composite, baseline.pipeline_composite]):
@@ -753,8 +812,8 @@ def plot_category_components(
     y = list(range(len(labels)))
 
     fig, ax = plt.subplots(figsize=(7.2, 4.4))
-    b1 = ax.barh(y, acc_w, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
-    b2 = ax.barh(y, grd_w, left=acc_w, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    ax.barh(y, acc_w, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
+    ax.barh(y, grd_w, left=acc_w, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
     left2 = [a + g for a, g in zip(acc_w, grd_w)]
     ax.barh(y, eff_w, left=left2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
 

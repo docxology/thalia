@@ -71,7 +71,7 @@ def main() -> int | str:
         # Record that the model was confirmed present in the Ollama tag listing.
         import urllib.request
         try:
-            with urllib.request.urlopen(f"http://localhost:11434/api/tags", timeout=3) as resp:
+            with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3) as resp:
                 import json as _json
                 tags = _json.load(resp)
                 result["neural_model_in_tags"] = model_in_tags(tags, DEFAULT_OLLAMA_MODEL)
