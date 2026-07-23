@@ -10,8 +10,11 @@ only model-calling code is the Reasoner via the `LMClient` protocol.
   + `to_yaml`/`from_yaml`), `llm.py` (real LM adapters), `harness.py` (`AutoHarness`),
   `pipeline.py` (composable `Pipeline` with intermediates + custom steps),
   `session.py` (persistent multi-turn, context-manager safe), `cli.py` (query CLI),
-  `evaluation/` (dataset + experiments + `schemas.py`), `figures/` (plots, diagrams,
-  manifest), `dspy_runtime/` (gated DSPy adapters), `manuscript_variables.py`.
+  `evaluation/` (datasets, experiments, accounting, statistics, benchmark and
+  campaign runners, generalization reports, and `schemas.py`), `figures/` (plots,
+  diagrams, manifest), `dspy_runtime/` (gated DSPy adapters),
+  `manuscript_integrity.py`, `manuscript_variables.py`, `provenance.py`, and
+  `dashboard.py`.
 - **`retrieval/`** — `lexical.py` (BM25 + grep), `semantic.py` (hashing-embedding
   cosine surrogate), `fusion.py` (weighted RRF), `mmr.py` (diversity re-ranking),
   `expansion.py` (PRF query expansion).

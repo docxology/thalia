@@ -42,7 +42,7 @@ descriptions, system-prompt sections, and code, in a five-phase roadmap:
 
 GEPA reads **execution traces** to understand *why* something failed — not merely
 that it failed — then proposes targeted improvements. Every evolved variant must
-pass hard gates before merge: the full test suite (100%), size limits (skills
+pass hard gates before merge: the full test suite, size limits (skills
 ≤ 15 KB, tool descriptions ≤ 500 chars), caching compatibility (no mid-conversation
 changes), semantic preservation, and human review.
 
@@ -51,7 +51,8 @@ search (`src/compiler/mipro.py`) evaluates configurations against the harness
 metric; the GEPA-style optimizer (`src/compiler/gepa.py`) reflects on the weakest
 metric component of an evaluation report and applies a targeted, bounded mutation,
 recording the full trace. The size/non-empty constraints on evolved skill
-artifacts are enforced by `check_skill_constraints` (15 KB budget mirrored from
+artifacts are enforced by `check_skill_constraints` with the documented skill-size
+budget mirrored from
 the Hermes roadmap), and a `to_dspy_signature` bridge produces a real
 `dspy.Signature`; `dspy-ai` is installed as a package dependency while the
 deterministic core itself never imports it ([@sec:stage-compiler]). The

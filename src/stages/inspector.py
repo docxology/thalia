@@ -4,8 +4,9 @@ Following Zhang, Kraska & Khattab (2025/26), the Inspector treats the (possibly
 very long) session history as *external state*, not as direct neural input. It
 loads the history into a small REPL environment, peeks at structure, greps for
 query-anchored patterns, and emits only compact :class:`EvidenceWindow` objects
-plus auditable :class:`InspectorMetadata`. The full context is never forwarded to
-a neural call — this is the harness's defence against context rot.
+plus auditable :class:`InspectorMetadata`. The full transcript is retained as
+external state but is not forwarded as one prompt to the Reasoner; only selected
+evidence windows are eligible for a model call.
 """
 
 from __future__ import annotations
@@ -51,7 +52,12 @@ class REPLEnvironment:
             cursor += len(raw_line)
             if stripped:
                 self._lines.append(stripped)
-                self._offsets.append((start, start + len(stripped)))
+                # Keep offsets aligned to the displayed, trimmed record rather
+                # than the leading indentation in the raw transcript.  This makes
+                # EvidenceWindow spans genuinely sliceable even for indented logs.
+                leading = len(raw_line) - len(raw_line.lstrip())
+                display_start = start + leading
+                self._offsets.append((display_start, display_start + len(stripped)))
 
     def peek(self, n_chars: int = 500) -> str:
         """Return the first ``n_chars`` characters of the context."""

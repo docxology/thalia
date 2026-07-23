@@ -1,10 +1,10 @@
 # THALIA — Agent Reference
 
 Agent-facing technical reference for the THALIA auto-harness. This is an
-in-progress, local-only research project under `projects/working/`; it is not
-discovered or rendered by the template pipeline by default. Project source is
-tracked in this private sidecar; generated `output/` artifacts are gitignored and
-must not be committed to the public template checkout.
+in-progress, local-only research checkout; it is not discovered or rendered by
+the template pipeline by default. Project source is tracked in this private
+sidecar; generated `output/` artifacts are gitignored and must not be committed
+to the public template checkout.
 
 ## What THALIA is
 
@@ -60,7 +60,7 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 | `src/dspy_runtime/` | Real DSPy runtime (gated): `adapters.py` (parse/render), `runtime.py` (configure + program builders), `live_eval.py` (opt-in neural eval) |
 | `src/retrieval/learned.py` | Optional learned dense embedder (Ollama) + dense-RAG baseline (gated) |
 | `src/harness.py` | `AutoHarness`, `build_run_fn` (incl. opt-in `adaptive_windows`) |
-| `src/evaluation/` | `dataset.py` (+ seeded `build_large_dataset`), `budget.py`, `experiments.py`, `bundle.py` (`run_full_eval`), `ablation.py` (no-harness baseline, weight-sensitivity, memory, injection), `scaling.py` (bootstrap CIs), `longmemeval.py` (real benchmark loader + bottleneck analysis) |
+| `src/evaluation/` | `dataset.py` (demo, large, stratified research datasets), `accounting.py` (ledger/events/fingerprints), `budget.py`, `experiments.py`, `bundle.py` (`run_full_eval`), `ablation.py` (no-harness baseline, weight-sensitivity, memory, injection), `scaling.py` (seeded sample audit), `statistics.py` (cluster bootstrap, Wilson/exact paired tests/Holm/planning), `longmemeval.py` (validated benchmark loader + resumable neural path + bottleneck analysis), `campaign.py` (typed nested cohorts, checkpoints, promotion), `generalization.py` (seed sensitivity), `compiler_generalization.py` (held-out compiler validation) |
 | `src/figures/` | `plots.py` (data-driven matplotlib), `diagrams.py` (architecture figures), `manifest.py` (figure SSOT) |
 | `src/evaluation/schemas.py` | Typed payloads for committed JSON → plot pipeline |
 | `src/manuscript_variables.py` | `{{…}}` token generation (reads committed aggregate JSONs) |
@@ -78,46 +78,55 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 
 ```bash
 # Tests + coverage (authoritative gate; confirm collected > 0 and coverage >= 90%)
-uv run --project working/thalia pytest working/thalia/tests/ \
-  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
+PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+  --junitxml=output/reports/pytest.xml --cov-fail-under=90
 
 # Single test
-uv run --project working/thalia pytest working/thalia/tests/test_harness.py -v
+uv run --project . --extra dev python -m pytest tests/test_harness.py -v
 
 # Regenerate artifacts (thin orchestrators; print output paths)
-uv run --project working/thalia python working/thalia/scripts/run_harness_eval.py
-uv run --project working/thalia python working/thalia/scripts/run_compiler.py
-uv run --project working/thalia python working/thalia/scripts/run_pipeline.py
-uv run --project working/thalia python working/thalia/scripts/generate_figures.py
-uv run --project working/thalia python working/thalia/scripts/build_dashboard.py
-uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
-uv run --project working/thalia python working/thalia/scripts/validate_artifacts.py
+uv run --project . --extra dev python scripts/run_harness_eval.py  # 5,550 examples / 16,650 method evaluations + ledger
+uv run --project . --extra dev python scripts/run_compiler.py
+uv run --project . --extra dev python scripts/run_seed_sensitivity.py
+uv run --project . --extra dev python scripts/run_compiler_generalization.py
+uv run --project . --extra dev python scripts/run_pipeline.py
+uv run --project . --extra dev python scripts/generate_figures.py
+uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
+uv run --project . --extra dev python scripts/run_demo.py
+uv run --project . --extra dev python scripts/build_dashboard.py
+uv run --project . --extra dev python scripts/validate_artifacts.py
 
 # Re-render the PDF and validate output (run LAST, after every artifact above is
 # fresh, or the PDF silently ships stale figures/tokens — see PUBLICATION_READINESS.md)
-uv run python scripts/03_render_pdf.py --project working/thalia
-uv run python scripts/04_validate_output.py --project working/thalia
+# Optional external template integration; ../template must be populated. The
+# adapter creates a temporary exact project link and removes it on exit.
+uv run --project ../template python scripts/render_pdf_external.py --validate
 
 # Run a query (configurable: file < THALIA_* env < CLI flags)
-uv run --project working/thalia python working/thalia/scripts/run_query.py \
+uv run --project . --extra dev python scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
 
-# Real DSPy runtime (dspy-ai is a mandatory dependency, installed by `uv sync`)
-uv run --project working/thalia python working/thalia/scripts/run_dspy.py
+# Real DSPy runtime (optional neural/dev extra)
+uv run --project . --extra neural python scripts/run_dspy.py
 
 # Record the real extractive-vs-neural measurement (needs a live Ollama model);
 # writes data/neural_eval.json, which the backend-comparison figure + §07 tokens read
-uv run --project working/thalia python working/thalia/scripts/run_neural_eval.py
+uv run --project . --extra neural python scripts/run_neural_eval.py
 
 # Other gated recorders (each writes a committed aggregate JSON read by figures + tokens):
-uv run --project working/thalia python working/thalia/scripts/run_learned_retrieval.py    # learned dense embedder vs surrogate
-uv run --project working/thalia python working/thalia/scripts/run_injection_probe.py       # context-poisoning resistance + neural row
+uv run --project . --extra neural python scripts/run_learned_retrieval.py    # learned dense embedder vs surrogate
+uv run --project . --extra neural python scripts/run_injection_probe.py       # context-poisoning resistance + neural row
 
 # Real LongMemEval_S benchmark (download once, then record); needs Ollama for neural rows:
-bash working/thalia/scripts/get_longmemeval.sh
-uv run --project working/thalia python working/thalia/scripts/run_longmemeval.py            # accuracy/grounding/composite + bootstrap CIs
-uv run --project working/thalia python working/thalia/scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
+bash scripts/get_longmemeval.sh
+uv run --project . --extra neural python scripts/run_longmemeval.py            # accuracy/grounding/composite + bootstrap CIs
+uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
+
+# THALIA v2 external-volume campaign (resumable; incomplete tiers are never promoted)
+uv run --project . --extra neural python scripts/run_research_campaign.py
+uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
 ```
 
 ## Extension points
@@ -126,12 +135,14 @@ uv run --project working/thalia python working/thalia/scripts/run_longmemeval_bo
   `AutoHarness` / `Reasoner`.
 - **Real embedder:** replace `src/retrieval/semantic.py::SemanticIndex` (same
   `top_k(query, k)` contract).
-- **Real DSPy:** `dspy-ai` is a mandatory dependency (installed by `uv sync`, no
-  separate extra required). Two real seams are always available without changing
-  the core: `to_dspy_signature` (THALIA signature → real `dspy.Signature`) and the
-  full `src/dspy_runtime/` runtime — a real `dspy.Predict` program and a real
-  `dspy.BootstrapFewShot` optimizer, both backed by the real deterministic
-  `ExtractiveLM` (no mock/stub; offline and reproducible). Run via `scripts/run_dspy.py`.
+- **Real DSPy:** `dspy-ai` is an optional `dev`/`neural` extra. The deterministic
+  core remains importable without it. When installed, two real seams are
+  available without changing the core: `to_dspy_signature` (THALIA signature →
+  real `dspy.Signature`) and the full `src/dspy_runtime/` runtime — a real
+  `dspy.Predict` program and a real `dspy.BootstrapFewShot` optimizer, both
+  backed by the real deterministic `ExtractiveLM` (no mock/stub; offline and
+  reproducible). Run via `uv run --project . --extra neural python
+  scripts/run_dspy.py`.
 - **Real neural LLM:** `configure_ollama(model="gemma3:4b")` wires `dspy.LM` → litellm
   → a live local Ollama model (e.g. `ollama pull gemma3:4b`), so the same dspy program
   runs against real generations. `ollama_model_available()` gates it; `run_dspy.py`

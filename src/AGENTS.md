@@ -12,7 +12,11 @@ Public API surface and invariants for the THALIA implementation. Import via the
 
 - `AutoHarness(config?, lm?, episodic_store?, memory_snapshot?)` —
   `.forward(query, session_history, session_ending=False) -> HarnessOutput`;
-  `.run(example) -> HarnessOutput`.
+  `.run(example) -> HarnessOutput`; `.close()` and context-manager support close
+  only the store created by the harness.
+- `Pipeline(config?, lm?, episodic_store?, memory_gate?)` — composable stage
+  chain with `.close()` and context-manager support; caller-owned stores remain
+  open.
 - `build_run_fn(config, lm?) -> (example -> HarnessOutput)` — fresh harness per
   call; the contract the compilers rely on for order-independent evaluation.
 - `AutoHarness(..., start_turn=N)` — resume turn IDs (used by `Session` on reopen).

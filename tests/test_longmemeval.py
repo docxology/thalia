@@ -4,7 +4,15 @@ import json
 
 import pytest
 
-from src.evaluation.longmemeval import DEFAULT_PATH, _rrf_rank, load_longmemeval, longmemeval_available
+from src.evaluation.longmemeval import (
+    DEFAULT_PATH,
+    _load_neural_checkpoint,
+    _rrf_rank,
+    _write_neural_checkpoint,
+    load_longmemeval,
+    longmemeval_available,
+    validate_longmemeval_payload,
+)
 from src.compiler.metrics import EvalExample
 from src.signatures import TaskCategory
 
@@ -31,7 +39,7 @@ def test_rrf_rank_fusion_order():
 
 
 def test_rrf_rank_single_ranking_preserves_order():
-    # With a single ranking the RRF score is 1/(k0+rank), so the original order
+    # With a single ranking the RRF score is 1/(k0+rank+1), so the original order
     # must be preserved exactly.
     ranking = [5, 3, 7, 1]
     result = _rrf_rank([ranking])
@@ -53,6 +61,141 @@ def test_load_longmemeval_limit_truncates():
 def test_missing_file_raises_clearly(tmp_path):
     with pytest.raises(FileNotFoundError, match="get_longmemeval"):
         load_longmemeval(path=tmp_path / "absent.json")
+
+
+def test_validation_checks_every_record_and_alignment():
+    valid = {
+        "question_id": "q0",
+        "question_date": "2025-01-01",
+        "question": "q",
+        "answer": "a",
+        "question_type": "single-session-user",
+        "answer_session_ids": ["s0"],
+        "haystack_session_ids": ["s0"],
+        "haystack_dates": ["2025-01-01"],
+        "haystack_sessions": [[{"role": "user", "content": "fact"}]],
+    }
+    assert validate_longmemeval_payload([valid]) == [valid]
+    malformed = dict(valid)
+    malformed["question_id"] = "q1"
+    malformed["haystack_session_ids"] = []
+    with pytest.raises(ValueError, match="unaligned"):
+        validate_longmemeval_payload([valid, malformed])
+    malformed = dict(valid)
+    malformed["haystack_sessions"] = [[{"role": "user"}]]
+    with pytest.raises(ValueError, match="turn"):
+        validate_longmemeval_payload([malformed])
+    malformed = dict(valid)
+    malformed["answer_session_ids"] = ["missing"]
+    with pytest.raises(ValueError, match="unknown sessions"):
+        validate_longmemeval_payload([malformed])
+    malformed = dict(valid)
+    malformed["question_type"] = "unknown"
+    with pytest.raises(ValueError, match="question_type"):
+        validate_longmemeval_payload([malformed])
+
+
+def test_validation_rejects_duplicate_ids_and_invalid_limits(tmp_path):
+    valid = {
+        "question_id": "q0",
+        "question_date": "2025-01-01",
+        "question": "q",
+        "answer": "a",
+        "question_type": "single-session-user",
+        "answer_session_ids": ["s0"],
+        "haystack_session_ids": ["s0"],
+        "haystack_dates": ["2025-01-01"],
+        "haystack_sessions": [[{"role": "user", "content": "fact"}]],
+    }
+    with pytest.raises(ValueError, match="duplicates"):
+        validate_longmemeval_payload([valid, dict(valid)])
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps([valid]))
+    with pytest.raises(ValueError, match="positive"):
+        load_longmemeval(path, limit=0)
+
+
+def test_neural_checkpoint_round_trip_is_atomic_and_scope_aware(tmp_path):
+    checkpoint = tmp_path / "neural_checkpoint.json"
+    benchmark = {"sha256": "abc123", "size_bytes": 3}
+    rows = {
+        "q1": {"example_id": "q1", "accuracy": 1.0, "grounding": 0.5},
+        "q0": {"example_id": "q0", "accuracy": 0.0, "grounding": 1.0},
+    }
+    _write_neural_checkpoint(
+        checkpoint,
+        rows,
+        benchmark=benchmark,
+        model="gemma-test",
+        generation_options={"temperature": 0.0},
+    )
+    assert checkpoint.is_file()
+    assert not checkpoint.with_name(f".{checkpoint.name}.tmp").exists()
+    loaded = _load_neural_checkpoint(
+        checkpoint,
+        benchmark=benchmark,
+        model="gemma-test",
+        generation_options={"temperature": 0.0},
+        requested_ids={"q0", "q1", "q-missing"},
+    )
+    assert list(loaded) == ["q0", "q1"]
+    assert loaded == rows
+    assert _load_neural_checkpoint(
+        checkpoint,
+        benchmark={"sha256": "different", "size_bytes": 3},
+        model="gemma-test",
+        generation_options={"temperature": 0.0},
+        requested_ids={"q0", "q1"},
+    ) == {}
+    assert _load_neural_checkpoint(
+        checkpoint,
+        benchmark=benchmark,
+        model="different-model",
+        generation_options={"temperature": 0.0},
+        requested_ids={"q0", "q1"},
+    ) == {}
+
+
+def test_neural_checkpoint_rejects_duplicate_or_invalid_rows(tmp_path):
+    checkpoint = tmp_path / "neural_checkpoint.json"
+    benchmark = {"sha256": "abc123", "size_bytes": 3}
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "benchmark_sha256": "abc123",
+                "benchmark_size_bytes": 3,
+                "model": "gemma-test",
+                "rows": [
+                    {"example_id": "q0", "accuracy": 0.5, "grounding": 0.5},
+                    {"example_id": "q0", "accuracy": 0.4, "grounding": 0.4},
+                ],
+            }
+        )
+    )
+    assert _load_neural_checkpoint(
+        checkpoint,
+        benchmark=benchmark,
+        model="gemma-test",
+        generation_options={"temperature": 0.0},
+        requested_ids={"q0"},
+    ) == {}
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "benchmark_sha256": "abc123",
+                "benchmark_size_bytes": 3,
+                "model": "gemma-test",
+                "rows": [{"example_id": "q0", "accuracy": 2.0, "grounding": 0.5}],
+            }
+        )
+    )
+    assert _load_neural_checkpoint(
+        checkpoint,
+        benchmark=benchmark,
+        model="gemma-test",
+        generation_options={"temperature": 0.0},
+        requested_ids={"q0"},
+    ) == {}
 
 
 def test_ranking_recall_by_mode_has_backward_compatible_shape_without_embedder():

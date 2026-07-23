@@ -14,6 +14,7 @@ neural rows, a live Ollama model; otherwise prints a notice and exits 0.
 from __future__ import annotations
 
 import json
+import argparse
 import sys
 from pathlib import Path
 
@@ -27,8 +28,8 @@ from src.dspy_runtime import DEFAULT_OLLAMA_MODEL, ollama_model_available  # noq
 from src.evaluation.longmemeval import longmemeval_available  # noqa: E402
 
 
-def main() -> int | str:
-    """Run LongMemEval_S and write data/longmemeval_results.json."""
+def main(neural_limit: int = 50, output_path: str | Path | None = None, checkpoint_path: str | Path | None = None) -> int | str:
+    """Run LongMemEval_S with resumable neural checkpoints."""
     if not longmemeval_available():
         print("[skip] LongMemEval_S not downloaded; run `bash scripts/get_longmemeval.sh` first.")
         return 0
@@ -38,9 +39,17 @@ def main() -> int | str:
 
     from src.evaluation.longmemeval import longmemeval_eval
 
-    result = longmemeval_eval()
-    out_path = PROJECT_ROOT / "data" / "longmemeval_results.json"
-    out_path.write_text(json.dumps(result, indent=2, sort_keys=True))
+    if neural_limit <= 0:
+        raise ValueError("neural_limit must be positive")
+    out_path = Path(output_path) if output_path is not None else PROJECT_ROOT / "data" / "longmemeval_results.json"
+    checkpoint = Path(checkpoint_path) if checkpoint_path is not None else PROJECT_ROOT / "output" / "checkpoints" / "longmemeval_neural.json"
+    try:
+        result = longmemeval_eval(neural_limit=neural_limit, checkpoint_path=checkpoint)
+    except Exception as exc:
+        print(f"[failed] LongMemEval neural run: {type(exc).__name__}: {exc}; existing aggregate left as-is.")
+        return 1
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     ea = result["extractive_accuracy"][0]
     na = result["neural_accuracy"][0]
     eg = result["extractive_grounding"][0]
@@ -51,5 +60,15 @@ def main() -> int | str:
 
 
 if __name__ == "__main__":
-    out = main()
+    parser = argparse.ArgumentParser(description="Record LongMemEval_S accuracy and grounding aggregates.")
+    parser.add_argument(
+        "--neural-limit",
+        type=int,
+        default=50,
+        help="number of real neural examples to evaluate (default: 50; increase when Ollama capacity permits)",
+    )
+    parser.add_argument("--output-path", type=Path, default=None, help="isolated aggregate output path")
+    parser.add_argument("--checkpoint-path", type=Path, default=None, help="resumable neural checkpoint path")
+    args = parser.parse_args()
+    out = main(neural_limit=args.neural_limit, output_path=args.output_path, checkpoint_path=args.checkpoint_path)
     sys.exit(0 if isinstance(out, str) or out == 0 else 1)

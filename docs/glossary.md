@@ -5,7 +5,10 @@
   `src/signatures/`.
 - **Inspector** — Stage 0; RLM-style context narrowing (grep/peek/partition).
 - **Retriever** — Stage 1; lexical+semantic lanes fused by RRF, optional MMR.
-- **Reasoner** — Stage 2; typed reasoning (CoT/ReAct), optional verification.
+- **Reasoner** — Stage 2; one model completion over ranked evidence, with a
+  deterministic ReAct-style read→integrate route for multi-hop/code/update
+  categories and optional token-support verification. It does not expose hidden
+  chain-of-thought.
 - **Memory Gate** — Stage 3; episodic-first storage with gated consolidation.
 - **Compiler** — Stage 4 (offline); MIPRO search + GEPA evolution over `HarnessConfig`.
 - **BM25** — Okapi lexical relevance score (`k1=1.5`, `b=0.75`).

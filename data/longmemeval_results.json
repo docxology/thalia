@@ -1,60 +1,123 @@
 {
+  "benchmark_provenance": {
+    "path": "data/longmemeval/longmemeval_s.json",
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "size_bytes": 277383467
+  },
   "category_accuracy": {
     "knowledge_update": [
       0.03966537485150228,
-      0.02327601751715616,
-      0.05840610297938561
+      0.023273884075564365,
+      0.0583338858418499
     ],
     "multi_session": [
       0.0240635257431022,
-      0.015532955524980373,
-      0.032917500435969166
+      0.015532511691476326,
+      0.03288906198847656
     ],
     "preference": [
       0.14001476235197474,
-      0.12238691158651976,
-      0.1598871160800403
+      0.12238675813660327,
+      0.15982438515342554
     ],
     "single_session": [
       0.048077467298834574,
-      0.03621439496732464,
-      0.060747393920468934
+      0.0362118212881988,
+      0.06070620133368166
     ],
     "temporal": [
       0.057469543016143834,
-      0.046850967131943026,
-      0.06863356933100492
+      0.04685045170529353,
+      0.06857887402799039
     ]
   },
   "extractive_accuracy": [
     0.0483920022672186,
-    0.04257431462969144,
-    0.054730019642410185
+    0.0425735194701284,
+    0.054692653773552834
   ],
+  "extractive_accuracy_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 0.007624340461552241,
+    "low": 4.336808689942018e-19,
+    "method": "wilson_score",
+    "rate": 0.0,
+    "successes": 0,
+    "trials": 500,
+    "unit": "binary_observation"
+  },
+  "extractive_accuracy_statistics": {
+    "cluster_count": 0,
+    "confidence": 0.95,
+    "estimand": "mean",
+    "estimate": 0.0483920022672186,
+    "high": 0.054692653773552834,
+    "low": 0.0425735194701284,
+    "median": 0.0,
+    "method": "percentile_bootstrap_mean",
+    "n": 500,
+    "resample_provenance": "iid_observation_bootstrap",
+    "resamples": 2000,
+    "seed": 0,
+    "standard_deviation": 0.07065345958607817,
+    "standard_error": 0.0031597187696000987,
+    "strata": [],
+    "unit": "observation"
+  },
   "extractive_composite": [
     0.2112190158632499,
-    0.20389696494001688,
-    0.21848985711270466
+    0.20389691008572716,
+    0.218441328598577
   ],
   "extractive_grounding": [
     0.43036271500972917,
-    0.40947428590360285,
-    0.450513284346724
+    0.4094693816590036,
+    0.4504726061552841
   ],
   "n_extractive": 500,
   "n_neural": 50,
   "neural_accuracy": [
-    0.11157828829895551,
-    0.07709815354132804,
-    0.15061415057749158
+    0.10962043308238106,
+    0.07579017319905142,
+    0.14798372342823193
   ],
+  "neural_accuracy_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 0.07134759913335872,
+    "low": 6.938893903907228e-18,
+    "method": "wilson_score",
+    "rate": 0.0,
+    "successes": 0,
+    "trials": 50,
+    "unit": "binary_observation"
+  },
+  "neural_accuracy_statistics": {
+    "cluster_count": 0,
+    "confidence": 0.95,
+    "estimand": "mean",
+    "estimate": 0.10962043308238106,
+    "high": 0.15158046712055928,
+    "low": 0.07545925196228731,
+    "median": 0.06696428571428571,
+    "method": "percentile_bootstrap_mean",
+    "n": 50,
+    "resample_provenance": "iid_observation_bootstrap",
+    "resamples": 2000,
+    "seed": 1,
+    "standard_deviation": 0.13729948076344156,
+    "standard_error": 0.019417078780244294,
+    "strata": [],
+    "unit": "observation"
+  },
   "neural_generation_options": {
     "temperature": 0.0
   },
   "neural_grounding": [
-    0.38273102593896774,
-    0.31285662205767517,
-    0.44799448698242306
+    0.3853590346545591,
+    0.3147116037986821,
+    0.45127398921764916
   ],
   "neural_model": "gemma3:4b",
   "neural_model_metadata": {
@@ -72,9 +135,58 @@
     },
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
-    "modified_at": "2026-06-08T14:02:59.340727371-07:00",
-    "ollama_version": "0.30.5",
+    "modified_at": "2026-07-19T20:17:29.24740752-07:00",
+    "ollama_version": "0.32.1",
     "requested_model": "gemma3:4b",
     "size": 3338801804
+  },
+  "runtime_provenance": {
+    "benchmark": {
+      "path": "data/longmemeval/longmemeval_s.json",
+      "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+      "size_bytes": 277383467
+    },
+    "machine": "arm64",
+    "models": {
+      "neural_model": "gemma3:4b",
+      "neural_model_metadata": {
+        "api_base": "http://localhost:11434",
+        "available": true,
+        "details": {
+          "families": [
+            "gemma3"
+          ],
+          "family": "gemma3",
+          "format": "gguf",
+          "parameter_size": "4.3B",
+          "parent_model": "",
+          "quantization_level": "Q4_K_M"
+        },
+        "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+        "model": "gemma3:4b",
+        "modified_at": "2026-07-19T20:17:29.24740752-07:00",
+        "ollama_version": "0.32.1",
+        "requested_model": "gemma3:4b",
+        "size": 3338801804
+      }
+    },
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.11 (main, Dec  5 2025, 21:16:49) [Clang 21.1.4 ]"
+  },
+  "sample_accounting": {
+    "benchmark": "LongMemEval_S",
+    "extractive": {
+      "n_evaluated": 500,
+      "n_failed": 0,
+      "n_requested": 500,
+      "status": "complete"
+    },
+    "neural": {
+      "n_evaluated": 50,
+      "n_failed": 0,
+      "n_requested": 50,
+      "status": "complete"
+    },
+    "unit": "longmemeval_question"
   }
 }

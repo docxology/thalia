@@ -1,4 +1,9 @@
 {
+  "benchmark_provenance": {
+    "path": "data/longmemeval/longmemeval_s.json",
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "size_bytes": 277383467
+  },
   "default_max_windows": 15,
   "embed_model_for_modes": "nomic-embed-text",
   "embed_model_metadata": {
@@ -18,8 +23,8 @@
     },
     "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
     "model": "nomic-embed-text:latest",
-    "modified_at": "2026-06-08T16:33:48.900810949-07:00",
-    "ollama_version": "0.30.5",
+    "modified_at": "2026-07-19T20:17:45.008280034-07:00",
+    "ollama_version": "0.32.1",
     "requested_model": "nomic-embed-text",
     "size": 274302450
   },
@@ -33,17 +38,43 @@
   "n_neural": 30,
   "n_ranking": 40,
   "neural_adaptive": {
-    "accuracy": 0.15003401382776546,
-    "grounding": 0.5384133397251656
+    "accuracy": 0.17139864315937106,
+    "grounding": 0.5389062138128728
+  },
+  "sample_accounting": {
+    "benchmark": "LongMemEval_S",
+    "extractive_sweep": {
+      "n_evaluated": 240,
+      "n_failed": 0,
+      "n_requested": 240
+    },
+    "neural": {
+      "n_evaluated": 90,
+      "n_failed": 0,
+      "n_requested": 90,
+      "status": "complete"
+    },
+    "ranking": {
+      "n_evaluated": 40,
+      "n_failed": 0,
+      "n_requested": 40
+    },
+    "ranking_modes": {
+      "n_evaluated": 8,
+      "n_failed": 0,
+      "n_requested": 8,
+      "status": "complete"
+    },
+    "unit": "longmemeval_question_or_configuration"
   },
   "neural_by_maxwindows": {
     "15": {
-      "accuracy": 0.09325821798777022,
-      "grounding": 0.35937370711435074
+      "accuracy": 0.08586991232360248,
+      "grounding": 0.3630892905276244
     },
     "100": {
-      "accuracy": 0.14712226700419165,
-      "grounding": 0.5395732194560222
+      "accuracy": 0.16457495691539495,
+      "grounding": 0.5392765378605164
     }
   },
   "neural_generation_options": {
@@ -65,8 +96,8 @@
     },
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
-    "modified_at": "2026-06-08T14:02:59.340727371-07:00",
-    "ollama_version": "0.30.5",
+    "modified_at": "2026-07-19T20:17:29.24740752-07:00",
+    "ollama_version": "0.32.1",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },
@@ -78,6 +109,62 @@
     "k": 10,
     "lexical": 1.0,
     "n": 8
+  },
+  "runtime_provenance": {
+    "benchmark": {
+      "path": "data/longmemeval/longmemeval_s.json",
+      "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+      "size_bytes": 277383467
+    },
+    "machine": "arm64",
+    "models": {
+      "embedding_model": "nomic-embed-text",
+      "embedding_model_metadata": {
+        "api_base": "http://localhost:11434",
+        "available": true,
+        "details": {
+          "context_length": 2048,
+          "embedding_length": 768,
+          "families": [
+            "nomic-bert"
+          ],
+          "family": "nomic-bert",
+          "format": "gguf",
+          "parameter_size": "137M",
+          "parent_model": "",
+          "quantization_level": "F16"
+        },
+        "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "model": "nomic-embed-text:latest",
+        "modified_at": "2026-07-19T20:17:45.008280034-07:00",
+        "ollama_version": "0.32.1",
+        "requested_model": "nomic-embed-text",
+        "size": 274302450
+      },
+      "neural_model": "gemma3:4b",
+      "neural_model_metadata": {
+        "api_base": "http://localhost:11434",
+        "available": true,
+        "details": {
+          "families": [
+            "gemma3"
+          ],
+          "family": "gemma3",
+          "format": "gguf",
+          "parameter_size": "4.3B",
+          "parent_model": "",
+          "quantization_level": "Q4_K_M"
+        },
+        "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+        "model": "gemma3:4b",
+        "modified_at": "2026-07-19T20:17:29.24740752-07:00",
+        "ollama_version": "0.32.1",
+        "requested_model": "gemma3:4b",
+        "size": 3338801804
+      }
+    },
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.11 (main, Dec  5 2025, 21:16:49) [Clang 21.1.4 ]"
   },
   "sweep_values": [
     15,

@@ -36,6 +36,22 @@ PARAPHRASE_PROBES: list[tuple[str, list[str], int]] = [
     ("Which beverage is preferred?", ["My favourite drink is black coffee.", "The meeting moved to room 4.", "It rained yesterday."], 0),
 ]
 
+# Seven additional balanced semantic families (four items each) expand the live
+# probe from four anecdotes to 32 observations without changing the original four
+# regression fixtures.  The surrogate result is intentionally empirical; no claim
+# is made that this synthetic probe estimates natural-language retrieval globally.
+for _topic, _rows in [
+    ("schedule", [("At what time is the workshop?", "The workshop starts at 10am.", "The printer is jammed."), ("When is the flight?", "The flight leaves on Friday.", "The room is warm."), ("Which day is the review?", "The review happens on Tuesday.", "The build is green."), ("When should I submit?", "Submission is due next Monday.", "The lights are off.")]),
+    ("location", [("Where can I find the archive?", "The archive is in the basement.", "The kettle is boiling."), ("What place is the conference at?", "The conference is at Harbor Hall.", "The laptop is charged."), ("Where is the spare key?", "The spare key is behind the blue vase.", "The garden is wet."), ("Which site hosts the service?", "The service runs at the west campus.", "The monitor is asleep.")]),
+    ("quantity", [("How many seats are reserved?", "Eight seats are reserved.", "The coffee is ready."), ("What is the required capacity?", "The required capacity is 40 people.", "The queue is short."), ("How much storage is allocated?", "The allocation is 2 terabytes.", "The server is quiet."), ("What number of samples did we collect?", "We collected 120 samples.", "The chart is blue.")]),
+    ("identity", [("Who is leading the workshop?", "Mina leads the workshop.", "The workshop is tomorrow."), ("Which team owns this module?", "The platform team owns this module.", "The module is small."), ("Who approved the change?", "Diego approved the change.", "The change is staged."), ("Who is my emergency contact?", "My emergency contact is Noor.", "The phone is silent.")]),
+    ("status", [("Is the migration finished?", "The migration is complete.", "The database is large."), ("What state is the review in?", "The review is pending.", "The document is long."), ("Has the export succeeded?", "The export succeeded.", "The folder is empty."), ("Is the feature available?", "The feature is experimental.", "The browser is open.")]),
+    ("preference", [("What kind of music do I enjoy?", "I enjoy classical music.", "The radio is off."), ("Which snack do I usually choose?", "I usually choose almonds.", "The cupboard is full."), ("What color do I prefer?", "I prefer forest green.", "The wall is white."), ("Which framework do I favor?", "I favor Python and Rust.", "The script is short.")]),
+    ("technical", [("Which protocol does the service use?", "The service uses HTTPS.", "The certificate is new."), ("What causes the import failure?", "The import fails because CONFIG is missing.", "The package is installed."), ("Which file contains the route?", "The route is defined in router.py.", "The test is passing."), ("What format does the endpoint return?", "The endpoint returns JSON.", "The endpoint is local.")]),
+]:
+    for _query, _gold_doc, _distractor in _rows:
+        PARAPHRASE_PROBES.append((_query, [_gold_doc, _distractor, "This unrelated note has no answer."], 0))
+
 
 def surrogate_recall_at_1(probes: list[tuple[str, list[str], int]] | None = None) -> float:
     """Deterministic surrogate (hashing-trigram) recall@1 over the paraphrase probes."""
@@ -192,15 +208,54 @@ def dense_rag_answer(session_history: str, query: str, k: int = 3, model: str = 
 
 def paraphrase_retrieval_probe(model: str = DEFAULT_EMBED_MODEL) -> dict:  # pragma: no cover - requires a live ollama model
     """Real surrogate-vs-learned recall@1 measurement on the paraphrase probes."""
+    from ..evaluation.statistics import binary_rate, exact_paired_binary
+
+    rows: list[dict] = []
+    surrogate_hits: list[bool] = []
+    learned_hits: list[bool] = []
+    for index, (query, docs, gold) in enumerate(PARAPHRASE_PROBES, start=1):
+        surrogate_top = SemanticIndex(docs).top_k(query, k=1)
+        surrogate_hit = bool(surrogate_top and surrogate_top[0][0] == gold)
+        surrogate_hits.append(surrogate_hit)
+        try:
+            learned_top = LearnedSemanticIndex(docs, model=model).top_k(query, k=1)
+            learned_hit = bool(learned_top and learned_top[0][0] == gold)
+            error_class = None
+        except Exception as exc:
+            learned_hit = None
+            error_class = type(exc).__name__
+        if learned_hit is not None:
+            learned_hits.append(learned_hit)
+        rows.append({
+            "probe": index,
+            "family": ("schedule", "location", "quantity", "identity", "status", "preference", "technical")[(index - 1) % 7],
+            "surrogate_hit": surrogate_hit,
+            "learned_hit": learned_hit,
+            "error_class": error_class,
+        })
+    paired_rows = [row for row in rows if row["learned_hit"] is not None]
     return {
         "model": model,
         "model_metadata": embed_model_metadata(model=model),
         "metric": "recall@1",
         "n_probes": len(PARAPHRASE_PROBES),
+        "rows": rows,
         "embedding_document_prefix": DEFAULT_DOCUMENT_PREFIX.strip(),
         "embedding_query_prefix": DEFAULT_QUERY_PREFIX.strip(),
-        "surrogate_recall_at_1": surrogate_recall_at_1(),
-        "learned_recall_at_1": learned_recall_at_1(model=model),
+        "surrogate_recall_at_1": sum(surrogate_hits) / len(surrogate_hits),
+        "learned_recall_at_1": sum(learned_hits) / len(learned_hits) if learned_hits else 0.0,
+        "surrogate_rate": binary_rate(sum(surrogate_hits), len(surrogate_hits)).to_dict(),
+        "learned_rate": binary_rate(sum(learned_hits), len(learned_hits)).to_dict() if learned_hits else None,
+        "paired_binary_comparison": exact_paired_binary(
+            [row["learned_hit"] for row in paired_rows],
+            [row["surrogate_hit"] for row in paired_rows],
+        ).to_dict() if paired_rows else None,
+        "sample_accounting": {
+            "unit": "paraphrase_probe",
+            "n_requested": len(PARAPHRASE_PROBES),
+            "n_evaluated": len(paired_rows),
+            "n_failed": len(PARAPHRASE_PROBES) - len(paired_rows),
+        },
     }
 
 

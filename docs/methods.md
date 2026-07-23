@@ -1,7 +1,9 @@
-# Methods
+# Methods: Executable Contracts and Evidence Boundaries
 
-Every method below is deterministic and unit-tested. Formal equations appear in
-`manuscript/04_harness_design.md` (§Formalism); this is the implementer's view.
+Deterministic-core methods below are unit-tested and formally specified. Equations
+appear in `manuscript/04b_harness_formalism_and_added_methods.md`; the machine-
+checked registry at `data/paper_audit.yaml` is the implementer's view of the same
+contracts.
 
 ## Method contract
 
@@ -21,6 +23,15 @@ stage I/O, `src/stages/` implements runtime stages, `src/memory/` owns persisten
 dataset plus diagnostics. Scripts call these modules; they do not contain method
 logic.
 
+## Formalism-to-code contract
+
+`src/formalism_traceability.py` validates every registered formal object against
+the Python AST, its test files, and its manuscript equation/section anchors. The
+generated `output/reports/formalism_traceability.json` is required by the artifact
+manifest, and the manuscript injects the same registry as a table. This gives each
+equation a resolvable code symbol and each composition edge an explicit relation;
+it does not elevate a finite synthetic result into a population claim.
+
 ## Visual evidence contract
 
 Figures are part of the method surface, not decorative output. Architectural
@@ -34,8 +45,9 @@ the hashing semantic surrogate are labelled where they matter.
 
 ## Lexical lane — BM25 (`src/retrieval/lexical.py`)
 
-Okapi BM25 with `k1=1.5`, `b=0.75`. idf uses the `+1`-inside-log form so values
-stay non-negative (`invariants.check_bm25_idf_nonnegative`). `grep(docs, patterns)`
+Okapi BM25 with the code constants `DEFAULT_K1` and `DEFAULT_B`. idf uses the
+`+1`-inside-log form so values stay non-negative
+(`invariants.check_bm25_idf_nonnegative`). `grep(docs, patterns)`
 returns indices matching any regex; `extract_key_phrases(query)` drops stop-words
 and short tokens to derive grep anchors.
 
@@ -62,8 +74,9 @@ evaluated without changing the Inspector, Reasoner, Memory Gate, or Compiler.
 
 ## Fusion — weighted RRF (`src/retrieval/fusion.py`)
 
-`rrf_fuse(lex, sem, k=60, lexical_weight=0.65, semantic_weight=0.35)` sums
-`w / (k + rank + 1)` per lane. Ties break on ascending id (deterministic).
+`rrf_fuse` sums `w / (k + rank + 1)` per lane. Ranks are zero-based, duplicate
+IDs keep their first lane occurrence, and the ordering key is fixed-precision
+rounded before ties break on ascending ID (deterministic).
 
 The Retriever also applies harness-conditioned lane weights. Literal,
 single-session, and temporal tasks favour lexical evidence; preference and
@@ -93,10 +106,11 @@ queries.
 
 ## Reasoner routing & verification (`src/stages/reasoner.py`)
 
-`src.routing.classify_task` routes multi-hop/code/knowledge-update tasks through a ReAct
-read→integrate loop and others through chain-of-thought. With `verify=True`, the
-Reasoner measures answer-in-evidence support and re-answers over the full evidence
-set if it falls below `grounding_threshold`.
+`src.routing.classify_task` routes multi-hop/code/knowledge-update tasks through a
+deterministic ReAct-style read→integrate selection path and uses one model
+completion for both routes. With `verify=True`, the Reasoner measures a set-based
+answer-in-evidence support proxy and re-answers over the current ranked evidence
+set if it falls below `grounding_threshold`; this is not entailment or factuality.
 
 The Reasoner is the only stage that can use an LM. By default it uses
 `ExtractiveLM`, which selects the evidence line with maximal lexical overlap. Real
@@ -149,16 +163,43 @@ treated as evolved capabilities.
   memory at inference — closing the loop between the Memory Gate and reasoning.
 
 `evaluation.method_ablation` reports the composite for base + each method + all
-combined (visualised by `figures.plot_method_ablation`).
+combined (visualised by `figures.plot_method_ablation`). The research audit
+evaluates lexical-only, surrogate-semantic-only, and hybrid retrieval on the same
+examples across the sizes and fixed seeds declared in the generated
+`output/data/eval_results.json` bundle. That accounting distinguishes unique
+examples from method evaluations and records four balanced strata (literal
+lexical, semantic/paraphrase, noisy long context, and multi-hop/update). Means use
+within-stratum bootstrap intervals; seed
+clusters are resampled separately for cluster-aware precision checks. Binary
+outcomes use Wilson intervals and exact McNemar tests, and one named Holm family
+spans every sample-size row plus its overall and stratum-level paired method tests.
+Every estimate records its
+estimand, unit, strata, cluster count, seed, and resample provenance. These are
+uncertainty descriptions for a synthetic machinery benchmark, not population
+claims.
+
+The ledger is the accounting unit: each row has a global sequence number, stable
+example ID, category/stratum, seed, method, metric components, status, error class,
+and dataset/config fingerprints. The event stream repeats the fingerprints on
+every sample event and contains only deterministic sequence fields; no wall-clock
+values are used. The dashboard distinguishes unique examples from method
+evaluations so paired method rows cannot be mistaken for additional independent
+observations. Live neural and learned-retrieval plots add paired deltas, confidence
+bands, Wilson intervals, model digests, generation options, and embedding prefixes
+when the committed recorder aggregates provide them. Captions state whether a
+visual is a deterministic regression, a synthetic diagnostic, or a model-dependent
+probe.
 
 ## Provenance and artifact integrity (`src/provenance.py`)
 
 Generators write a deterministic manifest over the current output data, figures,
-dashboard, and verification summary. `validate_artifact_manifest` independently
-checks relative-path safety, file size, SHA-256, and required artifact coverage
-from `domain_profile.yaml`. This separates “the generator ran” from “the rendered
-artifact still matches the generated inputs”; the latter is the gate used before
-publication rendering.
+dashboard, verification summary, evaluation accounting, event stream, and
+per-example ledger. `validate_artifact_manifest` independently checks
+relative-path safety, file size, SHA-256, and required artifact coverage from
+`domain_profile.yaml`; malformed domain profiles fail closed. Model digests,
+generation options, embedding prefixes, benchmark SHA-256/size, Python, and
+platform are recorded as non-deterministic provenance metadata and are never used
+as byte-identical neural regressions.
 
 ## Evaluation protocol (`src/evaluation/`)
 
@@ -174,9 +215,36 @@ then reports:
 - tight-budget RRF, MMR, noise, and method-ablation diagnostics; and
 - compiler search trace plus compiled configuration.
 
-The protocol is intentionally small and deterministic. It validates composition,
-path hygiene, and reproducibility; it does not claim population-level performance
-or reproduce learned-dense-retrieval results.
+The six-example diagnostic remains intentionally small and deterministic. The
+separate seeded scaling audit increases sample size while preserving reproducible
+datasets and complete accounting of requested, evaluated, failed, category, and
+seed counts. Together they validate composition, path hygiene, reproducibility,
+dispersion, and paired method comparisons; they do not claim population-level
+performance or reproduce learned-dense-retrieval results.
+
+### Statistical estimands and uncertainty
+
+The continuous estimand is the mean composite over the finite generated task
+family. A unique example is the observation unit; the fixed seed is a design
+cluster, not an additional independent replication. Marginal method summaries
+resample within each declared difficulty stratum, retaining the observed stratum
+sizes. Hybrid-versus-baseline comparisons are aligned on stable example IDs and
+resample whole seed clusters, preserving within-seed pairing. The research figure
+therefore displays paired delta intervals directly rather than subtracting two
+marginal confidence limits. All randomized procedures receive explicit seeds and
+serialize their resampling method, confidence level, unit, strata, cluster count,
+and resample count. The bootstrap convention follows Efron's original
+non-parametric formulation [@efron1979bootstrap].
+
+Binary rates use Wilson score intervals [@wilson1927probable]. Paired binary
+outcomes use the exact McNemar test [@mcnemar1947sampling], including the
+zero-discordance case. The named Holm step-down family [@holm1979simple] is
+assembled before adjustment and includes the overall and stratum-level paired
+comparisons for every audited sample-size row. This protects the interpretation
+of exploratory slices without pretending that a generated benchmark samples a
+human population. The sample-size planner is a transparent precision heuristic,
+not a prospective power calculation; the synthetic, external-benchmark, and
+model-dependent evidence tiers remain separate.
 
 ## Composable Pipeline (`src/pipeline.py`)
 

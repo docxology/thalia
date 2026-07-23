@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import random
+from dataclasses import replace
+from collections import Counter
 
 from ..compiler.metrics import EvalExample
 from ..module import tokenize
@@ -92,8 +94,8 @@ def build_demo_dataset() -> list[EvalExample]:
 _POOLS = {
     "event": ["car service", "dentist appointment", "team offsite", "flight", "product launch", "tax filing", "house move", "conference talk"],
     "date": ["April 12th", "March 3rd", "June 9th", "next Tuesday", "the 21st", "July 4th", "October 30th", "May 1st"],
-    "thing": ["programming language", "coffee", "editor", "keyboard", "season", "city", "framework", "cuisine"],
-    "value": ["Rust", "espresso", "Vim", "the Model M", "autumn", "Lisbon", "DSPy", "Thai food"],
+    "thing": ["programming language", "morning drink", "editor", "keyboard", "season", "city", "framework", "cuisine"],
+    "value": ["Rust", "green tea", "Vim", "the Model M", "autumn", "Lisbon", "DSPy", "Thai food"],
     "script": ["the deploy script", "the migration job", "the importer", "the auth module", "the billing worker"],
     "error": ["a KeyError", "a TimeoutError", "a ValueError", "a NullPointer", "a 500"],
     "cond": ["CONFIG is missing", "the token expires", "the input is empty", "the DB is down", "the cache is cold"],
@@ -105,6 +107,21 @@ _POOLS = {
     "secret": ["wifi password", "guest code", "vault code", "API key", "door pin"],
     "secret_val": ["bluefish42", "7781", "alpha-seven-nine", "sk-9920", "4417"],
 }
+
+_PREFERENCE_PAIRS = tuple(zip(_POOLS["thing"], _POOLS["value"]))
+_ATTRIBUTE_PAIRS = (
+    ("budget", "5000 dollars"),
+    ("headcount", "twelve people"),
+    ("deadline", "the 30th"),
+    ("vendor", "three suppliers"),
+    ("scope", "two milestones"),
+)
+_PLACE_PAIRS = (
+    ("live in", "Berlin", "Lisbon"),
+    ("work at", "the old office", "the river campus"),
+    ("bank with", "First National", "Credit Union"),
+    ("commute to", "the north route", "the bridge route"),
+)
 
 
 def _generated_example(category: TaskCategory, rng: random.Random) -> EvalExample:
@@ -119,17 +136,18 @@ def _generated_example(category: TaskCategory, rng: random.Random) -> EvalExampl
         e, d = pick("event"), pick("date")
         gold, query, answer = f"the {e} is on {d}", f"When is the {e}?", f"{e} {d}"
     elif category is TaskCategory.PREFERENCE:
-        t, v = pick("thing"), pick("value")
+        t, v = rng.choice(_PREFERENCE_PAIRS)
         gold, query, answer = f"my favorite {t} is {v}", f"What is my favorite {t}?", f"favorite {t} is {v}"
     elif category is TaskCategory.CODE:
         s, er, c = pick("script"), pick("error"), pick("cond")
         gold, query, answer = f"{s} raises {er} when {c}", f"What error does {s} raise?", f"{er} when {c}"
     elif category is TaskCategory.MULTI_SESSION:
-        a, m = pick("attr"), pick("amount")
+        a, m = rng.choice(_ATTRIBUTE_PAIRS)
         gold, query, answer = f"earlier I said my {a} was {m}", f"What {a} did I mention across our sessions?", f"{a} was {m}"
     elif category is TaskCategory.KNOWLEDGE_UPDATE:
-        pv, old, new = pick("place_verb"), pick("old_place"), pick("new_place")
-        gold, query, answer = f"I used to {pv} {old}; I now {pv} {new}", f"Where do I now {pv}?", f"now {pv} {new}"
+        pv, old, new = rng.choice(_PLACE_PAIRS)
+        question_word = {"live in": "live", "work at": "work", "bank with": "bank", "commute to": "commute"}[pv]
+        gold, query, answer = f"I used to {pv} {old}; I now {pv} {new}", f"Where do I now {question_word}?", f"now {pv} {new}"
     else:  # SINGLE_SESSION
         s, v = pick("secret"), pick("secret_val")
         gold, query, answer = f"the {s} is {v}", f"What is the {s}?", f"{s} is {v}"
@@ -162,11 +180,127 @@ def build_large_dataset(per_category: int = 10, seed: int = 0) -> list[EvalExamp
     for category in TaskCategory:
         for _ in range(per_category):
             examples.append(_generated_example(category, rng))
+    return [
+        replace(
+            example,
+            example_id=f"large-s{seed}-{(example.task_category or TaskCategory.SINGLE_SESSION).value}-{index:04d}",
+            stratum="literal_lexical",
+            seed=seed,
+        )
+        for index, example in enumerate(examples)
+    ]
+
+
+_RESEARCH_STRATA = {
+    TaskCategory.SINGLE_SESSION: "literal_lexical",
+    TaskCategory.TEMPORAL: "literal_lexical",
+    TaskCategory.PREFERENCE: "semantic_paraphrase",
+    TaskCategory.CODE: "noisy_long_context",
+    TaskCategory.MULTI_SESSION: "multi_hop_update",
+    TaskCategory.KNOWLEDGE_UPDATE: "multi_hop_update",
+}
+
+
+def _research_variant(example: EvalExample, category: TaskCategory, index: int, seed: int) -> EvalExample:
+    """Build a construct-labelled research variant without changing the demo."""
+    stratum = _RESEARCH_STRATA[category]
+    metadata: dict[str, str] = {"construct": stratum, "synthetic": "true"}
+    if stratum == "semantic_paraphrase":
+        # Keep one content anchor so the Inspector can expose a candidate, while
+        # replacing the lexical relation that directly states the preference.
+        # This tests retrieval under controlled surface divergence, not language
+        # understanding in the population.
+        thing = example.query.removeprefix("What is my favorite ").rstrip("?")
+        query = f"Which option do I tend to favor as my {thing}?"
+        metadata.update({"surface_relation": "paraphrase", "anchor": thing})
+        example = replace(example, query=query)
+    elif stratum == "noisy_long_context":
+        # Place deterministic false friends before and after the gold transcript;
+        # the exact count varies by index so the stratum has measurable dispersion.
+        n_distractors = 8 + (index % 5) * 4
+        example = with_noise(example, n_distractors)
+        # The base generator always has four lines before the appended negative
+        # block. Persist the exact flattened line identities so a ledger reader
+        # can audit which observations were intended as false friends.
+        negative_indices = tuple(range(4, 4 + n_distractors))
+        metadata.update(
+            {
+                "negative_lines": str(n_distractors),
+                "negative_line_indices": ",".join(str(value) for value in negative_indices),
+                "negative_pattern": "query_token_false_friend",
+            }
+        )
+    elif stratum == "multi_hop_update":
+        if category is TaskCategory.MULTI_SESSION:
+            # The answer value is in the earlier line; the later line supplies the
+            # cross-session confirmation. Both source records are required by the
+            # research construct and are retained in the gold source set.
+            first = example.session_history.splitlines()[0]
+            attribute = example.expected_answer.split(" was ", 1)[0]
+            history = (
+                f"{first}\n"
+                "Assistant: Earlier note recorded.\n"
+                f"User: Across sessions, I confirmed the same {attribute}.\n"
+                f"Assistant: Cross-session {attribute} confirmation recorded."
+            )
+        else:
+            # Separate the old and new state into two source records.  A single
+            # combined line would be a literal extraction task, not an update.
+            gold = example.session_history.splitlines()[0].removeprefix("User: ").rstrip(".")
+            old, new = (gold.split("; ", 1) + [gold])[:2]
+            history = (
+                f"User: {old}.\n"
+                "Assistant: Earlier state recorded.\n"
+                f"User: {new}; this supersedes the earlier state.\n"
+                "Assistant: Current state updated."
+            )
+        metadata.update({"source_requirement": "multiple_records", "supersession": "explicit"})
+        example = replace(example, session_history=history, expected_source_indices=(0, 2))
+    return replace(
+        example,
+        example_id=f"research-s{seed}-{category.value}-{stratum}-{index:04d}",
+        stratum=stratum,
+        seed=seed,
+        metadata=tuple(sorted(metadata.items())),
+    )
+
+
+def validate_dataset(examples: list[EvalExample]) -> list[EvalExample]:
+    """Validate stable research identifiers and return the input unchanged."""
+    if not examples:
+        raise ValueError("examples must be non-empty")
+    ids = [example.example_id for example in examples]
+    if any(not value for value in ids):
+        raise ValueError("every research example must have a stable example_id")
+    duplicates = [key for key, count in Counter(ids).items() if count > 1]
+    if duplicates:
+        raise ValueError(f"duplicate example_id values: {duplicates[:3]}")
     return examples
+
+
+def build_research_dataset(per_category: int = 10, seed: int = 0) -> list[EvalExample]:
+    """Build the seeded, stratified research dataset used by the audit.
+
+    The six task categories remain balanced.  Four deterministic difficulty strata
+    make the audit capable of exposing method-specific failures; all examples are
+    synthetic and should not be read as population estimates.
+    """
+    if per_category <= 0:
+        raise ValueError("per_category must be positive")
+    rng = random.Random(seed)
+    examples: list[EvalExample] = []
+    for category in TaskCategory:
+        for index in range(per_category):
+            examples.append(_research_variant(_generated_example(category, rng), category, index, seed))
+    return validate_dataset(examples)
 
 
 def _distractor_lines(query: str, n: int) -> str:
     """Build lexical false-friend lines (Sen et al. 2026 Experiment 2 noise)."""
+    # Preserve the established demo-noise construction: the six-example
+    # regression set intentionally includes the query's first content-like tokens
+    # (including function words) so its published noise trajectory remains stable.
+    # Research-only construct metadata records the exact false-friend lines.
     content = [t for t in tokenize(query) if len(t) > 2][:3] or ["topic"]
     lines = []
     for i in range(n):
@@ -186,7 +320,17 @@ def with_noise(example: EvalExample, n_distractors: int) -> EvalExample:
         expected_answer=example.expected_answer,
         expected_source_indices=example.expected_source_indices,
         task_category=example.task_category,
+        example_id=example.example_id,
+        stratum=example.stratum,
+        seed=example.seed,
+        metadata=example.metadata,
     )
 
 
-__all__ = ["build_demo_dataset", "build_large_dataset", "with_noise"]
+__all__ = [
+    "build_demo_dataset",
+    "build_large_dataset",
+    "build_research_dataset",
+    "validate_dataset",
+    "with_noise",
+]

@@ -1,26 +1,56 @@
 {
   "category_extractive_f1": {
-    "code": 0.0,
-    "knowledge_update": 0.6153846153846153,
-    "multi_session": 0.0,
-    "preference": 0.8333333333333333,
+    "code": 0.7947712418300654,
+    "knowledge_update": 0.6431372549019607,
+    "multi_session": 0.6153846153846153,
+    "preference": 0.0,
     "single_session": 0.8,
-    "temporal": 0.6153846153846153
+    "temporal": 0.6666666666666666
   },
   "category_neural_f1": {
-    "code": 0.7692307692307693,
-    "knowledge_update": 0.888888888888889,
+    "code": 0.5329982517482518,
+    "knowledge_update": 0.5333333333333333,
     "multi_session": 0.6666666666666666,
-    "preference": 0.33333333333333337,
+    "preference": 0.4428571428571429,
     "single_session": 0.4,
     "temporal": 0.6666666666666666
+  },
+  "dataset_fingerprint": "70666243bd9e4ea30abfba422ba614965d82ec9fed927429538b10387d131e8b",
+  "extractive_binary_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 0.13797620467498017,
+    "low": 1.3877787807814457e-17,
+    "method": "wilson_score",
+    "rate": 0.0,
+    "successes": 0,
+    "trials": 24,
+    "unit": "binary_observation"
+  },
+  "extractive_statistics": {
+    "cluster_count": 0,
+    "confidence": 0.95,
+    "estimand": "mean",
+    "estimate": 0.5866599631305514,
+    "high": 0.6867611446287916,
+    "low": 0.46761814982403216,
+    "median": 0.6666666666666666,
+    "method": "percentile_bootstrap_mean",
+    "n": 24,
+    "resample_provenance": "iid_observation_bootstrap",
+    "resamples": 5000,
+    "seed": 0,
+    "standard_deviation": 0.27914257271901693,
+    "standard_error": 0.05697973905411162,
+    "strata": [],
+    "unit": "observation"
   },
   "generation_options": {
     "max_tokens": 512,
     "temperature": 0.0
   },
-  "mean_extractive_f1": 0.47735042735042726,
-  "mean_neural_f1": 0.6207977207977208,
+  "mean_extractive_f1": 0.5866599631305514,
+  "mean_neural_f1": 0.5404203435453435,
   "metric": "token_f1",
   "model": "gemma3:4b",
   "model_metadata": {
@@ -38,60 +68,302 @@
     },
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
-    "modified_at": "2026-06-24T16:28:26.558822059-07:00",
+    "modified_at": "2026-07-19T20:17:29.24740752-07:00",
     "ollama_version": "0.32.1",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },
-  "n": 6,
+  "n": 24,
+  "neural_binary_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 0.13797620467498017,
+    "low": 1.3877787807814457e-17,
+    "method": "wilson_score",
+    "rate": 0.0,
+    "successes": 0,
+    "trials": 24,
+    "unit": "binary_observation"
+  },
+  "neural_statistics": {
+    "cluster_count": 0,
+    "confidence": 0.95,
+    "estimand": "mean",
+    "estimate": 0.5404203435453435,
+    "high": 0.602281746031746,
+    "low": 0.4796999961843712,
+    "median": 0.5584415584415585,
+    "method": "percentile_bootstrap_mean",
+    "n": 24,
+    "resample_provenance": "iid_observation_bootstrap",
+    "resamples": 5000,
+    "seed": 1,
+    "standard_deviation": 0.15327425321974839,
+    "standard_error": 0.03128697592454377,
+    "strata": [],
+    "unit": "observation"
+  },
+  "paired_binary_comparison": {
+    "delta": 0.0,
+    "left_failure_right_success": 0,
+    "left_success_right_failure": 0,
+    "method": "exact_mcnemar_binomial",
+    "n": 24,
+    "p_value": 1.0
+  },
+  "paired_neural_minus_extractive": {
+    "bootstrap_seed": 2,
+    "cluster_count": 0,
+    "comparison_family": "",
+    "confidence": 0.95,
+    "effect_size": -0.15912392704244427,
+    "estimand": "mean_paired_delta",
+    "high": 0.06677243304081537,
+    "low": -0.1608103018305224,
+    "mean_delta": -0.04623961958520781,
+    "n": 24,
+    "p_value": 0.43951209758048393,
+    "permutation_seed": 3,
+    "permutations": 5000,
+    "resamples": 5000,
+    "unit": "paired_observation"
+  },
   "rows": [
     {
       "category": "temporal",
-      "extractive": "User: Also the car service is on April 12th.",
-      "extractive_f1": 0.6153846153846153,
-      "gold": "car service April 12th",
-      "neural": "April 12th.",
+      "extractive": "User: the house move is on October 30th.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "house move October 30th",
+      "neural": "October 30th",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "temporal",
+      "extractive": "User: the conference talk is on October 30th.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "conference talk October 30th",
+      "neural": "October 30th",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "temporal",
+      "extractive": "User: the tax filing is on next Tuesday.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "tax filing next Tuesday",
+      "neural": "Next Tuesday.",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "temporal",
+      "extractive": "User: the product launch is on June 9th.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "product launch June 9th",
+      "neural": "June 9th.",
       "neural_f1": 0.6666666666666666
     },
     {
       "category": "preference",
-      "extractive": "User: My favorite programming language is Rust.",
-      "extractive_f1": 0.8333333333333333,
-      "gold": "favorite programming language is Rust",
-      "neural": "Rust",
-      "neural_f1": 0.33333333333333337
+      "extractive": "Assistant: Noted.",
+      "extractive_f1": 0.0,
+      "gold": "favorite season is Vim",
+      "neural": "Vim",
+      "neural_f1": 0.4
     },
     {
-      "category": "code",
-      "extractive": "User: The deploy script lives in scripts/deploy.py.",
+      "category": "preference",
+      "extractive": "Assistant: Noted.",
       "extractive_f1": 0.0,
-      "gold": "KeyError when CONFIG is missing",
-      "neural": "It raises a KeyError when CONFIG is missing.",
-      "neural_f1": 0.7692307692307693
+      "gold": "favorite coffee is Lisbon",
+      "neural": "Lisbon",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "preference",
+      "extractive": "Assistant: Noted.",
+      "extractive_f1": 0.0,
+      "gold": "favorite coffee is Lisbon",
+      "neural": "Lisbon",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "preference",
+      "extractive": "Assistant: Noted.",
+      "extractive_f1": 0.0,
+      "gold": "favorite keyboard is Thai food",
+      "neural": "Thai food",
+      "neural_f1": 0.5714285714285715
     },
     {
       "category": "multi_session",
-      "extractive": "Assistant: Yes, three vendors across our sessions.",
-      "extractive_f1": 0.0,
-      "gold": "budget was 5000 dollars",
+      "extractive": "User: earlier I said my deadline was 5000 dollars.",
+      "extractive_f1": 0.6153846153846153,
+      "gold": "deadline was 5000 dollars",
       "neural": "5000 dollars.",
       "neural_f1": 0.6666666666666666
     },
     {
-      "category": "knowledge_update",
-      "extractive": "User: I no longer live there; I now live in Lisbon.",
+      "category": "multi_session",
+      "extractive": "User: earlier I said my budget was three suppliers.",
       "extractive_f1": 0.6153846153846153,
-      "gold": "now live in Lisbon",
-      "neural": "You now live in Lisbon.",
-      "neural_f1": 0.888888888888889
+      "gold": "budget was three suppliers",
+      "neural": "three suppliers",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "multi_session",
+      "extractive": "User: earlier I said my vendor was the 30th.",
+      "extractive_f1": 0.6153846153846153,
+      "gold": "vendor was the 30th",
+      "neural": "the 30th",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "multi_session",
+      "extractive": "User: earlier I said my budget was twelve people.",
+      "extractive_f1": 0.6153846153846153,
+      "gold": "budget was twelve people",
+      "neural": "twelve people.",
+      "neural_f1": 0.6666666666666666
     },
     {
       "category": "single_session",
-      "extractive": "User: The wifi password is bluefish42.",
+      "extractive": "User: the guest code is 7781.",
+      "extractive_f1": 0.8,
+      "gold": "guest code is 7781",
+      "neural": "7781",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "single_session",
+      "extractive": "User: the wifi password is bluefish42.",
       "extractive_f1": 0.8,
       "gold": "wifi password is bluefish42",
       "neural": "bluefish42",
       "neural_f1": 0.4
+    },
+    {
+      "category": "single_session",
+      "extractive": "User: the API key is bluefish42.",
+      "extractive_f1": 0.8,
+      "gold": "API key is bluefish42",
+      "neural": "bluefish42",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "single_session",
+      "extractive": "User: the vault code is bluefish42.",
+      "extractive_f1": 0.8,
+      "gold": "vault code is bluefish42",
+      "neural": "bluefish42",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "knowledge_update",
+      "extractive": "User: I used to work at First National; I now work at the bridge route.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "now work at the bridge route",
+      "neural": "the bridge route",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "knowledge_update",
+      "extractive": "User: I used to commute to First National; I now commute to the river campus.",
+      "extractive_f1": 0.7058823529411764,
+      "gold": "now commute to the river campus",
+      "neural": "the river campus",
+      "neural_f1": 0.6666666666666666
+    },
+    {
+      "category": "knowledge_update",
+      "extractive": "User: I used to work at the old office; I now work at Lisbon.",
+      "extractive_f1": 0.5333333333333333,
+      "gold": "now work at Lisbon",
+      "neural": "Lisbon",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "knowledge_update",
+      "extractive": "User: I used to commute to Berlin; I now commute to Lisbon.",
+      "extractive_f1": 0.6666666666666666,
+      "gold": "now commute to Lisbon",
+      "neural": "Lisbon",
+      "neural_f1": 0.4
+    },
+    {
+      "category": "code",
+      "extractive": "User: the deploy script raises a KeyError when the cache is cold.",
+      "extractive_f1": 0.7777777777777778,
+      "gold": "a KeyError when the cache is cold",
+      "neural": "KeyError",
+      "neural_f1": 0.25
+    },
+    {
+      "category": "code",
+      "extractive": "User: the importer raises a 500 when the token expires.",
+      "extractive_f1": 0.8,
+      "gold": "a 500 when the token expires",
+      "neural": "the importer raises a 500",
+      "neural_f1": 0.5454545454545454
+    },
+    {
+      "category": "code",
+      "extractive": "User: the auth module raises a 500 when the input is empty.",
+      "extractive_f1": 0.7777777777777778,
+      "gold": "a 500 when the input is empty",
+      "neural": "the auth module raises a 500",
+      "neural_f1": 0.4615384615384615
+    },
+    {
+      "category": "code",
+      "extractive": "User: the importer raises a KeyError when the input is empty.",
+      "extractive_f1": 0.8235294117647058,
+      "gold": "a KeyError when the input is empty",
+      "neural": "the importer raises a KeyError when the input is empty.",
+      "neural_f1": 0.8750000000000001
     }
-  ]
+  ],
+  "runtime_provenance": {
+    "benchmark": {},
+    "machine": "arm64",
+    "models": {
+      "model": "gemma3:4b",
+      "model_metadata": {
+        "api_base": "http://localhost:11434",
+        "available": true,
+        "details": {
+          "families": [
+            "gemma3"
+          ],
+          "family": "gemma3",
+          "format": "gguf",
+          "parameter_size": "4.3B",
+          "parent_model": "",
+          "quantization_level": "Q4_K_M"
+        },
+        "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+        "model": "gemma3:4b",
+        "modified_at": "2026-07-19T20:17:29.24740752-07:00",
+        "ollama_version": "0.32.1",
+        "requested_model": "gemma3:4b",
+        "size": 3338801804
+      }
+    },
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.11 (main, Dec  5 2025, 21:16:49) [Clang 21.1.4 ]"
+  },
+  "sample_accounting": {
+    "categories": 6,
+    "category_counts": {
+      "code": 4,
+      "knowledge_update": 4,
+      "multi_session": 4,
+      "preference": 4,
+      "single_session": 4,
+      "temporal": 4
+    },
+    "n_evaluated": 24,
+    "n_failed": 0,
+    "n_requested": 24,
+    "unit": "research_eval_example"
+  }
 }

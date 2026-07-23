@@ -19,12 +19,21 @@
 
 ## Outputs (all under `output/`, gitignored / regeneratable)
 
-- `data/eval_results.json`, `data/compile_result.json`, `data/manuscript_variables.json`
+- `data/eval_results.json`, `data/compile_result.json`, `data/seed_sensitivity.json`,
+  `data/compiler_generalization.json`, `data/manuscript_variables.json`
 - `data/demo_result.json`, `reports/verification_summary.json`,
-  `figures/figure_registry.json`, `reports/artifact_manifest.json`
+  `figures/figure_registry.json`, `reports/artifact_manifest.json`,
+  `reports/evaluation_accounting.json`, `reports/evaluation_events.jsonl`,
+  `reports/evaluation_ledger.jsonl`
 - `figures/retriever_comparison.png`, `figures/rrf_sensitivity.png`,
   `figures/compiler_convergence.png`, `figures/consolidation_curve.png`,
   `figures/category_breakdown.png`, `figures/evidence_funnel.png`,
   `figures/noise_scaling.png`, `figures/mmr_tradeoff.png`,
   `figures/method_ablation.png`
 - `dashboard.html`
+
+The live v2 campaign scripts write raw rows and atomic checkpoints only to the
+external `/Volumes/blue/data/thalia_campaigns` root. They never promote an
+incomplete report into the repository's `data/` layer; promotion requires
+complete accounting plus benchmark, model, generation, cohort, code, and config
+provenance.

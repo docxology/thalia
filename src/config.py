@@ -8,12 +8,20 @@ variants without aliasing.
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Callable
 
 RERANK_STRATEGIES = ("rrf", "mmr")
+
+# Architecture/reporting constants. Keeping these in executable configuration
+# lets manuscript variables derive stage counts and confidence defaults from the
+# implementation contract instead of copying them into prose-generation code.
+NUM_RUNTIME_STAGES = 4
+NUM_TOTAL_STAGES = NUM_RUNTIME_STAGES + 1  # runtime chain plus offline Compiler
+DEFAULT_CONFIDENCE_LEVEL = 0.95
 
 
 def _parse_bool(value: str) -> bool:
@@ -24,6 +32,19 @@ def _parse_bool(value: str) -> bool:
     if lowered in ("0", "false", "no", "off"):
         return False
     raise ValueError(f"{value!r} is not a boolean")
+
+
+def _require_int(value: object, field: str) -> None:
+    """Reject booleans and fractional values in integer configuration fields."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{field} must be an integer, got {value!r}")
+
+
+def _require_finite_number(value: object, field: str) -> float:
+    """Return a finite numeric configuration value, excluding booleans."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        raise ValueError(f"{field} must be a finite number, got {value!r}")
+    return float(value)
 
 
 # Environment variable -> (field name, parser) for runtime overrides.
@@ -100,6 +121,26 @@ class HarnessConfig:
     adaptive_window_ratio: int = 5
 
     def __post_init__(self) -> None:
+        for field in (
+            "max_windows",
+            "top_k",
+            "rrf_k",
+            "context_budget_tokens",
+            "max_evidence",
+            "partition_threshold",
+            "partition_size",
+            "expansion_terms",
+            "recall_limit",
+            "adaptive_window_ratio",
+        ):
+            _require_int(getattr(self, field), field)
+        for field in ("verify", "query_expansion", "recall_memory", "adaptive_windows"):
+            if not isinstance(getattr(self, field), bool):
+                raise ValueError(f"{field} must be a boolean, got {getattr(self, field)!r}")
+        if not isinstance(self.rerank, str):
+            raise ValueError(f"rerank must be a string, got {self.rerank!r}")
+        for field in ("mmr_lambda", "grounding_threshold", "recency_weight"):
+            _require_finite_number(getattr(self, field), field)
         if self.adaptive_window_ratio <= 0:
             raise ValueError("adaptive_window_ratio must be positive")
         if self.max_windows <= 0:
@@ -115,8 +156,13 @@ class HarnessConfig:
         lw, sw = self.lexical_weight, self.semantic_weight
         if (lw is None) ^ (sw is None):
             raise ValueError("lexical_weight and semantic_weight must both be set or both None")
-        if lw is not None and (lw < 0 or (sw is not None and sw < 0)):
-            raise ValueError("lane weights must be non-negative")
+        if lw is not None:
+            _require_finite_number(lw, "lexical_weight")
+            if sw is None:  # guarded above; explicit for type checkers
+                raise ValueError("lexical_weight and semantic_weight must both be set or both None")
+            _require_finite_number(sw, "semantic_weight")
+            if lw < 0 or sw < 0:
+                raise ValueError("lane weights must be non-negative")
         if lw == 0 and sw == 0:
             raise ValueError("at least one lane weight must be positive")
         if self.rerank not in RERANK_STRATEGIES:

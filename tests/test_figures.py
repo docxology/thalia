@@ -8,6 +8,7 @@ from src.figures import (
     plot_consolidation_curve,
     plot_retriever_comparison,
     plot_rrf_weight_sensitivity,
+    plot_sample_size_precision,
 )
 
 
@@ -167,6 +168,27 @@ class TestExtendedFigures:
             },
         )
         path = plot_scaling_ci(data, tmp_path / "scaling.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_sample_size_precision(self, tmp_path):
+        from src.evaluation import sample_size_scaling_eval
+        from src.evaluation.schemas import SampleSizePayload
+
+        data = SampleSizePayload.from_json(
+            sample_size_scaling_eval(per_category_values=(1, 2), seeds=(0, 1), n_boot=60)
+        )
+        path = plot_sample_size_precision(data, tmp_path / "sample_size.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_statistical_audit(self, tmp_path):
+        from src.evaluation import sample_size_scaling_eval
+        from src.evaluation.schemas import SampleSizePayload
+        from src.figures import plot_statistical_audit
+
+        data = SampleSizePayload.from_json(
+            sample_size_scaling_eval(per_category_values=(1,), seeds=(0, 1), n_boot=40)
+        )
+        path = plot_statistical_audit(data, tmp_path / "audit.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_injection_resistance(self, tmp_path):

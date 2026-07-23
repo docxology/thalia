@@ -23,7 +23,7 @@ compile-and-validate lifecycle:
 | `template/` stage | THALIA equivalent |
 |-------------------|------------------|
 | Environment sanitization | Dependency lock + (optional) LM/API validation |
-| Test execution (Zero-Mock) | Stage suite on real data + SQLite; {{CONFIG_COV_GATE}}% `src/` gate |
+| Test execution (Zero-Mock) | Stage suite on generated examples + real SQLite; {{CONFIG_COV_GATE}}% `src/` gate |
 | Analysis script invocation | `run_harness_eval.py`, `run_compiler.py` |
 | Pandoc/XeLaTeX rendering | Manuscript + figure generation |
 | SHA-256 + steganographic hash | Compiled-config / artifact fingerprint |

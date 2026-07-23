@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import re
 import urllib.request
 from typing import Any
@@ -16,7 +17,10 @@ DEFAULT_OPENROUTER_MODEL = "openrouter/tencent/hy3-preview"
 DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 ENV_OPENROUTER_KEY = "THALIA_OPENROUTER_API_KEY"
 
-DSPY_AVAILABLE = True
+# This module intentionally has no ``import dspy`` statement.  ``find_spec``
+# lets preflight report capability without making the deterministic/core import
+# path depend on the optional SDK.
+DSPY_AVAILABLE = importlib.util.find_spec("dspy") is not None
 
 _FIELD_RE = re.compile(r"\[\[ ## (\w+) ## \]\]")
 _QUESTION_FIELDS = ("question", "query")
@@ -136,7 +140,10 @@ def ollama_model_available(model: str = DEFAULT_OLLAMA_MODEL, api_base: str = DE
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=10) as resp:
+        # Loading a multi-gigabyte local model can exceed the short liveness
+        # timeout even though generation is healthy.  Keep the probe bounded but
+        # long enough to distinguish "installed and loading" from "missing".
+        with urllib.request.urlopen(request, timeout=60) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         return isinstance(body.get("response"), str)
     except Exception:

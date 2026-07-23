@@ -56,6 +56,18 @@ class TestRender:
         assert "Deterministic Demo" in out
         assert "bluefish42" in out
 
+    def test_includes_statistical_sample_audit(self):
+        metrics = dict(METRICS)
+        metrics["statistical_scaling"] = {
+            "seed_values": [0, 1],
+            "accounting": {"n_requested": 24, "n_evaluated": 72, "n_unique_examples": 24, "n_method_evaluations": 72, "n_failed": 0},
+            "rows": [{"n_total": 24, "methods": {"hybrid": {"estimate": 0.7, "low": 0.6, "high": 0.8}}}],
+        }
+        out = render_dashboard_html(metrics, INVARIANTS, FIGURES)
+        assert "Statistical sample audit" in out
+        assert "Method evaluations" in out
+        assert "Unique examples evaluated" in out and ">24<" in out
+
     def test_handles_missing_comparison(self):
         metrics = {
             "n_examples": 1,

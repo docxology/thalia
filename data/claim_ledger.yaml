@@ -13,6 +13,7 @@ claims:
     source_tier: generated_metric
     freshness: active
     artifact_path: output/data/eval_results.json
+    artifact_field: n_examples
   - claim_id: rrf-k
     kind: number
     value: 60
@@ -48,6 +49,8 @@ claims:
     source_tier: generated_metric
     freshness: active
     artifact_path: output/data/eval_results.json
+    artifact_field: composite
+    artifact_value_tolerance: 0.0005
   - claim_id: pipeline-composable-stages
     kind: number
     value: 5
@@ -78,15 +81,141 @@ claims:
     artifact_path: src/evaluation/dataset.py
   - claim_id: test-count
     kind: number
-    value: 572
-    source: pytest collected item count
+    value: 765
+    source: latest strict pytest collected item count after v2 campaign contract tests
     source_tier: generated_metric
     freshness: active
-    artifact_path: output/data/pipeline_result.json
+    artifact_path: output/reports/verification_summary.json
+    artifact_field: command_results.tests.collected
   - claim_id: test-coverage
     kind: number
-    value: 98.08
-    source: pytest --cov coverage percentage
+    value: 92.39
+    source: latest elevated strict pytest --cov coverage percentage after v2 campaign contract tests
     source_tier: generated_metric
     freshness: active
-    artifact_path: output/data/pipeline_result.json
+    artifact_path: output/reports/verification_summary.json
+    artifact_field: command_results.tests.coverage_percent
+  - claim_id: v2-campaign-schema
+    kind: number
+    value: 1
+    source: src/evaluation/campaign.py CAMPAIGN_SCHEMA_VERSION
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/evaluation/campaign.py
+  - claim_id: v2-checkpoint-schema
+    kind: number
+    value: 3
+    source: src/evaluation/campaign.py CHECKPOINT_SCHEMA_VERSION
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/evaluation/campaign.py
+  - claim_id: v2-seed-sensitivity-count
+    kind: number
+    value: 10
+    source: src/evaluation/generalization.py DEFAULT_SEED_SENSITIVITY_SEEDS
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/evaluation/generalization.py
+  - claim_id: v2-compiler-heldout-seed-count
+    kind: number
+    value: 5
+    source: src/evaluation/compiler_generalization.py DEFAULT_COMPILER_GENERALIZATION_SEEDS
+    source_tier: project_source
+    freshness: active
+    artifact_path: src/evaluation/compiler_generalization.py
+  - claim_id: longmemeval-benchmark-identity
+    kind: string
+    value: LongMemEval_S
+    source: validated LongMemEval benchmark loader and retained aggregate
+    source_tier: external_benchmark
+    freshness: active
+    artifact_path: data/longmemeval_results.json
+    artifact_field: sample_accounting.benchmark
+  - claim_id: longmemeval-benchmark-sha256
+    kind: string
+    value: d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442
+    source: validated LongMemEval_S benchmark file SHA-256
+    source_tier: external_benchmark
+    freshness: active
+    artifact_path: data/longmemeval_results.json
+    artifact_field: benchmark_provenance.sha256
+  - claim_id: longmemeval-benchmark-size-bytes
+    kind: number
+    value: 277383467
+    source: validated LongMemEval_S benchmark file size
+    source_tier: external_benchmark
+    freshness: active
+    artifact_path: data/longmemeval_results.json
+    artifact_field: benchmark_provenance.size_bytes
+  - claim_id: longmemeval-extractive-questions
+    kind: number
+    value: 500
+    source: retained extractive LongMemEval aggregate
+    source_tier: external_benchmark_local_deterministic
+    freshness: prior_evidence
+    artifact_path: data/longmemeval_results.json
+    artifact_field: sample_accounting.extractive.n_evaluated
+  - claim_id: longmemeval-neural-questions
+    kind: number
+    value: 50
+    source: retained Gemma LongMemEval aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/longmemeval_results.json
+    artifact_field: sample_accounting.neural.n_evaluated
+  - claim_id: bottleneck-neural-rows
+    kind: number
+    value: 90
+    source: retained LongMemEval bottleneck neural aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/longmemeval_bottleneck.json
+    artifact_field: sample_accounting.neural.n_evaluated
+  - claim_id: bottleneck-ranking-rows
+    kind: number
+    value: 40
+    source: retained LongMemEval ranking diagnostic aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/longmemeval_bottleneck.json
+    artifact_field: sample_accounting.ranking.n_evaluated
+  - claim_id: learned-retrieval-probes
+    kind: number
+    value: 32
+    source: retained nomic-embed-text paraphrase retrieval aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/learned_retrieval.json
+    artifact_field: sample_accounting.n_evaluated
+  - claim_id: injection-probes
+    kind: number
+    value: 30
+    source: retained context-poisoning injection aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/injection_eval.json
+    artifact_field: sample_accounting.n_evaluated
+  - claim_id: backend-comparison-rows
+    kind: number
+    value: 24
+    source: retained Gemma backend-comparison aggregate
+    source_tier: live_model
+    freshness: prior_evidence
+    artifact_path: data/neural_eval.json
+    artifact_field: sample_accounting.n_evaluated
+  - claim_id: v2-seed-sensitivity-evaluations
+    kind: number
+    value: 1800
+    source: generated ten-seed synthetic sensitivity aggregate
+    source_tier: finite_synthetic
+    freshness: active
+    artifact_path: output/data/seed_sensitivity.json
+    artifact_field: sample_accounting.n_evaluated
+  - claim_id: v2-compiler-accounted-evaluations
+    kind: number
+    value: 1350
+    source: generated held-out compiler aggregate including candidate-train evaluations
+    source_tier: finite_synthetic
+    freshness: active
+    artifact_path: output/data/compiler_generalization.json
+    artifact_field: sample_accounting.n_evaluated

@@ -1,7 +1,7 @@
 # THALIA Manuscript Configuration
 # Agentic Typed-pipeline with Lexical And Structured stages.
 # Consumed by infrastructure/rendering (PDF metadata) and project scripts such as
-# working/thalia/scripts/z_generate_manuscript_variables.py.
+# scripts/z_generate_manuscript_variables.py.
 
 paper:
   title: "THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
@@ -20,6 +20,7 @@ authors:
 
 publication:
   doi: ""  # Assigned on deposit
+  doi_status: "forthcoming"
   journal: ""
   year: "2026"
 

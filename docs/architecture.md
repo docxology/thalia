@@ -7,7 +7,7 @@ fifth (Compiler) operates on the harness offline.
 session history + query
   ─► Stage 0  Inspector    grep/peek/partition → compact evidence windows
   ─► Stage 1  Retriever    BM25 + hashing-embedding → weighted RRF (+ optional MMR) → budget
-  ─► Stage 2  Reasoner     CoT/ReAct routing (+ optional verify) → typed answer + citations
+  ─► Stage 2  Reasoner     single-pass or ReAct-style routing (+ optional verify) → typed answer + citations
   ─► Stage 3  MemoryGate   always append raw episode; gated consolidation
   ─► HarnessOutput
   ╌► Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution over HarnessConfig
@@ -32,7 +32,8 @@ session history + query
   `pipeline.intermediates` after `run()`.
 - **Operability** — `config` (load/save/env), `llm` (real adapters), `harness`,
   `session` (persistence), `cli`, plus `evaluation`, `figures`, `dashboard`,
-  `invariants`, `manuscript_variables`.
+  `invariants`, `manuscript_variables`, and `formalism_traceability` (the
+  machine-checked bridge from equations to code, tests, and artifacts).
 - **`src/py.typed`** — PEP 561 marker; downstream type-checkers treat the package as
   typed without additional configuration.
 

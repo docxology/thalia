@@ -12,7 +12,7 @@ produced — typed inputs and outputs via **Signatures** — rather than *how*. 
 decomposes into four primitives: Signatures (declarative I/O), Modules
 (`Predict`, `ChainOfThought` [@wei2022cot], `ReAct` [@yao2023react], …),
 Programs (modules wired into graphs), and Optimizers (compilers that tune
-instructions and few-shot examples against a metric). The state-of-the-art
+instructions and few-shot examples against a metric). One prominent
 optimizer, MIPROv2, bootstraps few-shot candidates,
 proposes instruction variants, and searches the combined space with Bayesian
 optimization.
@@ -49,8 +49,8 @@ traces to the consolidation step, not the underlying experience. Agents that
 preserve raw episodes by default and gate consolidation via explicit
 Retain/Delete/Consolidate actions roughly double the accuracy of forced-
 consolidation counterparts; disabling consolidation entirely matches that regime
-(figures cited as reported from a 2026 submitted preprint, not independently
-re-verified here — see [@sec:repro-provenance]).
+(reported by the source but not independently reproduced by THALIA — see
+[@sec:repro-provenance]).
 
 **Implication for THALIA.** Raw episodes are first-class evidence. The Memory Gate
 always appends the raw turn to an append-only store and *only* consolidates a
@@ -63,15 +63,13 @@ and an explicit criterion.
 
 This empirical study [@sen2026grep] compares lexical (grep/regex) and semantic
 (dense) retrieval across models, harnesses, and tool-calling paradigms on
-LongMemEval. As reported by that source — which we cite but do not independently
-reproduce — grep generally yields higher accuracy than vector retrieval in the
-inline comparisons, while overall scores still depend strongly on harness and
-tool-calling style; under programmatic file-based delivery, vector retrieval can
-exceed grep when the agent reliably closes the read→integrate→retry loop. Under
-increasing session noise the ordering is not preserved: lexical exploits surface
-cues (precise but brittle), dense explores embedding neighbourhoods (covers
-paraphrases but admits topical false friends). Harness-level shifts are as large
-as retriever-level shifts.
+LongMemEval. Its abstract reports that grep generally yields higher accuracy than
+vector retrieval in the study's comparisons, while overall scores still depend
+strongly on the harness and tool-calling style. We cite that external result but
+do not independently reproduce its model/harness comparison here. Under
+increasing session noise, the source studies how the ordering changes; THALIA
+uses that motivation for a bounded, local surrogate diagnostic rather than
+importing the source's magnitude or treating its ranking as universal.
 
 **Implications for THALIA.** (i) Lexical-first, hybrid by default — grep/BM25 as
 the inline lane, semantic as fallback. (ii) Weighted Reciprocal Rank Fusion
@@ -86,7 +84,7 @@ budgeting — inline when the result set fits, file-based overflow otherwise.
 The `template/` repository [@aii2026template] applies infrastructure-as-code to
 the research lifecycle: a two-layer architecture separates reusable infrastructure
 from self-contained project workspaces, connected by an eight-stage build pipeline
-with a Zero-Mock testing policy ({{CONFIG_COV_GATE}}% project / 60% infrastructure coverage),
+with a Zero-Mock testing policy and a project coverage gate of {{CONFIG_COV_GATE}}%,
 cryptographic hashing, and structural validation. Its **documentation duality**
 equips every directory with human-readable `README.md` and machine-readable
 `AGENTS.md`, and each module carries a `SKILL.md` aligned with the Model Context
@@ -99,4 +97,4 @@ the harness's compile-and-validate lifecycle ([@sec:integration]), and the
 manuscript's numbers are generated tokens, not hand-typed values
 ([@sec:reproducibility]).
 
-![Foundations-to-THALIA stage map. Each foundation work maps to one or more THALIA stages, colour-coded by the stage palette.](../output/figures/foundations_map.png){#fig:foundations_map width=90%}
+![Schematic foundations-to-THALIA stage map. Each foundation work maps to one or more THALIA stages, colour-coded by the stage palette. This diagram records conceptual provenance, not observations: there is no sample unit, sample size, uncertainty method, model estimate, or population claim.](../output/figures/foundations_map.png){#fig:foundations_map width=90%}

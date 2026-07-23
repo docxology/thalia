@@ -1,0 +1,343 @@
+schema_version: 2
+scope: code_to_paper_publication_red_team
+evidence_boundary: finite_synthetic_and_recorded_local_external_evidence
+interpretation_policy:
+  synthetic: finite generated task family; not a population estimate
+  neural: model-dependent and not byte-identical across hosts
+  benchmark: external input identified by size and SHA-256
+  grounding: citation-support proxy unless explicitly labelled session reachability
+  token_f1: set-based token overlap; repeated token multiplicity is intentionally ignored
+  intervals: descriptive resampling diagnostics; five seed clusters are too few for ordinary population coverage claims
+formalisms:
+  - id: shared_tokenizer
+    equation: eq:tokenizer
+    implementation: src/module.py::tokenize
+    tests: tests/test_module.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: token sequence
+    estimand: normalized alphanumeric tokenization
+    inputs: [text]
+    outputs: [lowercase alphanumeric tokens]
+    dependencies: []
+    invariants: [deterministic_tokenization]
+    limitation: punctuation and morphology are not modeled beyond regex token boundaries
+  - id: token_f1_set
+    equation: eq:token-f1
+    implementation: src/compiler/metrics.py::token_f1
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: example
+    estimand: set-based lexical answer overlap F1
+    inputs: [prediction, gold_answer]
+    outputs: [precision, recall, f1]
+    dependencies: [shared_tokenizer]
+    invariants: [bounded_metric, empty-empty_is_one]
+    limitation: token multiplicity, synonymy, entailment, factuality, and semantic correctness are not measured
+  - id: bm25
+    equation: eq:bm25
+    implementation: src/retrieval/lexical.py::BM25Index
+    tests: tests/test_lexical.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: query-document score
+    estimand: Okapi BM25 score under the shared tokenizer
+    inputs: [query, document_corpus, k1, b]
+    outputs: [ranked_document_indices, scores]
+    dependencies: [shared_tokenizer]
+    invariants: [nonnegative_idf, zero_score_exclusion, deterministic_ties]
+    limitation: query terms are a multiset, OOV terms contribute zero, and no learned semantic representation is used
+  - id: hashing_cosine
+    equation: eq:hash-cosine
+    implementation: [src/retrieval/semantic.py::embed, src/retrieval/semantic.py::cosine]
+    tests: tests/test_semantic.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: query-document similarity
+    estimand: cosine similarity of signed SHA-1 character-trigram vectors
+    inputs: [text, dimension]
+    outputs: [unit_vector, cosine_similarity]
+    dependencies: []
+    invariants: [deterministic_embedding, zero_vector_similarity_zero]
+    limitation: a hashing sub-word surrogate; it is not a learned embedding model or a semantic correctness measure
+  - id: weighted_rrf
+    equation: eq:rrf
+    implementation: src/retrieval/fusion.py::rrf_fuse
+    tests: tests/test_fusion.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: candidate chunk
+    estimand: weighted reciprocal-rank fusion score
+    inputs: [lexical_ranked_list, semantic_ranked_list, lane_weights, damping_constant]
+    outputs: [fused_ranked_list]
+    dependencies: [bm25, hashing_cosine]
+    invariants: [zero_based_rank, first_duplicate_occurrence, deterministic_ties]
+    limitation: absent lanes contribute nothing, native scores are not calibrated, and only the ordering key is fixed-precision rounded
+  - id: mmr
+    equation: eq:mmr
+    implementation: src/retrieval/mmr.py::mmr_rerank
+    tests: tests/test_mmr.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: candidate ordering
+    estimand: greedy relevance-diversity selection over fused candidates
+    inputs: [fused_scores, window_texts, lambda, k]
+    outputs: [selected_order]
+    dependencies: [hashing_cosine, weighted_rrf]
+    invariants: [lambda_one_relevance_order, deterministic_ties, bounded_selection]
+    limitation: first selection is seeded by relevance and pairwise similarity uses the hashing surrogate
+  - id: inspector_relevance
+    equation: eq:inspector-relevance
+    implementation: src/stages/inspector.py::_relevance
+    tests: tests/test_inspector.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: transcript record
+    estimand: fraction of distinct query tokens present in a record
+    inputs: [query_token_set, record_text]
+    outputs: [relevance in 0..1]
+    dependencies: [shared_tokenizer]
+    invariants: [bounded_relevance, empty_query_zero]
+    limitation: distinct-token overlap is lexical and does not detect paraphrase meaning
+  - id: inspector_partition
+    equation: eq:inspector-partition
+    implementation: src/stages/inspector.py::Inspector._coarse_block_filter
+    tests: tests/test_inspector.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: transcript block
+    estimand: summed record relevance used for depth-one coarse filtering
+    inputs: [partitioned_records, query_token_set, max_windows, partition_size]
+    outputs: [allowed_record_indices]
+    dependencies: [inspector_relevance]
+    invariants: [consecutive_partition, at_least_one_block]
+    limitation: discarded blocks cannot be recovered by later fine ranking; this is a diagnostic bottleneck candidate
+  - id: prf_expansion
+    equation: eq:prf
+    implementation: src/retrieval/expansion.py::expand_query
+    tests: tests/test_expansion.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: expanded query
+    estimand: deterministic feedback-term augmentation from top BM25 windows
+    inputs: [query, documents, top_docs, top_terms]
+    outputs: [expanded_query]
+    dependencies: [bm25, shared_tokenizer]
+    invariants: [distinct_feedback_terms, frequency_then_alphabetical_order]
+    limitation: RM3-inspired heuristic; it is not a learned query-expansion model
+  - id: recency_bonus
+    equation: eq:recency
+    implementation: src/stages/retriever.py::Retriever._apply_recency
+    tests: tests/test_retriever.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: candidate score
+    estimand: position-scaled ranking bonus for non-negative transcript indices
+    inputs: [fused_score, source_index, recency_weight]
+    outputs: [adjusted_score, reordered_candidates]
+    dependencies: [weighted_rrf]
+    invariants: [zero_weight_noop, recalled_window_exemption, deterministic_ties]
+    limitation: source position is a structural recency proxy, not elapsed time or a causal temporal effect
+  - id: evidence_budget
+    equation: eq:evidence-budget
+    implementation: src/stages/retriever.py::estimate_tokens
+    tests: tests/test_retriever.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: ranked evidence list
+    estimand: whitespace-token estimate and inline/file delivery decision
+    inputs: [window_texts, context_budget_tokens]
+    outputs: [estimated_tokens, delivery_mode]
+    dependencies: []
+    invariants: [deterministic_token_count, budget_threshold]
+    limitation: whitespace count is a structural proxy, not tokenizer cost, latency, memory, or monetary cost
+  - id: grounding_support
+    equation: eq:grounding
+    implementation: src/compiler/metrics.py::grounding_score
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_contract
+    unit: evaluation example
+    estimand: citation-support proxy combining expected-index hit and cited-excerpt token-F1
+    inputs: [answer, cited_excerpts, expected_source_indices]
+    outputs: [support_score]
+    dependencies: [token_f1_set]
+    invariants: [bounded_metric, no_citation_zero]
+    limitation: not entailment, factual attribution, line-level grounding, or human judgment
+  - id: evidence_efficiency
+    equation: eq:efficiency
+    implementation: src/compiler/metrics.py::efficiency_score
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_contract
+    unit: evaluation example
+    estimand: bounded structural reward from ranked-window count
+    inputs: [ranked_window_count, efficiency_scale]
+    outputs: [efficiency_score]
+    dependencies: []
+    invariants: [bounded_metric, floor_at_zero]
+    limitation: does not measure latency, prompt tokens, memory, cost, or energy
+  - id: composite_metric
+    equation: eq:composite
+    implementation: src/compiler/metrics.py::harness_metric
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_contract
+    unit: evaluation example
+    estimand: weighted sum of lexical answer, citation-support, and structural efficiency components
+    inputs: [accuracy, grounding_support, evidence_efficiency]
+    outputs: [composite_score]
+    dependencies: [token_f1_set, grounding_support, evidence_efficiency]
+    invariants: [bounded_metric, fixed_weights_sum_to_one]
+    limitation: the headline score inherits every proxy limitation and is descriptive over the declared finite set
+  - id: stratified_cluster_resampling
+    equation: none
+    implementation: src/evaluation/statistics.py::clustered_bootstrap_mean
+    tests: tests/test_statistics.py
+    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    evidence_tier: finite_generated_evaluation
+    status: descriptive_resampling
+    unit: seed-stratum cluster
+    estimand: finite-set mean with within-stratum seed-cluster resampling
+    inputs: [example_scores, strata, seed_clusters, confidence, resample_seed]
+    outputs: [interval, cluster_warning, provenance]
+    dependencies: []
+    invariants: [explicit_seed, finite_values, failure_denominator_preserved]
+    limitation: five seed clusters do not establish ordinary population interval coverage
+  - id: research_dataset
+    equation: none
+    implementation: src/evaluation/dataset.py::build_research_dataset
+    tests: tests/test_scaling.py
+    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_construct
+    unit: generated example
+    estimand: balanced finite synthetic task-family observation
+    inputs: [task_category, stratum, seed, per_category]
+    outputs: [stable_example_id, content_fingerprint, construct_metadata]
+    dependencies: []
+    invariants: [balanced_categories, unique_ids, stable_seed_replay]
+    limitation: generated content is not human or population data; template reuse is reported rather than treated as independent novelty
+  - id: evaluation_ledger
+    equation: none
+    implementation: src/evaluation/accounting.py::ledger_row
+    tests: tests/test_accounting.py
+    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    evidence_tier: project_source
+    status: executable_artifact_contract
+    unit: example-method evaluation row
+    estimand: complete requested-observation accounting including failures
+    inputs: [example, method, metrics, status, fingerprints]
+    outputs: [ledger_row, deterministic_events]
+    dependencies: [research_dataset]
+    invariants: [contiguous_sequence, failure_reason, deterministic_jsonl]
+    limitation: ledger provenance does not make model-dependent outputs deterministic
+connections:
+  - id: retrieval-to-evidence
+    sources: [bm25, hashing_cosine, weighted_rrf, recency_bonus, mmr]
+    targets: [evidence_budget]
+    relation: ranked-candidate composition followed by budgeted delivery
+    implementation: src/stages/retriever.py::Retriever.forward
+    tests: tests/test_retriever.py
+    manuscript_anchor: sec:stage-retriever
+  - id: inspector-to-retriever
+    sources: [inspector_relevance, inspector_partition]
+    targets: [bm25, hashing_cosine]
+    relation: coarse transcript narrowing supplies the candidate corpus
+    implementation: src/stages/inspector.py::Inspector.forward
+    tests: tests/test_inspector.py
+    manuscript_anchor: sec:stage-inspector
+  - id: metric-composition
+    sources: [token_f1_set, grounding_support, evidence_efficiency]
+    targets: [composite_metric]
+    relation: fixed convex weighted sum
+    implementation: src/compiler/metrics.py::harness_metric
+    tests: tests/test_metrics.py
+    manuscript_anchor: eq:composite
+  - id: dataset-to-ledger
+    sources: [research_dataset]
+    targets: [evaluation_ledger, stratified_cluster_resampling]
+    relation: stable construct metadata and seed clusters define the analysis unit
+    implementation: [src/evaluation/accounting.py::fingerprint_examples, src/evaluation/accounting.py::deterministic_events]
+    tests: [tests/test_accounting.py, tests/test_scaling.py]
+    manuscript_anchor: sec:eval-statistics
+claims:
+  - id: typed_pipeline_contract
+    strength: contract
+    implementation: [src/signatures/, src/pipeline.py]
+    artifact: output/data/pipeline_result.json
+    tests: [tests/test_pipeline.py, tests/test_signatures.py]
+    token_source: generated_configuration_and_pipeline_artifact
+    evidence_tier: project_source
+    limitation: tested contract, not proof of correctness for all integrations
+  - id: citation_support
+    strength: operational_metric
+    implementation: src/compiler/metrics.py::grounding_score
+    artifact: output/data/eval_results.json
+    tests: tests/test_metrics.py
+    token_source: generated_evaluation_bundle
+    evidence_tier: finite_generated_evaluation
+    limitation: lexical support is not entailment or factuality
+  - id: inspector_bottleneck
+    strength: retained_slice_diagnostic
+    implementation: [src/stages/inspector.py, src/evaluation/longmemeval.py]
+    artifact: data/longmemeval_bottleneck.json
+    tests: tests/test_longmemeval.py
+    token_source: committed_benchmark_aggregate
+    evidence_tier: external_benchmark_local_model
+    limitation: largest observed loss in the retained slice; no universal causal claim
+  - id: injection_visibility
+    strength: finite_probe_observation
+    implementation: src/evaluation/ablation.py::injection_resistance
+    artifact: data/injection_eval.json
+    tests: tests/test_ablation.py
+    token_source: committed_probe_aggregate
+    evidence_tier: finite_generated_evaluation
+    limitation: visibility and citation auditability are not injection immunity
+  - id: formalism_traceability
+    strength: publication_integrity_contract
+    implementation: src/formalism_traceability.py::validate_traceability
+    artifact: output/reports/formalism_traceability.json
+    tests: tests/test_formalism_traceability.py
+    token_source: generated_formalism_registry
+    evidence_tier: project_source
+    limitation: a valid mapping proves resolvability of declared anchors, not scientific validity of every assumption
+  - id: synthetic_comparison
+    strength: finite_set_description
+    implementation: [src/evaluation/dataset.py::build_research_dataset, src/evaluation/scaling.py::sample_size_scaling_eval]
+    artifact: output/data/eval_results.json
+    tests: tests/test_scaling.py
+    token_source: generated_evaluation_bundle
+    evidence_tier: finite_generated_evaluation
+    limitation: repeated templates and five seed clusters limit generalization; failures remain in requested denominators
+  - id: neural_measurement
+    strength: model_conditioned_measurement
+    implementation: [src/dspy_runtime/live_eval.py, src/llm.py::OllamaLM]
+    artifact: data/neural_eval.json
+    tests: tests/test_dspy_runtime.py
+    token_source: committed_neural_aggregate
+    evidence_tier: local_model_measurement
+    limitation: depends on model digest, generation options, service state, and retained sample; not byte-identical
+  - id: benchmark_transfer
+    strength: external_benchmark_measurement
+    implementation: src/evaluation/longmemeval.py
+    artifact: data/longmemeval_results.json
+    tests: tests/test_longmemeval.py
+    token_source: committed_benchmark_aggregate
+    evidence_tier: external_benchmark_local_model
+    limitation: extractive and neural rows have different evidence boundaries and the retained neural sample is incomplete

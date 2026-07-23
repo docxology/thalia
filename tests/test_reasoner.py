@@ -49,7 +49,7 @@ class TestReasonerForward:
             task_category=TaskCategory.SINGLE_SESSION,
         )
         assert "42" in pred["answer"]
-        assert pred["reasoning_trace"].startswith("[cot]")
+        assert pred["reasoning_trace"].startswith("[single_pass]")
         assert pred["evidence_citations"]
 
     def test_react_path_for_code(self):
@@ -60,7 +60,7 @@ class TestReasonerForward:
             ranked_evidence=ranked,
             task_category=TaskCategory.CODE,
         )
-        assert pred["reasoning_trace"].startswith("[react]")
+        assert pred["reasoning_trace"].startswith("[react_style]")
         assert "KeyError" in pred["answer"]
 
     def test_react_falls_back_when_no_token_overlap(self):
@@ -72,7 +72,7 @@ class TestReasonerForward:
             ranked_evidence=ranked,
             task_category=TaskCategory.CODE,
         )
-        assert "hop1 grep -> 2/2" in pred["reasoning_trace"]
+        assert "hop1 token filter -> 2/2" in pred["reasoning_trace"]
 
     def test_no_evidence_path(self):
         r = Reasoner()

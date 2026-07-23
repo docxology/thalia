@@ -12,6 +12,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CORE_ALLOWLIST = {
     Path("src/llm.py"),
     Path("src/retrieval/learned.py"),
+    # The campaign runner measures live-model latency with perf_counter.  It is
+    # an optional observational lane, not part of the deterministic harness.
+    Path("src/evaluation/campaign.py"),
 }
 _CORE_ALLOWLIST_PREFIXES = (
     "src/dspy_runtime/",

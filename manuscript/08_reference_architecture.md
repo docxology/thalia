@@ -36,7 +36,7 @@ thalia/
 |   +-- module.py                    # Module / Prediction / LMClient / ExtractiveLM
 |   +-- config.py                    # HarnessConfig + load/save/env overrides
 |   +-- llm.py                       # real LM adapters (CallableLM, OllamaLM)
-|   +-- harness.py                   # AutoHarness (composes the four stages)
+|   +-- harness.py                   # AutoHarness (composes the {{CONFIG_NUM_RUNTIME_STAGES}} runtime stages)
 |   +-- recall.py                    # read-only memory recall (episodic + MEMORY.md)
 |   +-- session.py                   # persistent multi-turn Session
 |   +-- cli.py                       # query CLI (run_query, arg parsing, Inspector diagnostics)

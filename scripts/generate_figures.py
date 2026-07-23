@@ -29,6 +29,7 @@ from src.evaluation import (  # noqa: E402
     pipeline_evidence_flow,
     retriever_comparison,
     run_full_eval,
+    sample_size_scaling_eval,
 )
 from src.evaluation.schemas import (  # noqa: E402
     BottleneckPayload,
@@ -37,6 +38,7 @@ from src.evaluation.schemas import (  # noqa: E402
     LongMemEvalPayload,
     NeuralEvalPayload,
     OrchestrationBaseline,
+    SampleSizePayload,
     ScalingCiPayload,
 )
 from src.figures import (  # noqa: E402
@@ -54,6 +56,8 @@ from src.figures import (  # noqa: E402
     plot_paraphrase_retrieval,
     plot_pipeline_flow,
     plot_scaling_ci,
+    plot_sample_size_precision,
+    plot_statistical_audit,
     plot_compiler_convergence,
     plot_consolidation_curve,
     plot_evidence_funnel,
@@ -95,6 +99,13 @@ def main() -> list[Path]:
     comparison = retriever_comparison()
     compiled = MIPROCompiler(auto="heavy").compile(lambda c: build_run_fn(c), build_demo_dataset())
     full_eval = run_full_eval()
+    eval_bundle_path = PROJECT_ROOT / "output" / "data" / "eval_results.json"
+    if eval_bundle_path.exists():
+        bundle_data = json.loads(eval_bundle_path.read_text())
+        statistical_scaling = bundle_data.get("statistical_scaling")
+    else:
+        statistical_scaling = None
+    statistical_scaling = statistical_scaling or sample_size_scaling_eval()
     category_means = full_eval["category_means"]
     components = {k: full_eval[k] for k in ("accuracy", "grounding", "efficiency")}
 
@@ -110,6 +121,14 @@ def main() -> list[Path]:
         plot_method_ablation(fig_dir / "method_ablation.png"),
         plot_orchestration_value(OrchestrationBaseline.from_json(no_harness_baseline()), fig_dir / "orchestration_value.png"),
         plot_scaling_ci(ScalingCiPayload.from_json(large_dataset_eval()), fig_dir / "scaling_ci.png"),
+        plot_sample_size_precision(
+            SampleSizePayload.from_json(statistical_scaling),
+            fig_dir / "sample_size_precision.png",
+        ),
+        plot_statistical_audit(
+            SampleSizePayload.from_json(statistical_scaling),
+            fig_dir / "statistical_audit.png",
+        ),
         plot_category_components(category_component_breakdown(), fig_dir / "category_components.png"),
         plot_pipeline_flow(pipeline_evidence_flow(), fig_dir / "pipeline_flow.png"),
         plot_gepa_trajectory(gepa_component_trajectory(), fig_dir / "gepa_trajectory.png"),

@@ -15,10 +15,16 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src"):
         sys.path.insert(0, str(_path))
 
 from src.manuscript_integrity import (  # noqa: E402
+    check_bibliography_integrity,
     check_crossref_integrity,
     find_template_root,
+    find_hardcoded_numeric_claims,
+    load_claim_ledger,
+    validate_claim_ledger,
     verify_token_coverage,
+    write_paper_audit_json,
 )
+from src.formalism_traceability import write_traceability_report  # noqa: E402
 from src.manuscript_variables import generate_variables  # noqa: E402
 from src.provenance import write_artifact_manifest  # noqa: E402
 
@@ -34,6 +40,7 @@ def main() -> Path:
     manuscript_dir = PROJECT_ROOT / "manuscript"
 
     variables = generate_variables()
+    validate_claim_ledger(load_claim_ledger(), project_root=PROJECT_ROOT)
     used, missing = verify_token_coverage(variables, manuscript_dir)
     if missing:
         raise SystemExit(
@@ -43,9 +50,26 @@ def main() -> Path:
         check_crossref_integrity(manuscript_dir)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
+    try:
+        check_bibliography_integrity(manuscript_dir, manuscript_dir / "references.bib")
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    hardcoded = find_hardcoded_numeric_claims(manuscript_dir)
+    if hardcoded:
+        raise SystemExit(
+            "manuscript contains result-bearing numeric literals outside generated tokens: "
+            + repr(hardcoded)
+        )
 
     output_path = output_dir / "manuscript_variables.json"
     output_path.write_text(json.dumps(variables, indent=2, sort_keys=True))
+    write_paper_audit_json(PROJECT_ROOT / "output" / "reports" / "paper_audit.json")
+    # Source-only generation must work in a clean checkout.  The release
+    # validator performs the stricter claim-artifact check after all generators.
+    write_traceability_report(
+        PROJECT_ROOT / "output" / "reports" / "formalism_traceability.json",
+        check_artifacts=False,
+    )
     manifest_path = write_artifact_manifest(PROJECT_ROOT)
 
     if TEMPLATE_ROOT is None:

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 DEFAULT_K = 60
 DEFAULT_LEXICAL_WEIGHT = 0.65
 DEFAULT_SEMANTIC_WEIGHT = 0.35
+RANK_PRECISION = 12
 
 
 @dataclass(frozen=True)
@@ -121,7 +122,9 @@ def rrf_fuse(
         )
         for chunk_id, score in scores.items()
     ]
-    fused.sort(key=lambda c: (-c.fused_score, c.id))
+    # Round only the ordering key: the reported score remains the exact summed
+    # float, while sub-1e-12 platform noise cannot change a tie's id ordering.
+    fused.sort(key=lambda c: (-round(c.fused_score, RANK_PRECISION), c.id))
     return fused
 
 
@@ -132,4 +135,5 @@ __all__ = [
     "DEFAULT_K",
     "DEFAULT_LEXICAL_WEIGHT",
     "DEFAULT_SEMANTIC_WEIGHT",
+    "RANK_PRECISION",
 ]

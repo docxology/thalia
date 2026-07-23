@@ -27,6 +27,11 @@ class TestREPLEnvironment:
         assert SESSION[win.start : win.end] == "User: the cat sat on the mat"
         assert win.source_index == 2
 
+    def test_window_offsets_skip_trimmed_indentation(self):
+        repl = REPLEnvironment("  indented evidence  \n")
+        win = repl.window(0)
+        assert repl.context[win.start : win.end] == "indented evidence"
+
 
 class TestInspectorInit:
     def test_non_positive_max_windows_raises(self):

@@ -112,14 +112,19 @@ def check_consolidation_gate_requires_flag_and_criterion() -> InvariantResult:
 def check_harness_determinism() -> InvariantResult:
     """The same query+history yields the same answer across fresh harnesses."""
     session = "User: my wifi password is bluefish42\nAssistant: noted"
-    a = AutoHarness().forward("what is the wifi password", session).answer
-    b = AutoHarness().forward("what is the wifi password", session).answer
+    with AutoHarness() as first:
+        a = first.forward("what is the wifi password", session).answer
+    with AutoHarness() as second:
+        b = second.forward("what is the wifi password", session).answer
     return InvariantResult("harness_determinism", a == b, "two runs agree")
 
 
 def check_answer_is_grounded() -> InvariantResult:
     """A harness answer cites at least one source window when evidence exists."""
-    out = AutoHarness().forward("what is the wifi password", "User: my wifi password is bluefish42")
+    with AutoHarness() as harness:
+        out = harness.forward(
+            "what is the wifi password", "User: my wifi password is bluefish42"
+        )
     ok = len(out.evidence_citations) >= 1
     return InvariantResult("answer_grounded", ok, f"{len(out.evidence_citations)} citation(s)")
 

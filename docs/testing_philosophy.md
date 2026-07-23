@@ -28,7 +28,11 @@ outputs. It checks that every manifest entry is a safe relative path whose curre
 size and SHA-256 match the recorded values, and that the required paths declared in
 `domain_profile.yaml` are present. Run `scripts/validate_artifacts.py` after the
 last generator and before rendering; a green test suite alone does not certify
-that a PDF or dashboard was built from the current JSON and figures.
+that a PDF or dashboard was built from the current JSON and figures. The same
+validator checks `data/claim_ledger.yaml` structure, safe anchors, declared JSON
+fields, and strict formalism claim-artifact resolution. Source-only manuscript
+generation remains valid before `output/` exists; the release-time validator owns
+the generated-artifact check.
 
 ## 4. Golden regression
 
@@ -44,5 +48,5 @@ flips a golden assertion red before it can reach the manuscript.
 2. Keep the LM deterministic (`ExtractiveLM`) unless explicitly testing an adapter
    (then use `CallableLM` or the real HTTP-server fixture).
 3. If you added a structural guarantee, encode it in `src/invariants.py`.
-4. Re-run the suite with coverage before declaring done. Add Ruff or mypy only
-   when a project-local config introduces those gates.
+4. Re-run the suite with coverage before declaring done. The repository also
+   enforces `mypy src` and `ruff check src tests scripts` as static gates.

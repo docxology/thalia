@@ -1,13 +1,20 @@
 """Manuscript / reproducibility integrity gates (Zero-Mock)."""
 
 from pathlib import Path
+import re
 
 import pytest
 
 from src.manuscript_integrity import (
+    check_bibliography_integrity,
     check_crossref_integrity,
+    find_hardcoded_numeric_claims,
     find_template_root,
+    load_claim_ledger,
+    validate_claim_ledger,
     verify_token_coverage,
+    load_paper_audit,
+    validate_paper_audit,
 )
 from src.manuscript_variables import generate_variables
 
@@ -18,6 +25,7 @@ STALE_PREFIX = "projects_in_progress"
 
 class TestReproPathHygiene:
     _EXCLUDE = ("/output/", "/.venv/", "/__pycache__/", "/.pytest_cache/", "/htmlcov/", ".egg-info")
+    _LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 
     def _shipped_markdown(self) -> list[Path]:
         return [
@@ -38,11 +46,28 @@ class TestReproPathHygiene:
         offenders = []
         for doc in docs:
             text = doc.read_text()
-            if "pytest" in text and "uv run --project working/thalia pytest working/thalia/tests/" not in text:
+            if "pytest" in text and "uv run --project . --extra dev python -m pytest tests/" not in text:
                 offenders.append(str(doc.relative_to(PROJECT)))
             if "projects/working/thalia" in text:
                 offenders.append(str(doc.relative_to(PROJECT)))
         assert offenders == []
+
+    def test_local_markdown_links_resolve(self):
+        """Keep documentation signposts real as sections are split or renamed."""
+        offenders: list[tuple[str, str]] = []
+        for doc in self._shipped_markdown():
+            for raw_target in self._LINK_RE.findall(doc.read_text(encoding="utf-8")):
+                target = raw_target.strip()
+                if target.startswith("<") and ">" in target:
+                    target = target[1 : target.index(">")]
+                else:
+                    target = target.split()[0]
+                if not target or target.startswith(("#", "http://", "https://", "mailto:")):
+                    continue
+                local_target = target.split("#", 1)[0]
+                if local_target and not (doc.parent / local_target).resolve().exists():
+                    offenders.append((str(doc.relative_to(PROJECT)), target))
+        assert offenders == [], f"broken local Markdown links: {offenders}"
 
 
 class TestTemplateRootDiscovery:
@@ -92,12 +117,82 @@ class TestCrossrefIntegrity:
         check_crossref_integrity(tmp_path)  # should not raise
 
 
+class TestBibliographyIntegrity:
+    def test_current_manuscript_citations_have_bibliography_entries(self):
+        used, declared = check_bibliography_integrity(MANUSCRIPT, MANUSCRIPT / "references.bib")
+        assert used
+        assert used <= declared
+
+    def test_missing_bibliography_key_raises(self, tmp_path):
+        (tmp_path / "01_intro.md").write_text("A claim [@missing2026]. Narrative @missing2027.\n")
+        (tmp_path / "references.bib").write_text("@article{present2026,\n  title = {Present}\n}\n")
+        with pytest.raises(ValueError, match="missing from bibliography"):
+            check_bibliography_integrity(tmp_path, tmp_path / "references.bib")
+
+
 class TestManuscriptGates:
+    def test_paper_audit_ledger_is_valid(self):
+        validate_paper_audit(load_paper_audit())
+
+    def test_claim_ledger_matches_generated_json_artifacts(self):
+        # Source-only validation keeps the unit suite runnable before output/ is generated;
+        # scripts/validate_artifacts.py owns the strict release-time artifact check.
+        validate_claim_ledger(load_claim_ledger(), project_root=PROJECT)
+
+    def test_claim_ledger_checks_json_field_when_artifacts_exist(self, tmp_path):
+        artifact = tmp_path / "metrics.json"
+        artifact.write_text('{"score": 0.5}\n')
+        payload = {
+            "claims": [
+                {
+                    "claim_id": "score",
+                    "kind": "number",
+                    "value": 0.5,
+                    "source": "test",
+                    "source_tier": "generated_metric",
+                    "freshness": "active",
+                    "artifact_path": "metrics.json",
+                    "artifact_field": "score",
+                }
+            ]
+        }
+        validate_claim_ledger(payload, project_root=tmp_path, check_artifacts=True)
+
+    def test_claim_ledger_rejects_unsafe_artifact_path(self):
+        payload = {"claims": [dict(load_claim_ledger()["claims"][0], artifact_path="../outside.json")]}
+        with pytest.raises(ValueError, match="unsafe artifact path"):
+            validate_claim_ledger(payload, project_root=PROJECT)
+
     def test_token_coverage_passes(self):
         variables = generate_variables()
         used, missing = verify_token_coverage(variables, MANUSCRIPT)
         assert used
         assert missing == []
+
+    def test_result_bearing_numeric_literals_are_tokenized(self):
+        findings = find_hardcoded_numeric_claims(MANUSCRIPT)
+        assert findings == [], "hardcoded manuscript result numbers: " + repr(findings)
+
+    def test_numeric_lint_reports_result_literal_with_location(self, tmp_path):
+        body = tmp_path / "07_results.md"
+        body.write_text("The measured accuracy was 0.75 across 12 examples.\n")
+        findings = find_hardcoded_numeric_claims(tmp_path)
+        assert findings == [("07_results.md", 1, body.read_text().strip())]
+
+    def test_numeric_lint_allows_tokens_code_and_equations(self, tmp_path):
+        body = tmp_path / "07_results.md"
+        body.write_text(
+            "The measured accuracy was {{RESULT_ACCURACY}}.\n"
+            "```text\naccuracy 0.75 across 12 examples\n```\n"
+            "The metric is $1 - |ranked|/N$ with N as the budget.\n"
+        )
+        assert find_hardcoded_numeric_claims(tmp_path) == []
+
+    def test_numeric_lint_catches_result_next_to_equation(self, tmp_path):
+        body = tmp_path / "07_results.md"
+        body.write_text("The measured accuracy was 0.75 under $1 - |ranked|/N$.\n")
+        findings = find_hardcoded_numeric_claims(tmp_path)
+        assert findings == [("07_results.md", 1, body.read_text().strip())]
 
     def test_crossref_integrity_passes(self):
         check_crossref_integrity(MANUSCRIPT)
@@ -169,6 +264,11 @@ class TestManuscriptGates:
         assert "Santhanam, Keshav" in bib
         assert "Sen, Sahil" in bib and "Kasturi, Akhil" in bib and "Lumer, Elias" in bib
         assert "Zhang, Dylan" in bib and "Lin, Yanshan" in bib and "Wu, Zhengkun" in bib
+        for identifier in ("2512.24601", "2605.12978", "2605.15184", "2601.02845", "2604.14362"):
+            assert f"arXiv:{identifier}" in bib
+            assert f"https://arxiv.org/abs/{identifier}" in bib
+        assert "10.5281/zenodo.20693013" in bib
+        assert "10.5281/zenodo.19139090" not in bib
 
     def test_injection_and_figure_captions_are_small_n_honest(self):
         evaluation = (MANUSCRIPT / "07_evaluation.md").read_text()

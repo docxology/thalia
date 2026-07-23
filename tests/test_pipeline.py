@@ -78,6 +78,11 @@ class TestEpisodicStoreContextManager:
         with pytest.raises(Exception):
             store.count()
 
+    def test_close_is_idempotent(self):
+        store = EpisodicStore()
+        store.close()
+        store.close()
+
 
 # ---------------------------------------------------------------------------
 # Context manager protocol: Session
@@ -103,6 +108,34 @@ class TestSessionContextManager:
         # Memory was still persisted by the context manager's __exit__.
         assert memory.exists()
 
+
+class TestOwnedLifecycle:
+    def test_harness_context_closes_owned_store(self):
+        with AutoHarness() as harness:
+            harness.forward("what is the wifi password", "User: wifi password is x")
+            owned = harness.memory_gate.store
+        assert owned._closed is True  # noqa: SLF001 - lifecycle contract
+        harness.close()
+
+    def test_harness_does_not_close_caller_store(self):
+        store = EpisodicStore()
+        with AutoHarness(episodic_store=store) as harness:
+            harness.forward("what is the wifi password", "User: wifi password is x")
+        store.append(EpisodicEntry(1, "q2", "a2"))
+        store.close()
+
+    def test_pipeline_context_closes_owned_store(self):
+        with Pipeline().with_all_stages() as pipeline:
+            pipeline.run(query="what is x", session_history="User: x is y")
+            owned = pipeline._memory_gate.store  # noqa: SLF001
+        assert owned._closed is True  # noqa: SLF001
+
+    def test_pipeline_does_not_close_caller_store(self):
+        store = EpisodicStore()
+        with Pipeline(episodic_store=store).with_memory_gate() as pipeline:
+            pipeline.run(query="what is x", session_history="User: x is y")
+        store.append(EpisodicEntry(1, "q2", "a2"))
+        store.close()
 
 # ---------------------------------------------------------------------------
 # HarnessOutput.to_dict()

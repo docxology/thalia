@@ -14,7 +14,7 @@ from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Iterable
 
-from .figures.manifest import FIGURE_LABELS
+from .figures.manifest import FIGURE_CAPTIONS, FIGURE_LABELS
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = PROJECT_ROOT / "output"
@@ -35,6 +35,8 @@ _MANIFEST_EXCLUDE_NAMES = {
     "test_results.md",
     "validation_report.json",
     "validation_report.md",
+    "coverage.json",
+    "pytest.xml",
 }
 
 
@@ -49,6 +51,7 @@ class VerificationSummary:
     status: str = "commands-documented"
     latest_observed_tests: str = ""
     latest_observed_coverage: str = ""
+    command_results: dict[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         """Return a stable JSON-ready representation."""
@@ -78,12 +81,19 @@ def default_verification_summary() -> VerificationSummary:
     """Return the canonical command summary for this project checkout."""
     return VerificationSummary(
         test_command=(
-            "uv run --project working/thalia pytest working/thalia/tests/ "
-            "--cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90"
+            "PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ "
+            "--cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json "
+            "--junitxml=output/reports/pytest.xml --cov-fail-under=90"
         ),
         coverage_gate=_coverage_gate(),
-        render_command="uv run python scripts/03_render_pdf.py --project working/thalia",
-        validation_command="uv run python scripts/04_validate_output.py --project working/thalia",
+        render_command=(
+            "EXTERNAL: uv run --project ../template python scripts/render_pdf_external.py "
+            "(requires a populated sibling template checkout)"
+        ),
+        validation_command=(
+            "EXTERNAL: uv run --project ../template python scripts/render_pdf_external.py --validate "
+            "(requires a populated sibling template checkout)"
+        ),
     )
 
 
@@ -95,9 +105,65 @@ def write_verification_summary(
     """Write the verification summary and return its path."""
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = (summary or default_verification_summary()).to_dict()
+    if summary is None and path.exists():
+        # Artifact-generation scripts run after verification in the canonical
+        # workflow.  Preserve observed evidence instead of silently replacing it
+        # with a blank command-only record, while refreshing command text from the
+        # current source of truth so stale renderer paths cannot persist.
+        try:
+            payload = load_verification_summary(path).to_dict()
+            canonical = default_verification_summary().to_dict()
+            for key in ("test_command", "coverage_gate", "render_command", "validation_command"):
+                payload[key] = canonical[key]
+        except (OSError, ValueError, TypeError):
+            payload = default_verification_summary().to_dict()
+    else:
+        payload = (summary or default_verification_summary()).to_dict()
+    if summary is None:
+        _refresh_observed_verification(payload, path.parent)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path) -> None:
+    """Refresh live test/coverage claims from machine-readable gate reports."""
+    junit_path = reports_dir / "pytest.xml"
+    coverage_path = reports_dir / "coverage.json"
+    if not junit_path.is_file() or not coverage_path.is_file():
+        return
+    try:
+        import xml.etree.ElementTree as ET
+
+        root = ET.parse(junit_path).getroot()
+        suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+        tests = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
+        failures = sum(int(suite.attrib.get("failures", "0")) for suite in suites)
+        errors = sum(int(suite.attrib.get("errors", "0")) for suite in suites)
+        skipped = sum(int(suite.attrib.get("skipped", "0")) for suite in suites)
+        coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
+        totals = coverage_payload.get("totals", {})
+        coverage = float(totals["percent_covered"])
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, ET.ParseError):
+        return
+    passed = tests - failures - errors - skipped
+    coverage_gate = payload.get("coverage_gate")
+    gate = coverage_gate if isinstance(coverage_gate, int) else _coverage_gate()
+    results = payload.get("command_results")
+    command_results = dict(results) if isinstance(results, dict) else {}
+    command_results["tests"] = {
+        "collected": tests,
+        "passed": passed,
+        "failed": failures + errors,
+        "skipped": skipped,
+        "coverage_percent": round(coverage, 2),
+        "coverage_gate": gate,
+        "resource_warnings_as_errors": True,
+        "status": "pass" if failures == 0 and errors == 0 and coverage >= gate else "fail",
+    }
+    payload["latest_observed_tests"] = f"{passed} passed; {tests} collected"
+    payload["latest_observed_coverage"] = f"{coverage:.2f}% (src; gate {gate}%)"
+    payload["command_results"] = command_results
+    payload["status"] = "pass" if command_results["tests"]["status"] == "pass" else "fail"
 
 
 def load_verification_summary(
@@ -125,6 +191,7 @@ def write_figure_registry(
         entries[label] = {
             "filename": figure_path.name,
             "label": label,
+            "caption": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
             "generated_by": "scripts/generate_figures.py",
             "source": "src/figures/",
         }
@@ -137,7 +204,7 @@ def write_artifact_manifest(
     output_path: str | Path | None = None,
 ) -> Path:
     """Write a current, validator-compatible manifest for stable THALIA outputs."""
-    root = Path(project_root)
+    root = Path(project_root).resolve()
     out = Path(output_path) if output_path else root / "output" / "reports" / "artifact_manifest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     entries = []
@@ -171,11 +238,13 @@ def validate_artifact_manifest(
     ``artifact_expectations`` list, keeping the research-domain declaration as
     the artifact completeness source of truth.
     """
-    root = Path(project_root)
+    root = Path(project_root).resolve()
     source = Path(manifest_path) if manifest_path else root / "output" / "reports" / "artifact_manifest.json"
     issues: list[str] = []
     if not source.exists():
         return ArtifactValidation(False, 0, 0, (f"manifest missing: {source}",))
+    if source.is_symlink():
+        return ArtifactValidation(False, 0, 0, (f"manifest must not be a symlink: {source}",))
     try:
         payload = json.loads(source.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -204,6 +273,14 @@ def validate_artifact_manifest(
             continue
         paths_seen.add(rel)
         artifact = root.joinpath(*normalized.parts)
+        if artifact.is_symlink():
+            issues.append(f"artifact must not be a symlink: {rel}")
+            continue
+        try:
+            artifact.resolve(strict=False).relative_to(root)
+        except ValueError:
+            issues.append(f"unsafe artifact path: {rel}")
+            continue
         if not artifact.is_file():
             issues.append(f"artifact missing: {rel}")
             continue
@@ -217,7 +294,13 @@ def validate_artifact_manifest(
         if expected_hash != _sha256(artifact):
             issues.append(f"sha256 mismatch: {rel}")
 
-    required = tuple(required_paths) if required_paths is not None else _profile_artifact_expectations(root)
+    if required_paths is not None:
+        required = tuple(required_paths)
+    else:
+        try:
+            required = _profile_artifact_expectations(root)
+        except ValueError as exc:
+            return ArtifactValidation(False, checked, 0, (str(exc),))
     for rel in required:
         if rel not in paths_seen:
             issues.append(f"required artifact absent from manifest: {rel}")
@@ -232,10 +315,12 @@ def _profile_artifact_expectations(project_root: Path) -> tuple[str, ...]:
         return ()
     try:
         import yaml
-
+    except (ImportError, OSError) as exc:
+        raise ValueError(f"domain profile unreadable: {exc}") from exc
+    try:
         payload = yaml.safe_load(profile.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return ()
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError(f"domain profile invalid: {exc}") from exc
     values = payload.get("artifact_expectations", []) if isinstance(payload, dict) else []
     return tuple(value for value in values if isinstance(value, str))
 
@@ -246,10 +331,15 @@ def _stable_artifacts(project_root: Path) -> list[Path]:
     for subdir in ("data", "figures"):
         folder = output / subdir
         if folder.exists():
-            candidates.extend(path for path in folder.glob("*") if path.is_file())
+            candidates.extend(path for path in folder.glob("*") if path.is_file() and not path.is_symlink())
     for path in (
         output / "dashboard.html",
         output / "reports" / "verification_summary.json",
+        output / "reports" / "evaluation_accounting.json",
+        output / "reports" / "evaluation_events.jsonl",
+        output / "reports" / "evaluation_ledger.jsonl",
+        output / "reports" / "paper_audit.json",
+        output / "reports" / "formalism_traceability.json",
     ):
         if path.exists():
             candidates.append(path)
@@ -257,7 +347,7 @@ def _stable_artifacts(project_root: Path) -> list[Path]:
         {
             path
             for path in candidates
-            if path.name not in _MANIFEST_EXCLUDE_NAMES and not path.name.startswith(".")
+            if path.name not in _MANIFEST_EXCLUDE_NAMES and not path.name.startswith(".") and not path.is_symlink()
         },
         key=lambda p: p.relative_to(project_root).as_posix(),
     )
@@ -275,7 +365,7 @@ def _coverage_gate() -> int:
     try:
         import tomllib  # Python >= 3.11
     except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
-        import tomli as tomllib  # type: ignore[no-redef]
+        import tomli as tomllib  # type: ignore[import-not-found,no-redef]
 
     pyproject = PROJECT_ROOT / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
@@ -287,6 +377,7 @@ __all__ = [
     "VerificationSummary",
     "ArtifactValidation",
     "default_verification_summary",
+    "_refresh_observed_verification",
     "load_verification_summary",
     "write_artifact_manifest",
     "validate_artifact_manifest",

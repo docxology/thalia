@@ -40,7 +40,7 @@ via attribute or subscript. Stages validate inputs with
 | `Inspector(max_windows=15)` | `partition_threshold`, `partition_size` | `session_history`, `query` | `evidence_windows: list[EvidenceWindow]`, `metadata: InspectorMetadata` |
 | `Retriever(top_k=8, k=60)` | `lexical_weight`, `semantic_weight`, `rerank`, `mmr_lambda`, `query_expansion`, `recency_weight` | `evidence_windows`, `query`, `task_category`, `context_budget_tokens` | `ranked_evidence: list[RankedEvidence]`, `delivery_mode: DeliveryMode` |
 | `Reasoner(lm?, max_evidence=5)` | `verify`, `grounding_threshold` | `query`, `ranked_evidence`, `task_category`, `memory_context` | `reasoning_trace`, `answer`, `evidence_citations: list[EvidenceCitation]`, `requires_consolidation: bool` |
-| `MemoryGate(episodic_store?, memory_md='')` | — | `query`, `answer`, `evidence_citations`, `requires_consolidation`, `task_category`, `turn_id?`, `session_ending`, `explicit_request?` | `episodic_entry: EpisodicEntry`, `consolidation_action: str`, `memory_delta: str` |
+| `MemoryGate(episodic_store?, memory_md='')` | — | `query`, `answer`, `evidence_citations`, `requires_consolidation`, `task_category`, `turn_id?`, `session_ending`, `explicit_request?` | `episodic_entry: EpisodicEntry`, `consolidation_action: str`, `memory_delta: str`; ownership-aware `close()`/context manager |
 
 ## Key invariants
 
@@ -50,9 +50,12 @@ via attribute or subscript. Stages validate inputs with
   first; consolidation is conditional (see `src/memory/AGENTS.md`).
 - **Consolidation dual-key gate**: `MemoryGate` consolidates only when
   `requires_consolidation` (Reasoner output) **and** a criterion holds.
-- **Task routing**: `Reasoner` selects `react` strategy for
-  `REACT_CATEGORIES` tasks (multi-session, code, knowledge-update), `cot`
-  otherwise. Routing is deterministic via `classify_task` from `src.routing`.
+- **Task routing**: `Reasoner` selects the `react_style` strategy for
+  `REACT_CATEGORIES` tasks (multi-session, code, knowledge-update), and
+  `single_pass` otherwise. The ReAct-style path performs deterministic
+  read→integrate selection followed by one model completion; it is not a hidden
+  chain-of-thought trace. Routing is deterministic via `classify_task` from
+  `src.routing`.
 - **Turn-id collision safety**: `MemoryGate` derives next turn id from
   `store.max_turn_id() + 1` (not `count()`), safe when explicit and
   auto-assigned ids are mixed.

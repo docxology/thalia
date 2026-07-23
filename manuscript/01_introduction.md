@@ -15,7 +15,7 @@ hand).
 
 This manuscript synthesises four foundational works and one infrastructure
 substrate into a single coherent system, then implements that system as runnable,
-deterministic, fully-tested code.
+deterministic code covered by the strict local test gate.
 
 The central methodological move is to make every handoff explicit. The Inspector
 does not "summarize context"; it emits line-addressed evidence windows with grep
@@ -28,7 +28,7 @@ first and only then decides whether a derived memory delta is warranted. The
 Compiler does not rewrite source code or mutate prose; it searches a bounded
 configuration surface and records the full trace.
 
-![THALIA system overview: query and history become inspectable evidence, then move through the typed verbs scan/narrow → rank/fuse → verify/answer → append/gate. The Compiler is shown as a bounded offline loop whose full trace is recorded rather than hidden behind a single optimized prompt.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
+![Schematic system overview: query and history become inspectable evidence, then move through the typed verbs scan/narrow → rank/fuse → verify/answer → append/gate. The Compiler is shown as a bounded offline loop whose full trace is recorded rather than hidden behind a single optimized prompt. This is an architectural diagram, not an empirical result: it has no observation unit, sample size, uncertainty interval, model estimate, or population interpretation.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
 
 ## The four foundations and the substrate
 
@@ -50,8 +50,8 @@ configuration surface and records the full trace.
 
 The Hermes Agent ecosystem [@nous2026hermes; @nous2026selfevolution] supplies the
 concrete engineering pattern that ties these together: a strictly-ordered prompt
-stack with a *frozen* memory snapshot, an episodic SQLite/FTS5 store distinct from
-the consolidated `MEMORY.md` [@sqlite2026fts5], and a DSPy + GEPA-style evolution
+stack with a *frozen* memory snapshot, an episodic SQLite/FTS5 store [@sqlite2026fts5]
+distinct from the consolidated `MEMORY.md`, and a DSPy + GEPA-style evolution
 loop [@agrawal2025gepa] that mutates skills against execution traces under hard
 constraints.
 
@@ -60,7 +60,7 @@ constraints.
 THALIA is not a new model and makes no SOTA claim. Its contribution is a clean,
 composable, *operational* embodiment of these principles:
 
-- **Five stages, each a typed signature.** Inspector, Retriever, Reasoner, and
+- **{{CONFIG_NUM_STAGES}} stages, each a typed signature.** Inspector, Retriever, Reasoner, and
   Memory Gate are the runtime; the Compiler operates on them offline
   ([@sec:harness_design]).
 - **A methods-first harness boundary.** Stage contracts live in `src/signatures/`,

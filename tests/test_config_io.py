@@ -40,6 +40,22 @@ class TestDictRoundTrip:
         cfg = HarnessConfig.from_dict({"top_k": 5, "bogus": 99})
         assert cfg.top_k == 5
 
+    @pytest.mark.parametrize(
+        "field, value",
+        [("top_k", True), ("max_windows", 2.5), ("rrf_k", 1.5), ("recall_limit", False)],
+    )
+    def test_rejects_non_integral_integer_fields(self, field, value):
+        with pytest.raises(ValueError, match=field):
+            HarnessConfig(**{field: value})
+
+    def test_rejects_non_finite_weights(self):
+        with pytest.raises(ValueError, match="lexical_weight"):
+            HarnessConfig(lexical_weight=float("nan"), semantic_weight=0.5)
+
+    def test_rejects_non_boolean_flags(self):
+        with pytest.raises(ValueError, match="verify"):
+            HarnessConfig(verify=1)
+
 
 class TestEnvOverrides:
     def test_no_env_returns_same(self):

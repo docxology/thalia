@@ -1,6 +1,6 @@
-# Auto-Harness Design {#sec:harness_design}
+# Harness Architecture and Executable Contract {#sec:harness_design}
 
-THALIA is organised around {{CONFIG_NUM_STAGES}} functional stages. Four are
+THALIA is organised around {{CONFIG_NUM_STAGES}} functional stages. {{CONFIG_NUM_RUNTIME_STAGES}} are
 runtime stages composed by `AutoHarness` (`src/harness.py`); the fifth, the
 Compiler, operates on the harness offline. Each stage is a
 `src.module.Module` with a declarative `src.signatures.Signature` contract. The
@@ -10,7 +10,7 @@ end-to-end flow:
 session history + query
   -> Stage 0  Inspector    RLM-style context narrowing  (peek -> grep -> windows)
   -> Stage 1  Retriever    lexical-first hybrid + weighted RRF + budgeting
-  -> Stage 2  Reasoner     typed reasoning; CoT or ReAct; typed citations
+  -> Stage 2  Reasoner     single-pass reasoning or ReAct-style deterministic read-integrate; typed citations
   -> Stage 3  MemoryGate   always append raw episode; gated consolidation
   -> HarnessOutput
   ~> Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution
@@ -33,9 +33,9 @@ natural-language summaries.
 
 This spine preserves the stable auto-harness design anchor. The detailed method contract, stage-by-stage design, formalism, added-method diagnostics, and implementation traceability now live in adjacent `04a_` through `04c_` modules.
 
-![Memory lifecycle: the raw episode is always appended to the SQLite EpisodicStore. Consolidation into MEMORY.md only fires when the Reasoner requests it AND an explicit criterion holds — a dual-key gate that prevents the per-turn consolidation fault documented by @zhang2026memory](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
+![Schematic memory lifecycle: the raw episode is always appended to the SQLite EpisodicStore. Consolidation into MEMORY.md only fires when the Reasoner requests it AND an explicit criterion holds — a dual-key gate that prevents the per-turn consolidation fault documented by [@zhang2026memory]. This is a contract diagram, not a measurement: it has no observation unit, sample size, uncertainty method, model dependence, or population interpretation.](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
 
-![GEPA evolution loop: the Compiler evaluates a config, reflects on the weakest metric component, mutates the config, and repeats, recording the full search trace. This mirrors the trace-reflective evolution loop described in [@sec:eval-compiler].](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
+![Schematic GEPA-style evolution loop: the Compiler evaluates a config, reflects on the weakest metric component, mutates the config, and repeats, recording the full search trace. This mirrors the trace-reflective evolution loop described in [@sec:eval-compiler]. It is a process diagram, not an empirical estimate: no observation unit, sample size, uncertainty method, model dependence, or population interpretation applies.](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
 
 Modular harness-design files:
 

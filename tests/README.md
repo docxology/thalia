@@ -6,8 +6,9 @@ SQLite, and deterministic computation — no `unittest.mock`, no `MagicMock`.
 ## Running
 
 ```bash
-uv run --project working/thalia pytest working/thalia/tests/ \
-  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
+uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+  --junitxml=output/reports/pytest.xml --cov-fail-under=90
 ```
 
 `tests/conftest.py` forces a headless matplotlib backend and adds the project root

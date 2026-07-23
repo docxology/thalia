@@ -1,14 +1,14 @@
 # Thermo-Nuclear Code Quality Review — THALIA
 
 **Date:** 2026-06-02 (initial) · **2026-07-05** (follow-up pass)
-**Scope:** Full tree under `working/thalia` (`src/`, `tests/`, `scripts/`)
+**Scope:** Full standalone THALIA tree (`src/`, `tests/`, `scripts/`)
 **Rubric:** [thermo-nuclear-code-quality-review](https://github.com/cursor/cursor-team-kit) (cursor-team-kit plugin)
 
 ## Executive verdict: **PASS**
 
 **2026-06-02:** Pre-remediation **PASS WITH BLOCKERS**; structural fixes applied in the same pass.
 
-**2026-07-05:** Pre-remediation **PASS WITH BLOCKERS** (unwired architectural figures, `figures.py` >1k LOC, harness/pipeline duplication). All ranked blockers and moderate findings remediated; suite gate confirmed below.
+**2026-07-05:** Pre-remediation **PASS WITH BLOCKERS** (unwired architectural figures, oversized figure module, harness/pipeline duplication). The ranked blockers and moderate findings were remediated; run the current standalone gate for live evidence.
 
 ## 2026-07-05 remediation summary
 
@@ -95,45 +95,41 @@ Stage signatures in [`src/signatures/stages.py`](../src/signatures/stages.py) no
 
 ```bash
 # From the canonical THALIA checkout
-cd /path/to/thalia && uv run pytest tests/ \
-  --cov=src --cov-report=term-missing --cov-fail-under=90
+cd /path/to/thalia && PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+  --junitxml=output/reports/pytest.xml --cov-fail-under=90
 
-# From template checkout
-uv run --project working/thalia pytest working/thalia/tests/ \
-  --cov=working/thalia/src --cov-report=term-missing --cov-fail-under=90
+# Template-side validation is external and optional; use the standalone command
+# above for this checkout's authoritative code gate.
 ```
 
 `src/provenance.py::write_verification_summary` (called from `src/demo.py::
 build_demo_artifacts`, itself invoked by `scripts/run_demo.py`, and separately
 from `scripts/build_dashboard.py`) writes
 [`output/reports/verification_summary.json`](../output/reports/verification_summary.json).
-**Corrected 2026-07-15:** that file is *not* a live results record — every call
-site invokes it with no `summary=` argument, so it always falls back to
-`default_verification_summary()`'s placeholder (`status: "commands-documented"`,
-blank observed fields). It documents which commands to run, not what a run
-produced. This project deliberately does not track a machine-written coverage
-snapshot as its numeric SSOT (see `.gitignore`'s note on `coverage_project.json`,
-removed 2026-07-15 as a stale, gitignored-but-still-tracked artifact) — the
-authoritative pass/fail/coverage numbers for any given checkout are whatever a
-fresh run of the documented gate reports, cross-checked against
-[`PUBLICATION_READINESS.md`](../PUBLICATION_READINESS.md)'s most recent dated run.
+The summary preserves the canonical commands and, after the strict suite and
+artifact sweep, records the observed test count, coverage, lock/compile/package
+checks, and validator result. A fresh gate remains authoritative for a new
+checkout; the generated record is evidence from the last completed local run,
+not a substitute for rerunning it. The project deliberately does not track a
+machine-written coverage snapshot as its numeric SSOT (see `.gitignore`'s note
+on `coverage_project.json`, removed 2026-07-15 as a stale, gitignored-but-still
+tracked artifact).
 
-**Status:** PASS for the 2026-07-05 remediation pass (suite gate confirmed by the
-manuscript-integrity test `test_count_bearing_docs_use_generated_verification_summary`,
-which fails if any count-bearing doc hard-codes a stale pass/skip/coverage literal
-— it does not, and cannot, confirm that `verification_summary.json` itself holds
-real numbers, since the test never inspects that file's content).
+**Status:** The current generated record is a passing 2026-07-21 run; the
+manuscript-integrity test `test_count_bearing_docs_use_generated_verification_summary`
+also prevents count-bearing prose from drifting to frozen pass/skip/coverage
+literals.
 
 ## 2026-07-18 iterative follow-up
 
 The source-to-artifact chain was rechecked after a first-principles review of
-state, determinism, and evidence boundaries. The authoritative local gate now
-reports **665 passed, 0 skipped, 98.82% `src/` coverage**. Additional regression
-coverage protects defensive pipeline snapshots, sparse persisted turn ids,
-restart-safe Memory Gate novelty, strict retrieval/config weights, and a
-fail-closed artifact manifest validator. The generated output manifest checked
-34 artifacts (32 required) before the final template render, including the
-generated title-page cover visual abstract.
+state, determinism, and evidence boundaries. The authoritative local gate is the
+standalone command documented in `README.md`; this review intentionally embeds no
+stale pass/skip/coverage count. Additional regression coverage protects defensive
+pipeline snapshots, sparse persisted turn ids, restart-safe Memory Gate novelty,
+strict retrieval/config weights, and a fail-closed artifact manifest validator.
+Artifact counts are derived from the live output tree before validation.
 
 The LongMemEval recorder was not silently treated as refreshed: its live
 benchmark path did not finish during this pass, so the existing aggregate is

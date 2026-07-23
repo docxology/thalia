@@ -13,7 +13,7 @@ validation_gates:
   - evidence_grounding
   - render_validation
 figure_types:
-  # Kept in src/figures/manifest.py::FIGURE_MANIFEST order (the SSOT — 24 entries).
+  # Kept in src/figures/manifest.py::FIGURE_MANIFEST order (the SSOT — 26 entries).
   - retriever_comparison
   - rrf_sensitivity
   - compiler_convergence
@@ -25,6 +25,8 @@ figure_types:
   - method_ablation
   - orchestration_value
   - scaling_ci
+  - sample_size_precision
+  - statistical_audit
   - category_components
   - pipeline_flow
   - gepa_trajectory
@@ -47,6 +49,8 @@ review_gates:
 artifact_expectations:
   - output/data/eval_results.json
   - output/data/compile_result.json
+  - output/data/seed_sensitivity.json
+  - output/data/compiler_generalization.json
   - output/data/demo_result.json
   - output/data/pipeline_result.json
   - output/data/manuscript_variables.json
@@ -61,6 +65,8 @@ artifact_expectations:
   - output/figures/method_ablation.png
   - output/figures/orchestration_value.png
   - output/figures/scaling_ci.png
+  - output/figures/sample_size_precision.png
+  - output/figures/statistical_audit.png
   - output/figures/category_components.png
   - output/figures/pipeline_flow.png
   - output/figures/gepa_trajectory.png
@@ -77,6 +83,11 @@ artifact_expectations:
   - output/figures/figure_registry.json
   - output/dashboard.html
   - output/reports/verification_summary.json
+  - output/reports/evaluation_accounting.json
+  - output/reports/evaluation_events.jsonl
+  - output/reports/evaluation_ledger.jsonl
+  - output/reports/paper_audit.json
+  - output/reports/formalism_traceability.json
 benchmark_rubric:
   name: thalia-harness-readiness
   dimensions:

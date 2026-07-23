@@ -25,8 +25,8 @@ class TestScripts:
     def test_preflight(self):
         assert _load("00_preflight").main() == 0
 
-    def test_run_harness_eval_writes_json(self):
-        path = _load("run_harness_eval").main()
+    def test_run_harness_eval_writes_json(self, tmp_path):
+        path = _load("run_harness_eval").main(tmp_path / "output", per_category_values=(1,), seeds=(0,))
         assert Path(path).exists()
 
     def test_run_compiler_writes_json(self):
@@ -50,6 +50,10 @@ class TestScripts:
         assert Path(path).exists()
 
     def test_validate_artifacts_passes(self):
+        # Keep this test order-independent: the validator is intentionally
+        # fail-closed when a required artifact has not been generated yet.
+        _load("run_pipeline").main()
+        _load("run_demo").main()
         assert _load("validate_artifacts").main() == 0
 
     def test_build_dashboard_writes_html(self):
@@ -89,20 +93,20 @@ class TestScripts:
         assert isinstance(result, str)
         assert Path(result).exists()
 
-    def test_run_learned_retrieval(self):
+    def test_run_learned_retrieval(self, tmp_path):
         # Real learned-embedder measurement when a model is live; clean exit-0
         # notice otherwise. Must not blow up either way.
         from src.retrieval.learned import embed_model_available
 
-        result = _load("run_learned_retrieval").main()
+        result = _load("run_learned_retrieval").main(tmp_path / "learned_retrieval.json")
         if embed_model_available():
             assert Path(result).exists()
         else:
             assert result == 0
 
-    def test_run_injection_probe(self):
+    def test_run_injection_probe(self, tmp_path):
         # Always writes the deterministic rows (+ neural when a model is live).
-        result = _load("run_injection_probe").main()
+        result = _load("run_injection_probe").main(tmp_path / "injection_eval.json")
         assert Path(result).exists()
 
     def test_run_openrouter(self):

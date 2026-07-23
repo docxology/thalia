@@ -4,10 +4,11 @@ The compiler optimizes a single scalar ``harness_metric`` per example, a convex
 combination of three components:
 
 * **accuracy** — token-F1 of the answer against the gold answer (weight 0.6);
-* **grounding** — did the answer cite the expected source(s), and is it supported
-  by the cited excerpts (weight 0.3);
-* **efficiency** — a sparse-context-budgeting reward: fewer evidence windows for
-  the same answer scores higher (weight 0.1).
+* **citation support** — did the answer cite the expected source(s), and does
+  token overlap support it in the cited excerpts (weight 0.3). This is an
+  operational provenance proxy, not entailment, factuality, or human judgment;
+* **evidence-count efficiency** — a bounded reward based on the number of ranked
+  evidence windows, not a token-cost or latency measurement (weight 0.1).
 
 All components are deterministic functions of a :class:`HarnessOutput` and an
 :class:`EvalExample`, so identical inputs always yield identical scores.
@@ -44,6 +45,19 @@ class EvalExample:
     expected_answer: str
     expected_source_indices: tuple[int, ...] = ()
     task_category: TaskCategory | None = None
+    # Optional research metadata.  Defaults preserve the six-example demo and
+    # all existing callers while allowing ledgers to identify observations
+    # without hashing long transcripts at write time.
+    example_id: str = ""
+    stratum: str = "default"
+    seed: int | None = None
+    # Stable, JSON-friendly construct annotations.  Keeping this as a sorted
+    # tuple preserves dataclass immutability and deterministic fingerprints.
+    metadata: tuple[tuple[str, str], ...] = ()
+
+    def metadata_dict(self) -> dict[str, str]:
+        """Return construct annotations as a defensive mapping."""
+        return dict(self.metadata)
 
 
 def token_f1(prediction: str, gold: str) -> float:
@@ -73,12 +87,13 @@ def answer_score(output: HarnessOutput, example: EvalExample) -> float:
 
 
 def grounding_score(output: HarnessOutput, example: EvalExample) -> float:
-    """Grounding component in [0, 1].
+    """Citation-support proxy in [0, 1], not a semantic grounding judgment.
 
     If expected source indices are provided, half the score rewards citing at
-    least one of them; the other half rewards the answer being lexically
-    supported by the cited excerpts. Without expected indices, the full score is
-    the citation-support term.
+    least one of them; the other half rewards set-based token-F1 between the
+    answer and cited excerpts. Without expected indices, the full score is the
+    citation-support term. Generic-token overlap can score positively, so this
+    must not be reported as entailment or factual attribution.
     """
     cited_indices = {c.source_index for c in output.evidence_citations}
     cited_text = " ".join(c.excerpt for c in output.evidence_citations)
@@ -91,7 +106,11 @@ def grounding_score(output: HarnessOutput, example: EvalExample) -> float:
 
 
 def efficiency_score(output: HarnessOutput) -> float:
-    """Efficiency component: reward using fewer evidence windows (1..0)."""
+    """Evidence-count component: reward fewer ranked windows (1..0).
+
+    This does not measure wall-clock latency, prompt tokens, memory use, or model
+    cost; it is intentionally a narrow structural metric.
+    """
     n = len(output.ranked_evidence)
     return max(0.0, 1.0 - n / _EFFICIENCY_SCALE)
 

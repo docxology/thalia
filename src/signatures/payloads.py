@@ -117,9 +117,11 @@ class HarnessOutput:
         evidence_citations: Source windows cited by the Reasoner.
         ranked_evidence: Evidence ranked by the Retriever.
         task_category: Detected task category for the query.
-        memory_written: The episodic entry persisted by the Memory Gate.
+        memory_written: The episodic entry persisted by the Memory Gate, or ``None``
+            when a partial pipeline omitted that stage.
         consolidation_applied: Whether memory consolidation fired this turn.
-        delivery_mode: How evidence was delivered (inline or file-based).
+        delivery_mode: How evidence was delivered, or ``None`` when a partial
+            pipeline omitted the Retriever stage.
         inspector_metadata: Provenance from the Inspector stage.
     """
 
@@ -128,9 +130,9 @@ class HarnessOutput:
     evidence_citations: tuple[EvidenceCitation, ...]
     ranked_evidence: tuple[RankedEvidence, ...]
     task_category: TaskCategory
-    memory_written: EpisodicEntry
+    memory_written: EpisodicEntry | None
     consolidation_applied: bool = False
-    delivery_mode: DeliveryMode = DeliveryMode.INLINE
+    delivery_mode: DeliveryMode | None = DeliveryMode.INLINE
     inspector_metadata: InspectorMetadata | None = None
 
     def to_dict(self) -> dict:
@@ -144,7 +146,7 @@ class HarnessOutput:
         return {
             "answer": self.answer,
             "task_category": self.task_category.value,
-            "delivery_mode": self.delivery_mode.value,
+            "delivery_mode": self.delivery_mode.value if self.delivery_mode is not None else None,
             "reasoning_trace": self.reasoning_trace,
             "consolidation_applied": self.consolidation_applied,
             "citations": [

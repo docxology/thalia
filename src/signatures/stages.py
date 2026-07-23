@@ -57,7 +57,9 @@ class ReasonerSignature(Signature):
     )
     task_category: TaskCategory = InputField("Detected task category.", TaskCategory)
     memory_context: MemorySnapshot = InputField("Frozen MEMORY.md + USER.md snapshot (read-only).", MemorySnapshot)
-    reasoning_trace: str = OutputField("Chain of thought grounded in evidence.")
+    reasoning_trace: str = OutputField(
+        "Auditable routing and evidence-use trace; not hidden chain-of-thought."
+    )
     answer: str = OutputField("Final answer or action.")
     evidence_citations: list[EvidenceCitation] = OutputField(
         "Raw source windows cited.",

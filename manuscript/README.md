@@ -16,7 +16,7 @@ that can be explicitly compiled to PDF/HTML by the template rendering pipeline.
 | `05_template_integration.md` | `AGENTS.md`/`SKILL.md` duality + build lifecycle mapping |
 | `06_active_inference.md` | Correspondences with the Free Energy Principle |
 | `07_evaluation.md` | Evaluation spine and explicit scope-boundary reminder |
-| `07a_`-`07e_*.md` | Setup/scaling, real benchmark/bottleneck, baseline/neural/security, retrieval/noise, and compiler/summary evidence |
+| `07a_`-`07e_*.md` | Setup/scaling, external benchmark/bottleneck, baseline/neural/security, retrieval/noise, and compiler/summary evidence |
 | `08_reference_architecture.md` | Design-principle table + file structure |
 | `09_reproducibility.md` | Determinism, generated tokens, regeneration commands |
 | `10_operability.md` | Configuration, real LM adapters, persistent session, CLI |

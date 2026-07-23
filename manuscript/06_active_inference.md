@@ -14,7 +14,7 @@ not falsifiable). With that caveat stated plainly:
   the environment to bring into the inference, analogous to epistemic foraging
   that reduces uncertainty about hidden causes ([@sec:stage-inspector]).
 
-- **Action — the Reasoner and tool dispatch.** The ReAct read→integrate→retry loop
+- **Action — the Reasoner and tool dispatch.** The ReAct-style deterministic read→integrate→retry route
   selects information-gathering and answer-producing actions, analogous to
   policy selection under expected free energy: pragmatic value (answer the query)
   traded against epistemic value (gather more evidence) ([@sec:stage-reasoner]).

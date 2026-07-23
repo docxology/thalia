@@ -1,12 +1,12 @@
 # Validation and Invariants {#sec:validation}
 
-THALIA treats correctness as a build-time property, not a hope. Three layers
-enforce it: a Zero-Mock test suite, a set of executable invariants, and golden
+THALIA treats tested contracts as a build-time property, not a hope. Three layers
+check them: a Zero-Mock test suite, a set of executable invariants, and golden
 regression tests — all deterministic.
 
 The validation design follows the same typed boundaries as the method. Unit tests
 exercise individual functions, stage tests exercise payload handoffs, regression
-tests pin published metrics, and script smoke tests prove that the command surface
+tests pin published metrics, and script smoke tests demonstrate that the command surface
 can regenerate the artifacts named in the manuscript. This is why the manuscript
 can discuss Inspector windows, retrieval modes, Memory Gate actions, compiler
 traces, and dashboard rows as the same objects that appear in code rather than as
@@ -96,15 +96,15 @@ quotes so the recall path cannot silently break on natural-language input again.
 A trustworthy evaluation reports what did *not* work as much as what did. Three
 follow-ups returned honest nulls, stated plainly. **(i) Recency weighting does not
 change the injection outcome:** re-running the context-poisoning probes
-([@sec:eval-injection]) with `recency_weight` swept from 0 to 0.9 leaves the poisoned
+([@sec:eval-injection]) with `recency_weight` swept across its configured range leaves the poisoned
 answer unchanged — an overlap-dominated injection already wins regardless of recency,
 so recency is neither a defence nor an added liability here. **(ii) Retrieval depth
 does not change accuracy** on lexically clean tasks: sweeping `top_k`/`max_evidence`
 leaves token-F1 flat (the gold line is recoverable at depth one) and only lowers the
 efficiency term — exactly why the Compiler's optimum is an efficiency tie-break, not
-an accuracy gain. **(iii) The lexical-anchored hybrid ties a real dense RAG:** a pure
+an accuracy gain. **(iii) The lexical-anchored hybrid ties a learned-embedding RAG:** a pure
 neural-embedding retrieval baseline (`src.retrieval.learned.dense_rag_answer`,
-nomic-embed-text) matches the harness's accuracy on the seeded set. A tie on this
+`{{RESULT_EMBED_MODEL}}`) matches the harness's accuracy on the seeded set. A tie on this
 deliberately easy set is the *expected* outcome — [@sec:eval-real] shows the synthetic
 data cannot separate retrieval methods — so this is evidence of no regression, not of
 general parity. Consistent with the no-harness baseline ([@sec:eval-baseline]), the
@@ -127,7 +127,7 @@ false pass the gate now forbids. **Injection-independent token coverage**: the
 manuscript-variable generator locates the template root robustly even when THALIA
 is checked out as a symlink *outside* the template tree, and its token-coverage
 reproducibility contract completes whether or not the optional PDF-injection step
-is reachable — the gate that guarantees every published number is a generated
+is reachable — the gate that enforces every published number is a generated
 token never depends on the renderer plumbing.
 
 ## Static visualization dashboard {#sec:val-dashboard}

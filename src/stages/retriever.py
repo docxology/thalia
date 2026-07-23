@@ -76,7 +76,7 @@ class Retriever(Module):
             raise ValueError(f"k must be non-negative, got {k}")
         if (lexical_weight is None) ^ (semantic_weight is None):
             raise ValueError("lexical_weight and semantic_weight must both be set or both None")
-        if lexical_weight is not None and (lexical_weight < 0 or semantic_weight < 0):
+        if lexical_weight is not None and semantic_weight is not None and (lexical_weight < 0 or semantic_weight < 0):
             raise ValueError("lane weights must be non-negative")
         if lexical_weight == 0 and semantic_weight == 0:
             raise ValueError("at least one lane weight must be positive")

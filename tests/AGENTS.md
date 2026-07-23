@@ -27,11 +27,10 @@
 build without FTS5; the FTS5 path is covered on builds that have it, and the LIKE
 fallback is covered via the `fts_available` toggle. The `to_dspy_signature` body in
 `gepa.py` is `pragma: no cover` in principle (only reachable with `dspy` installed),
-but since `dspy-ai` is a mandatory dependency (as of 2026-07-01), `test_gepa.py::
-TestRealDspyBridge` now always runs and functionally validates it (real
-`dspy.Signature` round-trip + `dspy.Predict` usability) rather than skipping.
-`src/dspy_runtime/` (package) follows the same split: its pure adapter helpers are unit-tested
-unconditionally in `test_dspy_runtime.py`, and the gated `dspy` glue (real
-`dspy.Predict` + real `BootstrapFewShot` optimizer) — `pragma: no cover` in
-principle, validated by the `DSPY_AVAILABLE`-gated `TestRealDspyRuntime` — also
-always runs now rather than skipping, since the dependency is no longer optional.
+but since the DSPy bridge is an explicit `dev`/`neural` extra, `test_gepa.py::
+TestRealDspyBridge` runs with that extra and skips cleanly in a deterministic-
+core-only environment.
+`src/dspy_runtime/` (package) follows the same split: its pure adapter helpers are
+unit-tested unconditionally in `test_dspy_runtime.py`, and the gated `dspy` glue
+(real `dspy.Predict` + real `BootstrapFewShot` optimizer) runs with the explicit
+extra while remaining outside the deterministic-core prerequisite.

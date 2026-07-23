@@ -1,4 +1,4 @@
-# Harness Design: Method Contract and Stage Flow {#sec:harness-method-contract-stage-flow}
+# Stage Contract: From Transcript to Auditable Output {#sec:harness-method-contract-stage-flow}
 
 ## Method contract {#sec:method-contract}
 
@@ -31,13 +31,14 @@ into a `REPLEnvironment`, peeks at structure, greps for query-anchored patterns,
 ranks matching records by query-token overlap, and emits at most `max_windows`
 compact `EvidenceWindow` objects with auditable `InspectorMetadata`. If grep
 returns nothing it falls back to ranking every record; if the query contributes no
-content tokens it keeps records in order. The full context is never forwarded.
+content tokens it keeps records in order. The full transcript remains external
+state; only selected windows are eligible for a model call.
 
 ```python
 class InspectorSignature(Signature):
     """Inspect session history as external state.
     Use code execution (peek / grep / partition) to filter evidence before
-    forwarding. Never load the full context into the neural call."""
+    forwarding. Do not send the full transcript as one model prompt."""
     session_history: str = InputField("Raw session transcript (arbitrarily long).")
     query: str = InputField("Current task or question.")
     evidence_windows: list = OutputField("Compact snippets filtered from history.")
@@ -50,7 +51,7 @@ tokens the selected windows cover.
 
 Two fallback paths are load-bearing. If grep returns no match, the Inspector ranks
 all records by overlap rather than emitting an empty evidence set; this keeps the
-Reasoner from treating retrieval absence as proof of absence. If the query has no
+Reasoner from treating retrieval absence as evidence of absence. If the query has no
 usable content tokens, the Inspector preserves transcript order; this is safer
 than manufacturing a relevance signal from stop words. Both behaviours are
 deterministic and tested.
@@ -90,17 +91,19 @@ class RetrieverSignature(Signature):
 
 ## Stage 2 — Reasoner (typed declarative reasoning) {#sec:stage-reasoner}
 
-The Reasoner produces a grounded, typed answer. Deterministic code classifies the
-task (`src.routing.classify_task`), routes multi-hop/code/knowledge-update tasks through a
-ReAct-style read→integrate loop and everything else through chain-of-thought, and
-builds `EvidenceCitation`s from the windows whose text overlaps the answer. The
-`evidence_citations` output is what lets the Memory Gate audit answer-vs-evidence
-grounding, and what grounds any later consolidation in verifiable raw text.
+The Reasoner produces a typed answer with auditable citation support. Deterministic
+code classifies the task (`src.routing.classify_task`), routes
+multi-hop/code/knowledge-update tasks through a deterministic ReAct-style
+read→integrate selection path, and uses one model completion for both routes. It
+does not expose hidden chain-of-thought. It builds `EvidenceCitation`s from the
+windows whose text overlaps the answer. The `evidence_citations` output is what
+lets the Memory Gate audit answer-vs-evidence support, and what grounds any later
+consolidation in verifiable raw text.
 `requires_consolidation` is set only for knowledge-update tasks or explicit
 "remember" cues.
 
 The Reasoner is also where optional grounding verification occurs. When
-`verify=True`, the stage computes answer-token support against the cited excerpts.
+`verify=True`, the stage computes a set-based answer-token support proxy against the cited excerpts.
 If support falls below `grounding_threshold`, it re-answers over the full ranked
 evidence set and records the before/after scores in the trace. Verification is
 off by default because the deterministic local evaluation already exercises the
@@ -116,10 +119,10 @@ class ReasonerSignature(Signature):
     ranked_evidence: list = InputField("Ranked evidence from the Retriever.")
     task_category: TaskCategory = InputField("Detected task category.")
     memory_context: MemorySnapshot = InputField("Frozen MEMORY/USER snapshot (read-only).")
-    reasoning_trace: str = OutputField("Chain of thought grounded in evidence.")
+    reasoning_trace: str = OutputField("Auditable routing and evidence-use trace; not hidden chain-of-thought.")
     answer: str = OutputField("Final answer or action.")
     evidence_citations: list = OutputField("Raw source windows cited.")
-    requires_consolidation: bool = OutputField("True only on novel class / explicit update.")
+    requires_consolidation: bool = OutputField("True for knowledge-update tasks or explicit memory cues.")
 ```
 
 ## Stage 3 — Memory Gate (episodic-first, gated consolidation) {#sec:stage-memory}
@@ -148,7 +151,7 @@ class MemoryGateSignature(Signature):
     answer: str = InputField("The produced answer.")
     evidence_citations: list = InputField("Citations from the Reasoner.")
     requires_consolidation: bool = InputField("Reasoner's consolidation flag.")
-    session_episode_count: int = InputField("Episodes recorded this session.")
+    session_episode_count: int = InputField("Episodes currently recorded in the store.")
     episodic_entry: EpisodicEntry = OutputField("Raw turn record to append.")
     consolidation_action: str = OutputField("none | append_memory | update_memory.")
     memory_delta: str = OutputField("Delta to MEMORY.md if consolidating, else ''.")
@@ -176,6 +179,6 @@ The compiler trace is part of the method, not a logging nicety. It records the
 candidate configuration, component scores, selected mutation, and resulting
 configuration so a reader can tell whether an apparent improvement came from
 accuracy, grounding, or efficiency. On the current compact dataset the candidates
-tie structurally; the trace still proves that the search surface was exercised and
-that the reported optimum is a deterministic tie-break rather than a hidden
-performance gain.
+tie structurally; the trace documents that the declared search surface was
+executed and that the reported optimum is a deterministic tie-break rather than a
+measured performance gain.

@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from src.config import default_config
 from src.manuscript_variables import generate_variables
 
@@ -66,6 +68,20 @@ class TestGenerateVariables:
 
     def test_num_stages_is_five(self):
         assert generate_variables()["CONFIG_NUM_STAGES"] == "5"
+
+    def test_v2_extension_tokens_bind_to_generated_aggregates(self):
+        variables = generate_variables()
+        assert variables["RESULT_SEED_SENSITIVITY_SEEDS"] == "10"
+        assert variables["RESULT_SEED_SENSITIVITY_EVALUATIONS"] == "1800"
+        assert variables["RESULT_COMPILER_ACCOUNTED_N"] == "1350"
+        assert variables["RESULT_COMPILER_CANDIDATE_N"] == "65"
+
+    def test_missing_v2_aggregate_raises_clearly(self, monkeypatch, tmp_path):
+        import src.manuscript_variables as mv
+
+        monkeypatch.setattr(mv, "_SEED_SENSITIVITY_PATH", tmp_path / "absent_seed.json")
+        with pytest.raises(FileNotFoundError, match="run_seed_sensitivity"):
+            mv.generate_variables()
 
     def test_config_echoed(self):
         variables = generate_variables(default_config())

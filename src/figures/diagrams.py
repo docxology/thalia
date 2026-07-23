@@ -360,43 +360,67 @@ def plot_foundations_map(output_path: str | Path) -> Path:
 def plot_memory_lifecycle(output_path: str | Path) -> Path:
     """Episode to Memory Gate (dual-key) to Consolidation to MEMORY.md."""
     path = _prepare(output_path)
-    fig, ax = plt.subplots(figsize=(6.0, 3.0))
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 3)
+    # Keep generous horizontal and vertical margins: this figure is embedded at
+    # 80% manuscript width, so long labels that fit on the source canvas can
+    # otherwise be clipped by the box or the axes edge after PDF scaling.
+    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 3.4)
     ax.axis("off")
 
-    ax.text(5, 2.85, "Memory Lifecycle", ha="center", va="top", fontsize=13, fontweight="bold", color=PALETTE["ink"])
-    _box(ax, 0.3, 1.1, 1.8, 0.8, "Raw Episode\n(query, answer, citations)", color=PALETTE["accent"])
-    _arrow(ax, 2.1, 1.5, 3.5, 1.5)
-    _box(ax, 3.5, 0.8, 2.2, 1.4, "Memory Gate\n", color=PALETTE["muted"])
+    ax.text(6, 3.25, "Memory Lifecycle", ha="center", va="top", fontsize=13, fontweight="bold", color=PALETTE["ink"])
+    _box(
+        ax,
+        0.4,
+        1.35,
+        2.5,
+        0.95,
+        "Raw Episode\n(query, answer,\ncitations)",
+        color=PALETTE["accent"],
+        fontsize=8,
+    )
+    _arrow(ax, 2.9, 1.83, 3.6, 1.83)
+    _box(ax, 3.6, 1.05, 2.8, 1.55, "", color=PALETTE["muted"])
+    ax.text(5.0, 2.22, "Memory Gate", ha="center", va="center", fontsize=9, color="white", zorder=5)
     ax.text(
-        4.6,
-        1.3,
+        5.0,
+        1.48,
         "requires flag AND\n(session-end / novel class\n/ explicit request)",
         ha="center",
         va="center",
-        fontsize=6.5,
+        fontsize=7,
         color="white",
         zorder=5,
     )
-    _arrow(ax, 5.7, 1.5, 6.8, 1.5)
-    ax.text(6.25, 1.2, "no", ha="center", va="bottom", fontsize=7, color=PALETTE["muted"], fontstyle="italic")
-    _box(ax, 6.8, 1.1, 1.8, 0.8, "EpisodicStore\n(SQLite, append-only)", color=PALETTE["accent"], alpha=0.7)
-    _arrow(ax, 5.7, 0.8, 6.8, 0.3, style="--")
-    ax.text(6.25, 0.85, "yes", ha="center", va="bottom", fontsize=7, color=PALETTE["semantic"], fontstyle="italic")
+    _arrow(ax, 6.4, 1.83, 7.4, 1.83)
+    ax.text(6.9, 1.48, "no", ha="center", va="bottom", fontsize=7, color=PALETTE["muted"], fontstyle="italic")
     _box(
         ax,
-        6.8,
-        0.0,
-        2.2,
-        0.7,
-        "Consolidate to MEMORY.md\n(derived, never mutates)",
+        7.4,
+        1.35,
+        2.5,
+        0.95,
+        "EpisodicStore\n(SQLite,\nappend-only)",
+        color=PALETTE["accent"],
+        alpha=0.7,
+        fontsize=8,
+    )
+    _arrow(ax, 6.4, 1.05, 7.4, 0.62, style="--")
+    ax.text(6.9, 0.92, "yes", ha="center", va="bottom", fontsize=7, color=PALETTE["semantic"], fontstyle="italic")
+    _box(
+        ax,
+        7.4,
+        0.18,
+        3.2,
+        0.82,
+        "Consolidate to\nMEMORY.md\n(derived, never mutates)",
         color=PALETTE["semantic"],
         alpha=0.7,
+        fontsize=7.5,
     )
     ax.text(
-        0.2,
-        0.05,
+        0.4,
+        0.08,
         "Every turn: append always. Consolidation requires both conditions.",
         ha="left",
         va="bottom",

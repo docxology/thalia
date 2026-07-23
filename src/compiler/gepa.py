@@ -16,7 +16,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-import dspy as _dspy
+try:
+    import dspy as _dspy
+except ModuleNotFoundError:  # pragma: no cover - exercised by minimal installs
+    _dspy = None  # type: ignore[assignment]
 
 from ..config import HarnessConfig, default_config
 from ..signatures import HarnessOutput, Signature
@@ -183,7 +186,7 @@ class GEPAOptimizer:
 # DSPy signature bridge (real dspy.Signature from any THALIA signature)
 # ---------------------------------------------------------------------------
 
-DSPY_AVAILABLE = True
+DSPY_AVAILABLE = _dspy is not None
 
 
 def to_dspy_signature(signature: type[Signature]) -> Any:
@@ -195,6 +198,12 @@ def to_dspy_signature(signature: type[Signature]) -> Any:
     Returns:
         A dynamically constructed ``dspy.Signature`` class.
     """
+    if not DSPY_AVAILABLE:
+        raise ImportError(
+            "The DSPy signature bridge requires the optional 'neural' extra; "
+            "install with `uv sync --extra neural`."
+        )
+
     fields: dict[str, Any] = {}
     annotations: dict[str, Any] = {}
     for name, fld in signature.inputs().items():

@@ -51,6 +51,14 @@ class TestTokenF1:
         # pred={a,b}, gold={a,c}; overlap=1 -> P=0.5,R=0.5,F1=0.5
         assert token_f1("a b", "a c") == 0.5
 
+    def test_duplicate_tokens_are_deduplicated_by_contract(self):
+        # The implementation is set-based: duplicate surface tokens do not
+        # change either denominator or the overlap count.
+        assert token_f1("alpha alpha beta", "alpha beta") == 1.0
+
+    def test_token_f1_is_not_multiset_f1(self):
+        assert token_f1("alpha alpha", "alpha gamma") == pytest.approx(2 / 3)
+
 
 class TestComponentScores:
     def test_answer_score(self):

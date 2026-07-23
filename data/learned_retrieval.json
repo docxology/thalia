@@ -1,7 +1,23 @@
 {
   "embedding_document_prefix": "search_document:",
   "embedding_query_prefix": "search_query:",
+  "learned_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 1.0,
+    "low": 0.8928208017449293,
+    "method": "wilson_score",
+    "rate": 1.0,
+    "successes": 32,
+    "trials": 32,
+    "unit": "binary_observation"
+  },
   "learned_recall_at_1": 1.0,
+  "learned_recall_ci": [
+    1.0,
+    0.8928208017449293,
+    1.0
+  ],
   "metric": "recall@1",
   "model": "nomic-embed-text",
   "model_metadata": {
@@ -21,11 +37,298 @@
     },
     "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
     "model": "nomic-embed-text:latest",
-    "modified_at": "2026-07-07T16:58:39.770239561-07:00",
+    "modified_at": "2026-07-19T20:17:45.008280034-07:00",
     "ollama_version": "0.32.1",
     "requested_model": "nomic-embed-text",
     "size": 274302450
   },
-  "n_probes": 4,
-  "surrogate_recall_at_1": 0.25
+  "n_probes": 32,
+  "paired_binary_comparison": {
+    "delta": 0.125,
+    "left_failure_right_success": 0,
+    "left_success_right_failure": 4,
+    "method": "exact_mcnemar_binomial",
+    "n": 32,
+    "p_value": 0.125
+  },
+  "rows": [
+    {
+      "error_class": null,
+      "family": "schedule",
+      "learned_hit": true,
+      "probe": 1,
+      "surrogate_hit": false
+    },
+    {
+      "error_class": null,
+      "family": "location",
+      "learned_hit": true,
+      "probe": 2,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "quantity",
+      "learned_hit": true,
+      "probe": 3,
+      "surrogate_hit": false
+    },
+    {
+      "error_class": null,
+      "family": "identity",
+      "learned_hit": true,
+      "probe": 4,
+      "surrogate_hit": false
+    },
+    {
+      "error_class": null,
+      "family": "status",
+      "learned_hit": true,
+      "probe": 5,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "preference",
+      "learned_hit": true,
+      "probe": 6,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "technical",
+      "learned_hit": true,
+      "probe": 7,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "schedule",
+      "learned_hit": true,
+      "probe": 8,
+      "surrogate_hit": false
+    },
+    {
+      "error_class": null,
+      "family": "location",
+      "learned_hit": true,
+      "probe": 9,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "quantity",
+      "learned_hit": true,
+      "probe": 10,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "identity",
+      "learned_hit": true,
+      "probe": 11,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "status",
+      "learned_hit": true,
+      "probe": 12,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "preference",
+      "learned_hit": true,
+      "probe": 13,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "technical",
+      "learned_hit": true,
+      "probe": 14,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "schedule",
+      "learned_hit": true,
+      "probe": 15,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "location",
+      "learned_hit": true,
+      "probe": 16,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "quantity",
+      "learned_hit": true,
+      "probe": 17,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "identity",
+      "learned_hit": true,
+      "probe": 18,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "status",
+      "learned_hit": true,
+      "probe": 19,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "preference",
+      "learned_hit": true,
+      "probe": 20,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "technical",
+      "learned_hit": true,
+      "probe": 21,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "schedule",
+      "learned_hit": true,
+      "probe": 22,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "location",
+      "learned_hit": true,
+      "probe": 23,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "quantity",
+      "learned_hit": true,
+      "probe": 24,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "identity",
+      "learned_hit": true,
+      "probe": 25,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "status",
+      "learned_hit": true,
+      "probe": 26,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "preference",
+      "learned_hit": true,
+      "probe": 27,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "technical",
+      "learned_hit": true,
+      "probe": 28,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "schedule",
+      "learned_hit": true,
+      "probe": 29,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "location",
+      "learned_hit": true,
+      "probe": 30,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "quantity",
+      "learned_hit": true,
+      "probe": 31,
+      "surrogate_hit": true
+    },
+    {
+      "error_class": null,
+      "family": "identity",
+      "learned_hit": true,
+      "probe": 32,
+      "surrogate_hit": true
+    }
+  ],
+  "runtime_provenance": {
+    "benchmark": {},
+    "machine": "arm64",
+    "models": {
+      "model": "nomic-embed-text",
+      "model_metadata": {
+        "api_base": "http://localhost:11434",
+        "available": true,
+        "details": {
+          "context_length": 2048,
+          "embedding_length": 768,
+          "families": [
+            "nomic-bert"
+          ],
+          "family": "nomic-bert",
+          "format": "gguf",
+          "parameter_size": "137M",
+          "parent_model": "",
+          "quantization_level": "F16"
+        },
+        "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "model": "nomic-embed-text:latest",
+        "modified_at": "2026-07-19T20:17:45.008280034-07:00",
+        "ollama_version": "0.32.1",
+        "requested_model": "nomic-embed-text",
+        "size": 274302450
+      }
+    },
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.11 (main, Dec  5 2025, 21:16:49) [Clang 21.1.4 ]"
+  },
+  "sample_accounting": {
+    "n_evaluated": 32,
+    "n_failed": 0,
+    "n_requested": 32,
+    "unit": "paraphrase_probe"
+  },
+  "surrogate_rate": {
+    "confidence": 0.95,
+    "estimand": "success_probability",
+    "high": 0.9502986561251991,
+    "low": 0.7193169451834978,
+    "method": "wilson_score",
+    "rate": 0.875,
+    "successes": 28,
+    "trials": 32,
+    "unit": "binary_observation"
+  },
+  "surrogate_recall_at_1": 0.875,
+  "surrogate_recall_ci": [
+    0.875,
+    0.7193169451834978,
+    0.9502986561251991
+  ]
 }

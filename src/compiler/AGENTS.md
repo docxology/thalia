@@ -88,16 +88,13 @@ Validates an evolved skill artifact: must be non-empty and within the 15 KiB
 size budget (mirrored from `hermes-agent-self-evolution`). Used before writing
 any compiler-generated artifact to disk.
 
-## DSPy bridge
+## DSPy bridge (optional)
 
-```python
-# gepa.py (top-level, not inside a function)
-import dspy as _dspy
-DSPY_AVAILABLE = True
-```
-
-`DSPY_AVAILABLE` is `True` when DSPy is installed; the `import` is at module
-scope and will raise `ImportError` on import if DSPy is absent.
+`gepa.py` detects DSPy lazily. Importing deterministic compiler metrics does not
+load the SDK; requesting `to_dspy_signature` does. `DSPY_AVAILABLE` is false
+when the optional extra is absent, and the bridge raises an actionable install
+error in that environment. Install with `uv sync --extra neural` for the real
+DSPy bridge/runtime.
 
 `to_dspy_signature(signature: type[Signature]) -> dspy.Signature` — builds a
 real `dspy.Signature` class dynamically from any THALIA `Signature` subclass by

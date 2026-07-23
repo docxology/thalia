@@ -2,8 +2,10 @@
 
 THALIA is not only a design — it is operable. This section documents the
 configuration system, the real language-model adapters, the persistent multi-turn
-session, and the command-line interface. Each is fully tested (Zero-Mock,
-including a real in-process HTTP server for the network adapter).
+session, and the command-line interface. Each has dedicated Zero-Mock coverage in
+the strict local suite, including a real in-process HTTP server for the network
+adapter; this is a tested-path statement, not an assertion that every deployment
+integration has been exercised.
 
 ## Configuration {#sec:op-config}
 
@@ -14,13 +16,17 @@ is loadable, overridable, and serialisable:
   (`config/harness.yaml` ships as the canonical default). The YAML may list fields
   flat or under a `harness:` key; manuscript `config.yaml` keeps renderer metadata
   separate and mirrors selected values only under `project_config.harness`.
-- **Environment** — any field is overridable via `THALIA_<FIELD>` (e.g.
-  `THALIA_TOP_K=4`, `THALIA_LEXICAL_WEIGHT=0.8 THALIA_SEMANTIC_WEIGHT=0.2`). Lane
-  weights remain both-or-neither; setting only one against an unset pair raises.
+- **Environment** — any field is overridable via `THALIA_<FIELD>`. Three example
+  overrides are:
+  - `THALIA_TOP_K=<integer>` for the retrieval depth.
+  - `THALIA_LEXICAL_WEIGHT=<lexical>` for the lexical lane weight.
+  - `THALIA_SEMANTIC_WEIGHT=<semantic>` for the semantic lane weight.
+  Lane weights remain both-or-neither; setting only one against an unset pair
+  raises.
   Two additional environment variables control the OpenRouter adapter:
   `THALIA_OPENROUTER_API_KEY` (required to activate the adapter; absent → null
   rows in evaluation output) and `THALIA_OPENROUTER_MODEL` (selects the
-  OpenRouter model; defaults to `tencent/hy3-preview` when unset).
+  OpenRouter model; the current recorded aggregate uses `{{RESULT_OPENROUTER_MODEL}}`).
 - **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
   `save_config` make a config serialisable and reproducible; `from_dict` and
   `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
@@ -38,7 +44,7 @@ so a compiled or manually selected setting can be saved and compared later.
 
 ## Composable Pipeline {#sec:op-pipeline}
 
-`AutoHarness` bundles the four runtime stages into one `forward` call. For
+`AutoHarness` bundles the {{CONFIG_NUM_RUNTIME_STAGES}} runtime stages into one `forward` call. For
 callers that need to inspect or modify the stage chain — insert a logging hook,
 a custom reranker, or run a partial pipeline — `src/pipeline.py::Pipeline`
 exposes the same stages as an explicit, chainable sequence:
@@ -83,6 +89,19 @@ with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
 The demo script (`src/demo.py`) uses this pattern, so the context-manager path
 is exercised by the default analysis pipeline, not only by tests.
 
+`AutoHarness` and `Pipeline` expose the same context-manager contract. They close
+only stores they created internally; a store supplied by the caller remains the
+caller’s responsibility. `EpisodicStore.close()` is idempotent, so cleanup is
+safe in both nested context managers and explicit `finally` blocks. The strict
+suite runs with `ResourceWarning` promoted to an error to make a leaked SQLite
+connection a failing contract rather than a diagnostic afterthought.
+
+The standalone preflight reports independent readiness states for the
+deterministic core, DSPy SDK, Ollama server, Gemma model, embedding model,
+LongMemEval payload, and template renderer. Optional neural/benchmark states do
+not block deterministic operation; the fail-closed artifact validator remains the
+local release boundary.
+
 ## Package metadata {#sec:op-metadata}
 
 The package exports `__version__` at the top level (`from src import __version__`)
@@ -105,8 +124,9 @@ behind the one-method `LMClient` protocol:
   invoked by the default core.
 - **`configure_openrouter(model, api_key)`** — configure the harness to use an
   OpenRouter-hosted model via the OpenRouter chat completions API. The model is
- controlled by the `THALIA_OPENROUTER_MODEL` environment variable (default:
- `tencent/hy3-preview`); the API key is read from `THALIA_OPENROUTER_API_KEY`.
+ controlled by the `THALIA_OPENROUTER_MODEL` environment variable; the API key is
+ read from `THALIA_OPENROUTER_API_KEY`. The current recorded aggregate uses
+ `{{RESULT_OPENROUTER_MODEL}}`.
   Like `OllamaLM`, this adapter is opt-in and raises on failure rather than
   silently degrading.
 
@@ -141,7 +161,7 @@ still be recovered and cited.
 harness:
 
 ```bash
-uv run --project working/thalia python working/thalia/scripts/run_query.py \
+uv run --project . --extra dev python scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
 ```
@@ -149,7 +169,7 @@ uv run --project working/thalia python working/thalia/scripts/run_query.py \
 For real haystacks, the same CLI exposes the opt-in adaptive Inspector controls:
 
 ```bash
-uv run --project working/thalia python working/thalia/scripts/run_query.py \
+uv run --project . --extra dev python scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-file long_session.txt \
   --adaptive-windows --adaptive-window-ratio {{CONFIG_ADAPTIVE_RATIO}} --json

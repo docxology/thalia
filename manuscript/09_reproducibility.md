@@ -43,52 +43,74 @@ number must have a source in the live variable map.
 ## How to regenerate every artifact {#sec:repro-regenerate}
 
 ```bash
-# 1. Tests + coverage gate (>= {{CONFIG_COV_GATE}}% on src/)
-uv run --project working/thalia pytest working/thalia/tests/ \
-  --cov=working/thalia/src --cov-fail-under={{CONFIG_COV_GATE}}
+# 1. Tests + coverage gate (>= {{CONFIG_COV_GATE}}% on src/; warnings are strict)
+PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+  --junitxml=output/reports/pytest.xml --cov-fail-under={{CONFIG_COV_GATE}}
 
 # 2. Evaluation bundle -> output/data/eval_results.json
-uv run --project working/thalia python working/thalia/scripts/run_harness_eval.py
+uv run --project . --extra dev python scripts/run_harness_eval.py
 
 # 3. Compiler search -> output/data/compile_result.json
-uv run --project working/thalia python working/thalia/scripts/run_compiler.py
+uv run --project . --extra dev python scripts/run_compiler.py
 
-# 4. Real DSPy run + optional neural / learned-embedder measurements (dspy-ai is
-#    installed by the project; live Ollama models are still optional. Recorders
-#    write null rows or exit with a notice rather than fabricating unavailable
-#    model measurements.)
-uv run --project working/thalia python working/thalia/scripts/run_dspy.py
-uv run --project working/thalia python working/thalia/scripts/run_neural_eval.py
-uv run --project working/thalia python working/thalia/scripts/run_learned_retrieval.py
-uv run --project working/thalia python working/thalia/scripts/run_injection_probe.py
+# 4. Pre-registered finite sensitivity and held-out compiler aggregates
+uv run --project . --extra dev python scripts/run_seed_sensitivity.py
+uv run --project . --extra dev python scripts/run_compiler_generalization.py
 
-# 5. Figures -> output/figures/*.png  (reads data/neural_eval.json for the backend figure)
-uv run --project working/thalia python working/thalia/scripts/generate_figures.py
+# 5. Pipeline trace -> output/data/pipeline_result.json
+uv run --project . --extra dev python scripts/run_pipeline.py
 
-# 6. Manuscript variables -> output/data/manuscript_variables.json
-uv run --project working/thalia python working/thalia/scripts/z_generate_manuscript_variables.py
+# 6. Real DSPy run + optional neural / learned-embedder measurements.
+uv run --project . --extra neural python scripts/run_dspy.py
+uv run --project . --extra neural python scripts/run_neural_eval.py
+uv run --project . --extra neural python scripts/run_learned_retrieval.py
+uv run --project . --extra neural python scripts/run_injection_probe.py
+uv run --project . --extra neural python scripts/run_longmemeval.py
+uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py
 
-# 7. Artifact hashes + required-output completeness (must pass before rendering)
-uv run --project working/thalia python working/thalia/scripts/validate_artifacts.py
+# 7. Figures -> output/figures/*.png  (reads committed aggregates)
+uv run --project . --extra dev python scripts/generate_figures.py
+
+# 8. Manuscript variables -> output/data/manuscript_variables.json
+uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
+
+# 9. Demo, dashboard, then artifact hashes + required-output completeness
+uv run --project . --extra dev python scripts/run_demo.py
+uv run --project . --extra dev python scripts/build_dashboard.py
+uv run --project . --extra dev python scripts/validate_artifacts.py
 ```
 
-The deterministic steps (1–3, 5–6) are bit-reproducible on any host. Step 4 is the
-component **outside** the bit-reproducible envelope: it calls real local models
-(temperature 0 for the Gemma Reasoner path [@gemma2025gemma3], and nomic task
-prefixes for the learned embedder path [@nussbaum2024nomic]), so its numbers
+The deterministic-core paths in the evaluation, pipeline, figure, and validation
+steps are bit-reproducible on any host; the test step also exercises optional
+live-service tests when those services are available. The live-recorder step is the
+component **outside** the bit-reproducible envelope: it calls recorded
+local models (model `{{RESULT_NEURAL_MODEL}}`, temperature {{RESULT_NEURAL_TEMPERATURE}}
+[@gemma2025gemma3], and embedder `{{RESULT_EMBED_MODEL}}` with task prefixes
+[@nussbaum2024nomic]), so its numbers
 reproduce *on a host serving the same model tags*, not byte-for-byte across
-machines and Ollama versions. The recorder JSONs carry best-effort model
-metadata — requested model, resolved tag, digest when Ollama reports one,
-generation options, embedding query/document prefixes, and null fields when a
-model is unavailable — so figures do not carry stale neural rows.
+machines and Ollama versions. The recorder JSONs carry model metadata — requested
+model, resolved tag, digest when Ollama reports one, generation options, embedding
+query/document prefixes, benchmark SHA-256/size where applicable, and runtime
+Python/platform provenance. If an optional service is unavailable, the tracked
+aggregate is preserved; isolated output paths can be used to record the skip
+without rewriting committed evidence.
 
-An additional evaluation bundle, `data/openrouter_eval.json`, records results from
-the OpenRouter-backed adapter path ([@sec:op-lm]). This bundle is produced by
-`scripts/run_openrouter_eval.py` and requires the environment variable
+The deterministic research audit evaluates {{RESULT_AUDIT_UNIQUE_N}} unique synthetic examples and
+{{RESULT_AUDIT_METHOD_N}} method rows across {{RESULT_AUDIT_STRATA_COUNT}} strata,
+{{RESULT_AUDIT_CATEGORY_COUNT}} categories, {{RESULT_AUDIT_SIZES}} per-category sizes,
+and {{RESULT_AUDIT_SEED_COUNT}} fixed seeds. Its JSONL ledger has one example/method record with global
+sequence numbers and complete failure/fingerprint fields, while the event stream
+repeats dataset/config identity per sample and contains no wall-clock fields.
+
+The tracked `data/openrouter_eval.json` is a historical normalized OpenRouter
+aggregate used only when present; it is not regenerated by the canonical local
+pipeline. The current live smoke recorder is `scripts/run_openrouter.py`, which
+writes `output/data/openrouter_result.json` and requires the environment variable
 `THALIA_OPENROUTER_API_KEY` to be set to a valid OpenRouter API key. Like all
-recorder outputs, the file carries null rows when the key is absent, so the
-remaining pipeline steps proceed without error — the OpenRouter rows simply do not
-contribute to aggregate figures.
+recorder outputs, an unavailable key is recorded as an isolated skip rather than
+rewriting the tracked aggregate; the OpenRouter rows simply do not contribute to
+aggregate figures.
 
 ## Provenance chain {#sec:repro-provenance}
 
@@ -97,8 +119,9 @@ The artifact inventory produced alongside this manuscript: the evaluation bundle
 the manuscript figures (rendered with a colourblind-safe palette [@wong2011color]), the
 static dashboard, and the manuscript-variable map (`manuscript_variables.json`).
 Each is regeneratable and disposable; the source of truth is the code under `src/`
-and the fixed dataset in `src/evaluation/`. Together they make the manuscript a
-proof that the harness's invariants held at build time.
+and the fixed dataset in `src/evaluation/`. Together they provide an auditable
+record of which harness invariants held at build time; they are not a proof about
+unmeasured deployments.
 
 The provenance chain is intentionally narrow: generated outputs are evidence, not
 source. If a reader wants to audit a claim, the route is source code and fixed
@@ -124,6 +147,6 @@ append-only episodic store plus gated consolidation policy.
 Two boundaries are stated wherever they are relevant ([@sec:evaluation]): the
 deterministic extractive LM bounds token-F1 accuracy, and the hashing-embedding
 semantic lane is a sub-word surrogate, not a learned dense retriever. Both are
-designed plug-in points. Only the remaining citations explicitly marked "as
-provided" in `references.bib` are transcribed from the commissioning research
-synthesis rather than independently re-verified in this artifact.
+designed plug-in points. The bibliography records primary or official URLs where
+available; source-reported empirical claims remain source claims, not independent
+THALIA replications, unless a local aggregate explicitly records the result.

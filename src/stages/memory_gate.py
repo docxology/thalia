@@ -34,12 +34,33 @@ class MemoryGate(Module):
         memory_md: str = "",
     ) -> None:
         self.store = episodic_store if episodic_store is not None else EpisodicStore()
+        self._owns_store = episodic_store is None
         self.memory_md = memory_md
         # Novelty is session-scoped but must survive a process restart when the
         # caller reopens an existing append-only store. Otherwise the first turn
         # after reopen is misclassified as novel and can trigger redundant
         # consolidation.
         self._seen_categories: set[str] = {entry.task_category for entry in self.store.all()}
+
+    def close(self) -> None:
+        """Close the store created by this gate, never a caller-owned store."""
+        if self._owns_store:
+            self.store.close()
+
+    def __enter__(self) -> "MemoryGate":
+        """Return the gate for context-managed use."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+        """Close an owned store when leaving a context."""
+        self.close()
+
+    def __del__(self) -> None:  # pragma: no cover - interpreter safety net
+        """Best-effort cleanup for direct stage users."""
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def forward(  # type: ignore[override]
         self,

@@ -66,6 +66,7 @@ class EpisodicStore:
 
     def __init__(self, db_path: str = ":memory:") -> None:
         self.db_path = db_path
+        self._closed = False
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
         self.fts_available = _fts5_available(self._conn)
@@ -192,7 +193,16 @@ class EpisodicStore:
 
     def close(self) -> None:
         """Close the underlying SQLite connection."""
-        self._conn.close()
+        if not self._closed:
+            self._conn.close()
+            self._closed = True
+
+    def __del__(self) -> None:  # pragma: no cover - interpreter safety net
+        """Best-effort cleanup for callers that omit explicit close/context use."""
+        try:
+            self.close()
+        except Exception:
+            pass
 
     # -- Context manager protocol --------------------------------------------------
     # Enables ``with EpisodicStore(...) as store:`` so the connection is always

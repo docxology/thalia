@@ -1,10 +1,10 @@
-# Evaluation: Retrieval, Learned Embedder, and Noise {#sec:evaluation-retrieval-learned-noise}
+# Evaluation: Retrieval Representations and Noise Diagnostics {#sec:evaluation-retrieval-learned-noise}
 
 ## Retrieval mode comparison {#sec:eval-retrieval}
 
 [@fig:retriever_comparison] compares lexical-only, semantic-only, and hybrid
-composites at the **default (slack) retrieval budget** (`top_k=8`,
-`max_evidence=5`). On the clean compact dataset all three coincide
+composites at the **default (slack) retrieval budget** (`top_k={{CONFIG_TOP_K}}`,
+`max_evidence={{CONFIG_MAX_EVIDENCE}}`). On the clean compact dataset all three coincide
 (lexical {{RESULT_LEXICAL_COMPOSITE}}, semantic {{RESULT_SEMANTIC_COMPOSITE}},
 hybrid {{RESULT_HYBRID_COMPOSITE}}): the gold evidence is unambiguous, so every
 lane resolves it and the fused result is identical. The best single mode under the
@@ -12,11 +12,11 @@ tie-break is {{RESULT_BEST_MODE}}. This tie is itself the finding, and it
 reconciles cleanly with the divergence seen in the sweeps below: **retrieval-method
 choice is irrelevant while the budget is slack — every method retrieves the gold
 span anyway — and only bites once the budget is binding.** The sweep figures
-(ablation, MMR, RRF-weight) therefore use a tight budget (`top_k=2`,
-`max_evidence=2`) *inherited unchanged from the noise study*, not a budget tuned to
+(ablation, MMR, RRF-weight) therefore use a tight budget (`top_k={{CONFIG_TIGHT_TOP_K}}`,
+`max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`) *inherited unchanged from the noise study*, not a budget tuned to
 manufacture divergence; we report the regime, labeled, on every figure.
 
-![Composite metric by retrieval mode at the default slack budget (top-k 8, max-evidence 5). All three lanes resolve the unambiguous gold evidence identically; divergence is a property of a binding budget, of noise, and of the embedding model, not of the compact clean set.](../output/figures/retriever_comparison.png){#fig:retriever_comparison width=70%}
+![Composite metric per retrieval mode on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo (one deterministic extractive-LM evaluation per example) at the default slack budget (top-k {{CONFIG_TOP_K}}, max-evidence {{CONFIG_MAX_EVIDENCE}}). All three lanes resolve the unambiguous gold evidence identically; divergence is a property of a binding budget, of noise, and of the embedding model, not of the compact clean set. The bars are finite descriptive values with no interval or population interpretation; the semantic lane is a hashing surrogate and the default responder is extractive.](../output/figures/retriever_comparison.png){#fig:retriever_comparison width=70%}
 
 **Scope boundary (stated plainly).** The agentic-search study's headline —
 *grep generally beats vector retrieval in the cited inline comparisons, with
@@ -52,27 +52,29 @@ surrogate's limitation *measurable* rather than asserted, we score recall@1 on
 {{RESULT_NUM_PROBES}} **paraphrase** probes — each query shares meaning but little
 surface morphology with its gold document (e.g. "access code for the network" →
 "the wifi password is …"). [@fig:paraphrase_retrieval] reports the result: the
-hashing surrogate recovers the gold document on {{RESULT_SURROGATE_RECALL}} of the
-probes — it cannot bridge a paraphrase that shares no character n-grams — while the
-learned embedder recovers it on {{RESULT_LEARNED_RECALL}}. This is exactly the
-qualitative gap the surrogate caveat anticipates, now demonstrated: the surrogate
-behaves like a second lexical method, and only a learned embedder makes the semantic
-lane genuinely *semantic*. The measurement is gated on a live embedding model and
+hashing surrogate retrieves the gold document on {{RESULT_SURROGATE_RECALL}} of the
+probes (Wilson interval {{RESULT_SURROGATE_RECALL_CI}}), while the learned embedder
+retrieves it on {{RESULT_LEARNED_RECALL}} (Wilson interval {{RESULT_LEARNED_RECALL_CI}}). The
+expanded probe is deliberately mixed: some paraphrases retain enough sub-word
+signal for the surrogate, while the learned lane closes the remaining misses. The
+paired Wilson/exact-binary accounting is recorded in the aggregate; it is evidence
+about this synthetic probe family, not a population retrieval rate. The measurement
+is gated on a live embedding model and
 recorded to `data/learned_retrieval.json` (regenerable via
 `scripts/run_learned_retrieval.py`); the deterministic surrogate remains the offline
 default, so the bit-reproducible core is untouched.
 
-![Exact recall@1 counts on {{RESULT_NUM_PROBES}} paraphrase probes: the deterministic hashing surrogate versus a real learned embedder (`{{RESULT_EMBED_MODEL}}` via Ollama). The surrogate cannot match a paraphrase that shares no character n-grams with the gold document; the learned embedder resolves all of them. Recorded via `scripts/run_learned_retrieval.py`; the deterministic surrogate stays the offline default.](../output/figures/paraphrase_retrieval.png){#fig:paraphrase_retrieval width=60%}
+![Exact paired recall@1 outcomes per synthetic paraphrase probe ({{RESULT_NUM_PROBES}} probes): the deterministic hashing surrogate versus a learned embedder (`{{RESULT_EMBED_MODEL}}` via Ollama). Bars show Wilson intervals for the binary rate, and the paired exact McNemar comparison reports p={{RESULT_EMBED_PAIRED_P}}. This is a finite probe family with recorded model provenance, not a population retrieval rate or semantic-validity claim; the deterministic surrogate remains the offline default.](../output/figures/paraphrase_retrieval.png){#fig:paraphrase_retrieval width=60%}
 
 ## Noise scaling {#sec:eval-noise}
 
 `noise_scaling_experiment` appends lexical false-friend lines (repeating query
 tokens without the answer) and measures each mode at a tight retrieval budget,
-reproducing the *form* of Experiment 2 in [@sen2026grep]. The composites stay
-bounded and stable as noise grows — the Inspector's grep anchoring filters most
-false friends before retrieval, which is precisely why lexical anchoring is robust.
-Consistent with the surrogate caveat above, the hashing "semantic" lane does not
-collapse under noise: at *every* distractor level it scores *above* the lexical
+reproducing the *form* of the cited noise study [@sen2026grep]. The composites
+remain within the metric range as noise grows. In this finite probe, the
+Inspector's grep anchoring filters many false friends before retrieval.
+For this generated probe, the hashing "semantic" lane remains
+above the lexical
 lane — at the noisiest ({{RESULT_NOISE_MAX_DISTRACTORS}} false-friend lines),
 composite {{RESULT_NOISE_SEMANTIC}} vs. {{RESULT_NOISE_LEXICAL}} — because at the
 tight retrieval budget its sub-word overlap still ranks the gold line first

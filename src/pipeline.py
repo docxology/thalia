@@ -81,6 +81,7 @@ class Pipeline:
         self._lm = lm
         self._episodic_store = episodic_store
         self._memory_gate_ref = memory_gate
+        self._owns_store = episodic_store is None and memory_gate is None
         self._steps: list[PipelineStep] = []
         self._inspector: Inspector | None = None
         self._retriever: Retriever | None = None
@@ -252,6 +253,8 @@ class Pipeline:
             ctx = step.fn(ctx)
             self._intermediates.append((step.name, deepcopy(ctx)))
 
+        # ``Pipeline`` intentionally supports partial stage chains. Preserve that
+        # capability in the result schema instead of pretending omitted stages ran.
         return HarnessOutput(
             answer=ctx.answer,
             reasoning_trace=ctx.reasoning_trace,
@@ -263,6 +266,26 @@ class Pipeline:
             delivery_mode=ctx.delivery_mode,
             inspector_metadata=ctx.metadata,
         )
+
+    def close(self) -> None:
+        """Close a store created by this pipeline, never a caller-owned store."""
+        if self._owns_store and self._memory_gate is not None:
+            self._memory_gate.store.close()
+
+    def __enter__(self) -> "Pipeline":
+        """Return the pipeline for context-managed execution."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+        """Close an owned store when leaving a context."""
+        self.close()
+
+    def __del__(self) -> None:  # pragma: no cover - interpreter safety net
+        """Best-effort cleanup for callers that do not use the context manager."""
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 __all__ = ["Pipeline", "PipelineStep", "PipelineContext"]

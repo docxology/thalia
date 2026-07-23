@@ -101,6 +101,32 @@ class TestPureAdapterHelpers:
         assert ollama_model_available(model="gemma3:4b", api_base="http://localhost:1") is False
 
 
+class TestLiveEvaluationAccounting:
+    def test_balanced_subset_is_capacity_aware_and_deterministic(self):
+        from collections import Counter
+
+        from src.dspy_runtime.live_eval import _balanced_research_subset
+
+        subset = _balanced_research_subset(7)
+        repeat = _balanced_research_subset(7)
+        assert [example.example_id for example in subset] == [example.example_id for example in repeat]
+        counts = Counter(example.task_category for example in subset)
+        assert len(subset) == 7
+        assert max(counts.values()) - min(counts.values()) <= 1
+
+    def test_balanced_subset_caps_at_available_examples(self):
+        from src.dspy_runtime.live_eval import _balanced_research_subset
+
+        assert len(_balanced_research_subset(10_000)) == 24
+
+    @pytest.mark.parametrize("limit", [0, -1, True, 1.5])
+    def test_balanced_subset_rejects_invalid_limits(self, limit):
+        from src.dspy_runtime.live_eval import _balanced_research_subset
+
+        with pytest.raises(ValueError, match="positive integer"):
+            _balanced_research_subset(limit)
+
+
 class TestRealDspyRuntime:
     """Exercises genuine dspy objects end-to-end (real Predict + real optimizer)."""
 

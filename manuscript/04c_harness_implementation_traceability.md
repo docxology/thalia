@@ -1,12 +1,49 @@
-# Harness Design: Implementation Traceability {#sec:harness-implementation-traceability}
+# Formalism-to-Code Traceability {#sec:harness-implementation-traceability}
 
 ## Implementation-to-method traceability {#sec:method-traceability}
 
-The methods above are intentionally named the same way in code, tests, and
-generated artifacts. `src/signatures/` defines the payloads; `src/stages/` and
-`src/compiler/` implement the contract; `src/evaluation/` constructs the fixed
-dataset and diagnostic bundle; `src/figures/` (plots, diagrams, manifest) renders the figures; and
-`src/manuscript_variables.py` emits the manuscript numbers. The project-local
-scripts are thin orchestrators around those modules. This traceability keeps the
-paper from drifting into a design essay: every named method has a code path, a
-test path, and, where applicable, a figure or generated token.
+The method names are not merely a parallel vocabulary. The publication ledger
+requires every formal object to declare its equation, implementation symbol,
+test anchor, unit, estimand, dependencies, invariants, and manuscript section.
+The validator resolves Python symbols with the AST, confirms test and section
+paths, checks equation labels, and validates the composition edges. A passing
+status means that the declared references are resolvable; it does not prove the
+scientific assumptions or confer population validity.
+
+The generated registry currently reports {{RESULT_FORMALISM_COUNT}} formal objects,
+{{RESULT_TRACEABILITY_EDGE_COUNT}} composition edges, and {{RESULT_CLAIM_COUNT}}
+audited claims (status: `{{RESULT_TRACEABILITY_STATUS}}`). The table is injected
+from `data/paper_audit.yaml` and serialized as
+`output/reports/formalism_traceability.json`; it is therefore regenerated with the
+same command that hydrates all manuscript variables.
+
+{{FORMALISM_TRACEABILITY_TABLE}}
+
+## Composition semantics {#sec:formalism-composition}
+
+The graph makes three different relations explicit. First, the Inspector's
+lexical relevance and coarse partitioning define the candidate corpus presented to
+BM25 and the hashing-cosine lane. Second, ranked candidates are fused, optionally
+recency-adjusted and diversity-reranked, then passed through the evidence budget
+contract. Third, answer token-F1, citation-support, and evidence-count efficiency
+compose into the fixed per-example metric. These are dataflow dependencies, not
+causal claims: a downstream score cannot show that an upstream component caused a
+difference without a separately designed intervention.
+
+## From code to evidence to prose {#sec:traceability-evidence}
+
+`src/signatures/` defines typed payloads; `src/stages/` and `src/retrieval/`
+implement the stage functions; `src/compiler/metrics.py` defines score components;
+`src/evaluation/` constructs datasets, ledgers, and statistical summaries;
+`src/figures/` renders figures from validated aggregates; and
+`src/manuscript_variables.py` emits the quantitative tokens. The project scripts
+remain thin orchestrators. Generated JSON, JSONL, figures, captions, and PDF are
+downstream evidence artifacts, while the registry is the bridge that makes the
+formalism-to-code relationship inspectable before rendering.
+
+The evidence boundary remains explicit: deterministic contracts are tested locally;
+synthetic evaluations describe the declared finite generated set; external
+benchmark rows identify their input by size and SHA-256; and neural rows retain
+model digests and generation options. A resolved anchor is necessary for
+scholarship, but it is not sufficient for semantic validity, causal identification,
+or generalization.

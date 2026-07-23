@@ -18,7 +18,14 @@ from .compiler.metrics import (
     _EFFICIENCY_SCALE,
 )
 from .compiler.mipro import MIPROCompiler
-from .config import HarnessConfig, default_config
+from .config import (
+    DEFAULT_CONFIDENCE_LEVEL,
+    NUM_RUNTIME_STAGES,
+    NUM_TOTAL_STAGES,
+    HarnessConfig,
+    default_config,
+)
+from .figures.manifest import BACKEND_FIGURE_WIDTH_PERCENT
 from .retrieval.fusion import DEFAULT_LEXICAL_WEIGHT, DEFAULT_SEMANTIC_WEIGHT
 from .retrieval.lexical import DEFAULT_B, DEFAULT_K1
 from .evaluation import (
@@ -31,7 +38,11 @@ from .evaluation import (
     noise_scaling_experiment,
     run_full_eval,
 )
+from .evaluation.budget import TIGHT_MAX_EVIDENCE, TIGHT_TOP_K
 from .harness import build_run_fn
+from .formalism_traceability import load_and_validate_traceability, traceability_markdown
+from .manuscript_integrity import load_paper_audit
+from .signatures import TaskCategory
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _NEURAL_EVAL_PATH = _DATA_DIR / "neural_eval.json"
@@ -40,6 +51,9 @@ _INJECTION_EVAL_PATH = _DATA_DIR / "injection_eval.json"
 _LME_PATH = _DATA_DIR / "longmemeval_results.json"
 _LME_BN_PATH = _DATA_DIR / "longmemeval_bottleneck.json"
 _OPENROUTER_EVAL_PATH = _DATA_DIR / "openrouter_eval.json"
+_EVAL_RESULTS_PATH = _DATA_DIR.parent / "output" / "data" / "eval_results.json"
+_SEED_SENSITIVITY_PATH = _DATA_DIR.parent / "output" / "data" / "seed_sensitivity.json"
+_COMPILER_GENERALIZATION_PATH = _DATA_DIR.parent / "output" / "data" / "compiler_generalization.json"
 
 
 def _fmt(value: float, places: int = 3) -> str:
@@ -52,7 +66,7 @@ def _coverage_gate() -> int:
     try:
         import tomllib  # Python >= 3.11
     except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
-        import tomli as tomllib  # type: ignore[no-redef]
+        import tomli as tomllib  # type: ignore[import-not-found,no-redef]
 
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text())
@@ -84,6 +98,19 @@ def _load_learned_eval() -> dict:
     return json.loads(_LEARNED_EVAL_PATH.read_text())
 
 
+def _load_generated_eval(path: Path, command: str) -> dict:
+    """Load a generated aggregate and fail closed when its lane was skipped."""
+    if not path.exists():
+        raise FileNotFoundError(f"{path} is missing; regenerate with `{command}` before manuscript generation.")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"generated aggregate {path} is unreadable: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"generated aggregate {path} must contain a JSON object")
+    return payload
+
+
 def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
     """Generate the full ``{{TOKEN}} -> value`` map for the manuscript.
 
@@ -96,8 +123,20 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         evaluation results, the retriever comparison, and the compiled optimum.
     """
     config = config or default_config()
+    audit_ledger = load_paper_audit()
+    traceability = load_and_validate_traceability()
+    if traceability["status"] != "pass":
+        raise ValueError(f"formalism traceability failed: {traceability['issues']}")
     results = run_full_eval(config)
     comparison = results["retriever_comparison"]
+    seed_sensitivity = _load_generated_eval(
+        _SEED_SENSITIVITY_PATH,
+        "uv run --project . --extra dev python scripts/run_seed_sensitivity.py",
+    )
+    compiler_generalization = _load_generated_eval(
+        _COMPILER_GENERALIZATION_PATH,
+        "uv run --project . --extra dev python scripts/run_compiler_generalization.py",
+    )
 
     # Noise-regime endpoint: at the highest distractor level the lexical and the
     # hashing-surrogate "semantic" lanes diverge. Exposing these as tokens binds
@@ -117,7 +156,11 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "CONFIG_MAX_EVIDENCE": str(config.max_evidence),
         "CONFIG_RRF_K": str(config.rrf_k),
         "CONFIG_CONTEXT_BUDGET": str(config.context_budget_tokens),
-        "CONFIG_NUM_STAGES": "5",
+        "CONFIG_NUM_STAGES": str(NUM_TOTAL_STAGES),
+        "CONFIG_NUM_RUNTIME_STAGES": str(NUM_RUNTIME_STAGES),
+        "CONFIG_NUM_CATEGORIES": str(len(TaskCategory)),
+        "CONFIG_TIGHT_TOP_K": str(TIGHT_TOP_K),
+        "CONFIG_TIGHT_MAX_EVIDENCE": str(TIGHT_MAX_EVIDENCE),
         # Algorithm constants sourced from code so the prose/equations cannot drift.
         "CONFIG_WEIGHT_ACC": _fmt(ACCURACY_WEIGHT, 1),
         "CONFIG_WEIGHT_GROUND": _fmt(GROUNDING_WEIGHT, 1),
@@ -128,9 +171,17 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "CONFIG_BM25_K1": _fmt(DEFAULT_K1, 1),
         "CONFIG_BM25_B": _fmt(DEFAULT_B, 2),
         "CONFIG_ADAPTIVE_RATIO": str(config.adaptive_window_ratio),
-        "CONFIG_CI_LEVEL": "95",
-        "CONFIG_BACKEND_FIGURE_WIDTH": "75",
+        "CONFIG_CI_LEVEL": str(round(DEFAULT_CONFIDENCE_LEVEL * 100)),
+        "CONFIG_BACKEND_FIGURE_WIDTH": str(BACKEND_FIGURE_WIDTH_PERCENT),
         "CONFIG_COV_GATE": str(_coverage_gate()),
+        # The formalism graph is a generated manuscript input, not a hand-maintained
+        # claim.  The table itself is injected below so code/test anchors stay in
+        # lock-step with the validated registry.
+        "RESULT_FORMALISM_COUNT": str(traceability["n_formalisms"]),
+        "RESULT_TRACEABILITY_EDGE_COUNT": str(traceability["n_connections"]),
+        "RESULT_CLAIM_COUNT": str(traceability["n_claims"]),
+        "RESULT_TRACEABILITY_STATUS": str(traceability["status"]),
+        "FORMALISM_TRACEABILITY_TABLE": traceability_markdown(audit_ledger),
         # Dataset / headline results
         "RESULT_NUM_EXAMPLES": str(results["n_examples"]),
         "RESULT_COMPOSITE": _fmt(results["composite"]),
@@ -186,6 +237,99 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_LARGE_PER_CAT": str(large["per_category"]),
             "RESULT_LARGE_COMPOSITE": _fmt(large["composite_mean"]),
             "RESULT_LARGE_COMPOSITE_CI": f"[{_fmt(large['composite_lo'])}, {_fmt(large['composite_hi'])}]",
+            "RESULT_LARGE_ACCURACY": _fmt(large["accuracy_mean"]),
+            "RESULT_LARGE_ACCURACY_CI": f"[{_fmt(large['accuracy_lo'])}, {_fmt(large['accuracy_hi'])}]",
+        }
+    )
+
+    # Research-audit accounting comes from the generated bundle when available;
+    # the formula fallback keeps token generation useful before the first run.
+    audit: dict = {}
+    if _EVAL_RESULTS_PATH.exists():
+        bundle = json.loads(_EVAL_RESULTS_PATH.read_text())
+        audit = bundle.get("statistical_scaling", {})
+    audit_accounting = audit.get("accounting", {})
+    audit_contract = audit.get("analysis_contract", {})
+    audit_sizes = audit.get("per_category_values", [10, 25, 50, 100])
+    audit_seeds = audit.get("seed_values", [0, 1, 2, 3, 4])
+    audit_strata = audit_accounting.get("strata", [])
+    audit_unique = audit_accounting.get("n_unique_examples", sum(audit_sizes) * 6 * len(audit_seeds))
+    audit_methods = audit_accounting.get("n_method_evaluations", audit_unique * 3)
+    variables.update(
+        {
+            "RESULT_AUDIT_UNIQUE_N": str(audit_unique),
+            "RESULT_AUDIT_METHOD_N": str(audit_methods),
+            "RESULT_AUDIT_CONFIDENCE": str(round(float(audit.get("confidence", DEFAULT_CONFIDENCE_LEVEL)) * 100)),
+            "RESULT_AUDIT_FAMILY_SIZE": str(audit.get("comparison_family", {}).get("size", len(audit_sizes) * 2)),
+            "RESULT_AUDIT_DATASET_FINGERPRINT": str(audit.get("dataset_fingerprint", "pending")),
+            "RESULT_AUDIT_SOURCE_FINGERPRINT": str(audit.get("source_fingerprint", "pending")),
+            "RESULT_AUDIT_SIZES": "(" + ", ".join(str(value) for value in audit_sizes) + ")",
+            "RESULT_AUDIT_SEED_COUNT": str(len(audit_seeds)),
+            "RESULT_AUDIT_CATEGORY_COUNT": str(audit.get("categories", audit_accounting.get("categories", len(TaskCategory)))),
+            "RESULT_AUDIT_STRATA_COUNT": str(len(audit_strata) or 4),
+            "RESULT_AUDIT_FAILURES": str(audit_accounting.get("n_failed", 0)),
+            "RESULT_AUDIT_INTERVAL_LABEL": str(
+                audit_contract.get("interval_interpretation", "descriptive resampling interval")
+            ),
+            "RESULT_AUDIT_CLUSTER_WARNING": (
+                "small-cluster warning applies"
+                if audit_contract.get("small_cluster_warning", len(audit_seeds) < 10)
+                else "cluster count is above the diagnostic warning threshold"
+            ),
+        }
+    )
+
+    # Pre-registered extensions remain separate from the five-seed headline and
+    # are read from validated generated aggregates rather than recomputed prose.
+    seed_accounting = seed_sensitivity.get("sample_accounting") or {}
+    seed_pairs = seed_sensitivity.get("paired_comparisons") or {}
+    compiler_rows = compiler_generalization.get("rows") or []
+    compiler_summary = compiler_generalization.get("summary") or {}
+    if not isinstance(compiler_rows, list) or not compiler_rows:
+        raise ValueError("compiler generalization aggregate must contain non-empty rows")
+    first_compiler_row = compiler_rows[0]
+    if not isinstance(first_compiler_row, dict):
+        raise ValueError("compiler generalization rows must be mappings")
+    variables.update(
+        {
+            "RESULT_SEED_SENSITIVITY_SEEDS": str(seed_sensitivity.get("n_seeds", "pending")),
+            "RESULT_SEED_SENSITIVITY_UNIQUE_N": str(seed_sensitivity.get("n_unique_examples", "pending")),
+            "RESULT_SEED_SENSITIVITY_EVALUATIONS": str(seed_accounting.get("n_evaluated", "pending")),
+            "RESULT_SEED_SENSITIVITY_WARNING": (
+                "applies" if seed_accounting.get("small_cluster_warning") else "does not apply"
+            ),
+            "RESULT_SEED_HYBRID_LEXICAL_DELTA": _fmt(
+                float(seed_pairs["hybrid_vs_lexical"]["mean_delta"])
+            ),
+            "RESULT_SEED_HYBRID_LEXICAL_P": _fmt(
+                float(seed_pairs["hybrid_vs_lexical"]["p_value"]), 3
+            ),
+            "RESULT_SEED_HYBRID_SEMANTIC_DELTA": _fmt(
+                float(seed_pairs["hybrid_vs_semantic"]["mean_delta"])
+            ),
+            "RESULT_SEED_HYBRID_SEMANTIC_P": _fmt(
+                float(seed_pairs["hybrid_vs_semantic"]["p_value"]), 3
+            ),
+            "RESULT_COMPILER_SEEDS": str(compiler_generalization.get("n_seeds", "pending")),
+            "RESULT_COMPILER_TRAIN_N": str(first_compiler_row.get("n_train", "pending")),
+            "RESULT_COMPILER_HOLDOUT_N": str(first_compiler_row.get("n_holdout", "pending")),
+            "RESULT_COMPILER_ACCOUNTED_N": str(
+                (compiler_generalization.get("sample_accounting") or {}).get("n_evaluated", "pending")
+            ),
+            "RESULT_COMPILER_CANDIDATE_N": str(
+                sum(
+                    int(row[method].get("n_candidates", 0))
+                    for row in compiler_rows
+                    if isinstance(row, dict)
+                    for method in ("mipro", "gepa")
+                    if isinstance(row.get(method), dict)
+                )
+            ),
+            "RESULT_COMPILER_BASELINE_HOLDOUT": _fmt(float(compiler_summary["baseline"]["mean_holdout_composite"])),
+            "RESULT_COMPILER_MIPRO_HOLDOUT": _fmt(float(compiler_summary["mipro"]["mean_holdout_composite"])),
+            "RESULT_COMPILER_MIPRO_DELTA": _fmt(float(compiler_summary["mipro"]["mean_holdout_delta"])),
+            "RESULT_COMPILER_GEPA_HOLDOUT": _fmt(float(compiler_summary["gepa"]["mean_holdout_composite"])),
+            "RESULT_COMPILER_GEPA_DELTA": _fmt(float(compiler_summary["gepa"]["mean_holdout_delta"])),
         }
     )
 
@@ -197,6 +341,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_LME_N_EXT": str(lme["n_extractive"]),
             "RESULT_LME_N_NEURAL": str(lme["n_neural"]),
             "RESULT_LME_MODEL": str(lme["neural_model"]),
+            "RESULT_LME_BENCHMARK": str((lme.get("sample_accounting") or {}).get("benchmark", "external benchmark")),
             "RESULT_LME_EXT_ACC": _fmt(lme["extractive_accuracy"][0]),
             "RESULT_LME_EXT_ACC_CI": ci(lme["extractive_accuracy"]),
             "RESULT_LME_NEURAL_ACC": _fmt(lme["neural_accuracy"][0]),
@@ -205,6 +350,10 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_LME_GROUNDING_CI": ci(lme["extractive_grounding"]),
             # Derived neural/extractive accuracy ratio, so the "~Nx" prose tracks the data.
             "RESULT_LME_NEURAL_RATIO": _fmt(lme["neural_accuracy"][0] / lme["extractive_accuracy"][0], 1),
+            "RESULT_LME_BENCHMARK_SHA256": str((lme.get("benchmark_provenance") or {}).get("sha256", "pending")),
+            "RESULT_LME_BENCHMARK_BYTES": str((lme.get("benchmark_provenance") or {}).get("size_bytes", "pending")),
+            "RESULT_LME_MODEL_DIGEST": str((lme.get("neural_model_metadata") or {}).get("digest", "pending")),
+            "RESULT_LME_BENCHMARK_STATUS": str((lme.get("sample_accounting") or {}).get("neural", {}).get("status", "unknown")),
         }
     )
 
@@ -213,10 +362,12 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
     lo, hi = str(min(bn["sweep_values"])), str(max(bn["sweep_values"]))
     bn_neural = {str(k): v for k, v in bn["neural_by_maxwindows"].items()}
     bn_grnd = {str(k): v for k, v in bn["extractive_grounding_by_maxwindows"].items()}
+    bn_accounting = (bn.get("sample_accounting") or {}).get("neural") or {}
     variables.update(
         {
             "RESULT_BN_N": str(bn["n_ranking"]),
             "RESULT_BN_N_NEURAL": str(bn["n_neural"]),
+            "RESULT_BN_ACCOUNTING_NEURAL_N": str(bn_accounting.get("n_evaluated", bn["n_neural"])),
             "RESULT_BN_RANKING_RECALL": _fmt(bn["ranking_recall_at_10"], 2),
             "RESULT_BN_INSPECTOR_RECALL": _fmt(bn["inspector_recall"], 2),
             "RESULT_BN_MAXWIN_LO": lo,
@@ -227,6 +378,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_BN_NEURAL_ACC_LO": _fmt(bn_neural[lo]["accuracy"]),
             "RESULT_BN_NEURAL_ACC_HI": _fmt(bn_neural[hi]["accuracy"]),
             "RESULT_BN_ADAPTIVE_ACC": _fmt(bn["neural_adaptive"]["accuracy"]),
+            "RESULT_BN_NEURAL_RATIO": _fmt(bn_neural[hi]["accuracy"] / bn_neural[lo]["accuracy"], 1),
         }
     )
     # Optional learned-embedder per-mode probe. Older committed bottleneck
@@ -269,6 +421,14 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_NEURAL_CODE_F1": _fmt(neural["category_neural_f1"]["code"]),
             "RESULT_EXTRACTIVE_MULTI_F1": _fmt(neural["category_extractive_f1"]["multi_session"]),
             "RESULT_NEURAL_MULTI_F1": _fmt(neural["category_neural_f1"]["multi_session"]),
+            "RESULT_NEURAL_PAIRED_DELTA": _fmt(neural["paired_neural_minus_extractive"]["mean_delta"]),
+            "RESULT_NEURAL_PAIRED_CI": (
+                f"[{_fmt(neural['paired_neural_minus_extractive']['low'])}, "
+                f"{_fmt(neural['paired_neural_minus_extractive']['high'])}]"
+            ),
+            "RESULT_NEURAL_PAIRED_P": _fmt(neural["paired_neural_minus_extractive"]["p_value"], 3),
+            "RESULT_NEURAL_TEMPERATURE": str((neural.get("generation_options") or {}).get("temperature", "pending")),
+            "RESULT_NEURAL_MAX_TOKENS": str((neural.get("generation_options") or {}).get("max_tokens", "pending")),
         }
     )
 
@@ -287,6 +447,12 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
                 "RESULT_OPENROUTER_LIFT_PASS": f"{or_data['lift']['pass_delta']:+d}",
                 "RESULT_OPENROUTER_TEMPERATURE": str(or_data["temperature"]),
                 "RESULT_OPENROUTER_MAX_TOKENS": str(or_data["max_tokens"]),
+                "RESULT_OPENROUTER_RUST_EXT_F1": _fmt(or_data["extractive"]["examples"][1]["f1"]),
+                "RESULT_OPENROUTER_RUST_NEURAL_F1": _fmt(or_data["neural"]["examples"][1]["f1"]),
+                "RESULT_OPENROUTER_BUDGET_EXT_F1": _fmt(or_data["extractive"]["examples"][3]["f1"]),
+                "RESULT_OPENROUTER_BUDGET_NEURAL_F1": _fmt(or_data["neural"]["examples"][3]["f1"]),
+                "RESULT_OPENROUTER_MULTIHOP_EXT_F1": _fmt(or_data["extractive"]["examples"][2]["f1"]),
+                "RESULT_OPENROUTER_MULTIHOP_NEURAL_F1": _fmt(or_data["neural"]["examples"][2]["f1"]),
             }
         )
 
@@ -298,6 +464,16 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_NUM_PROBES": str(learned["n_probes"]),
             "RESULT_SURROGATE_RECALL": _fmt(learned["surrogate_recall_at_1"], 2),
             "RESULT_LEARNED_RECALL": _fmt(learned["learned_recall_at_1"], 2),
+            "RESULT_SURROGATE_RECALL_CI": (
+                f"[{_fmt(learned['surrogate_recall_ci'][1], 2)}, {_fmt(learned['surrogate_recall_ci'][2], 2)}]"
+            ),
+            "RESULT_LEARNED_RECALL_CI": (
+                f"[{_fmt(learned['learned_recall_ci'][1], 2)}, {_fmt(learned['learned_recall_ci'][2], 2)}]"
+            ),
+            "RESULT_EMBED_PAIRED_P": _fmt(learned["paired_binary_comparison"]["p_value"], 3),
+            "RESULT_EMBED_MODEL_DIGEST": str((learned.get("model_metadata") or {}).get("digest", "pending")),
+            "RESULT_EMBED_QUERY_PREFIX": str(learned.get("embedding_query_prefix", "pending")),
+            "RESULT_EMBED_DOCUMENT_PREFIX": str(learned.get("embedding_document_prefix", "pending")),
         }
     )
     return variables

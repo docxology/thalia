@@ -70,6 +70,7 @@ class AutoHarness:
             episodic_store=episodic_store,
             memory_md=self.memory_snapshot.memory_md,
         )
+        self._owns_store = episodic_store is None
         self._turn = start_turn
 
     def forward(
@@ -105,6 +106,26 @@ class AutoHarness:
         """Convenience adapter: run an :class:`EvalExample`-shaped object."""
         return self.forward(query=example.query, session_history=example.session_history)
 
+    def close(self) -> None:
+        """Close the default-owned episodic store, leaving caller stores open."""
+        if self._owns_store:
+            self.memory_gate.store.close()
+
+    def __enter__(self) -> "AutoHarness":
+        """Return the harness for context-managed resource ownership."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+        """Close an owned store when leaving a context."""
+        self.close()
+
+    def __del__(self) -> None:  # pragma: no cover - interpreter safety net
+        """Best-effort cleanup for callers that do not use the context manager."""
+        try:
+            self.close()
+        except Exception:
+            pass
+
 
 def build_run_fn(
     config: HarnessConfig,
@@ -112,7 +133,8 @@ def build_run_fn(
 ) -> Callable[[object], HarnessOutput]:
     """Return an ``example -> HarnessOutput`` runner with a fresh harness per call."""
     def run(example) -> HarnessOutput:
-        return AutoHarness(config=config, lm=lm).run(example)
+        with AutoHarness(config=config, lm=lm) as harness:
+            return harness.run(example)
 
     return run
 

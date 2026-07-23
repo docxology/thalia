@@ -8,6 +8,7 @@ from ..compiler.gepa import GEPAOptimizer
 from ..compiler.metrics import EvalExample, answer_score, evaluate, grounding_score, efficiency_score
 from ..config import HarnessConfig, default_config
 from ..harness import AutoHarness, build_run_fn
+from ..signatures import TaskCategory
 from ..stages.inspector import Inspector
 from .budget import lexical_only, metric_sweep, semantic_only, tight_eval_config
 from .dataset import build_demo_dataset, with_noise
@@ -99,7 +100,8 @@ def evidence_funnel(
     for ex in dataset:
         n_lines = len([ln for ln in ex.session_history.splitlines() if ln.strip()])
         n_windows = len(inspector(session_history=ex.session_history, query=ex.query)["evidence_windows"])
-        out = AutoHarness(config=config).run(ex)
+        with AutoHarness(config=config) as harness:
+            out = harness.run(ex)
         lines += n_lines
         windows += n_windows
         ranked += len(out.ranked_evidence)
@@ -173,16 +175,16 @@ def pipeline_evidence_flow(
     config = config or default_config()
     rows: list[dict] = []
     for ex in dataset:
-        pipe = Pipeline(config=config).with_all_stages()
-        pipe.run(query=ex.query, session_history=ex.session_history)
-        intermediates = {name: ctx for name, ctx in pipe.intermediates}
+        with Pipeline(config=config).with_all_stages() as pipe:
+            pipe.run(query=ex.query, session_history=ex.session_history)
+            intermediates = {name: ctx for name, ctx in pipe.intermediates}
         inspector_ctx = intermediates.get("inspector")
         retriever_ctx = intermediates.get("retriever")
         reasoner_ctx = intermediates.get("reasoner")
         rows.append(
             {
                 "query": ex.query,
-                "task_category": ex.task_category.value if hasattr(ex.task_category, "value") else str(ex.task_category),
+                "task_category": (ex.task_category or TaskCategory.SINGLE_SESSION).value,
                 "n_windows": len(inspector_ctx.evidence_windows) if inspector_ctx is not None else 0,
                 "n_ranked": len(retriever_ctx.ranked_evidence) if retriever_ctx is not None else 0,
                 "n_cited": len(reasoner_ctx.evidence_citations) if reasoner_ctx is not None else 0,

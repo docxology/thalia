@@ -18,7 +18,7 @@ takes the principle that prompts are parameterized code: every stage is a typed
 *signature* specifying *what* to produce, not *how*. From Recursive Language
 Models [@zhang2025rlm] it takes context-as-external-state: an Inspector loads
 session history into a small REPL, greps for query-anchored evidence, and
-forwards only compact windows — never the full context. From the agentic-search
+forwards only compact windows rather than the full transcript. From the agentic-search
 study [@sen2026grep] it takes lexical-first hybrid retrieval: a BM25/grep lane,
 a semantic lane, and weighted Reciprocal Rank Fusion [@cormack2009rrf]. From the
 memory-consolidation-fault study [@zhang2026memory] it takes episodic-first
@@ -33,7 +33,7 @@ implemented as {{CONFIG_NUM_STAGES}} composable stages, each a first-class
 signature backed by a machine-readable `SKILL.md`, with the language-model layer
 abstracted behind a protocol whose default is a deterministic extractive
 responder. This makes the entire harness runnable and testable offline with zero
-mocks: the suite exercises every stage on real data and SQLite, pins published
+mocks: the suite exercises every stage on generated examples and real SQLite, pins published
 numbers through generated tokens, and validates source-to-render path hygiene. The
 method is not a single heuristic but a contract stack: typed signatures constrain
 interfaces; deterministic routing chooses reasoning style; retrieval lanes expose
@@ -49,22 +49,24 @@ this easy set — an auditable trace, not a measured win. The genuinely adaptive
 is exercised separately by a real `dspy.BootstrapFewShot` optimiser over a real
 `dspy.Predict` program; and dropping a real neural model ({{RESULT_NEURAL_MODEL}},
 served locally through Ollama) into the Reasoner slot — every other stage held
-fixed — raises mean
-token-F1 from {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}},
-concentrated on the categories extraction cannot synthesise. (A second, harder
-cloud validation against `tencent/hy3-preview` via OpenRouter is reported in
+fixed — changes mean
+token-F1 from {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}} on
+the expanded local comparison; the paired result is mixed rather than a guaranteed
+lift, with gains concentrated on categories extraction cannot synthesise. (A second, harder
+cloud validation against `{{RESULT_OPENROUTER_MODEL}}` via OpenRouter is reported in
 [@sec:eval-openrouter]: there the neural model *underperforms* on token-F1 because
-concise correct answers are penalised by the metric, while winning the synthesis
-and multi-hop cases extraction structurally cannot — the same LM-bounded-ceiling
-story, not a second measured lift.) Beyond the synthetic set we run the **real
-LongMemEval_S benchmark** [@wu2025longmemeval] ({{RESULT_LME_N_EXT}} questions over
-~115k-token haystacks): accuracy collapses (extractive {{RESULT_LME_EXT_ACC}}, neural
+concise answers can be penalised by the metric, while receiving higher token-F1 on
+the synthesis and multi-hop cases in this finite probe — the same LM-dependent
+story, not a second measured lift.) Beyond the synthetic set we run the **external
+{{RESULT_LME_BENCHMARK}} benchmark** [@wu2025longmemeval] ({{RESULT_LME_N_EXT}} questions over
+long multi-session haystacks): accuracy falls sharply (extractive {{RESULT_LME_EXT_ACC}}, neural
 {{RESULT_LME_NEURAL_ACC}}; {{CONFIG_CI_LEVEL}}% bootstrap CIs), and — localising the failure rather than
-assuming it — we show the bottleneck is the Inspector's context-narrowing, not retrieval
-ranking (the committed full-haystack aggregate recovers the evidence; per-mode
+assuming it — the retained diagnostic localises a larger observed loss to the
+Inspector's context-narrowing than to retrieval ranking (the committed
+full-haystack aggregate reaches the evidence in the measured slice; per-mode
 learned-embedder rows remain gated on a working local embedder). An opt-in **adaptive Inspector**
-that scales the narrowing budget with context size then recovers most of that gap
-automatically on the neural subset — up to the manually-tuned best
+that scales the narrowing budget with context size then reduces part of that observed gap
+under the fixed adaptive policy on the neural subset — up to the manually-tuned best
 ({{RESULT_BN_NEURAL_ACC_LO}} → {{RESULT_BN_ADAPTIVE_ACC}}) — while remaining a bit-for-bit
 no-op on compact contexts. We are explicit about two scope boundaries: the
 default extractive responder bounds span-level accuracy, and the local semantic

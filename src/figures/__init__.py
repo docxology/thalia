@@ -36,6 +36,8 @@ from .plots import (
     plot_retriever_comparison,
     plot_rrf_weight_sensitivity,
     plot_scaling_ci,
+    plot_sample_size_precision,
+    plot_statistical_audit,
 )
 
 __all__ = [
@@ -52,6 +54,8 @@ __all__ = [
     "plot_longmemeval",
     "plot_bottleneck",
     "plot_scaling_ci",
+    "plot_sample_size_precision",
+    "plot_statistical_audit",
     "plot_orchestration_value",
     "plot_paraphrase_retrieval",
     "plot_retriever_comparison",

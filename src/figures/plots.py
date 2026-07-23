@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from ..config import HarnessConfig
+from matplotlib.lines import Line2D
+
+from ..config import DEFAULT_CONFIDENCE_LEVEL, HarnessConfig
+from ..compiler.metrics import ACCURACY_WEIGHT, EFFICIENCY_WEIGHT, GROUNDING_WEIGHT
 from ..evaluation import (
     RetrieverComparison,
     consolidation_simulation,
@@ -22,6 +26,7 @@ from ..evaluation.schemas import (
     LongMemEvalPayload,
     NeuralEvalPayload,
     OrchestrationBaseline,
+    SampleSizePayload,
     ScalingCiPayload,
 )
 from ..figure_style import EXPORT_DPI, PALETTE, annotate_bars as _annotate_bars
@@ -137,7 +142,7 @@ def plot_compiler_convergence(
         labels = ["0.6·acc", "0.3·grnd", "0.1·eff"]
         vals = [0.6 * components["accuracy"], 0.3 * components["grounding"], 0.1 * components["efficiency"]]
         colors = [PALETTE["lexical"], PALETTE["hybrid"], PALETTE["accent"]]
-        inset = ax.inset_axes([0.6, 0.1, 0.36, 0.42])
+        inset = ax.inset_axes((0.6, 0.1, 0.36, 0.42))
         pos = list(range(len(labels)))
         bars = inset.bar(pos, vals, color=colors, edgecolor=PALETTE["ink"], linewidth=0.4)
         for bar, v in zip(bars, vals):
@@ -331,7 +336,7 @@ def plot_noise_scaling(output_path: str | Path) -> Path:
     # surrogate), so a solid hybrid line would render invisibly under lexical. Give
     # each lane a distinct style/marker and dodge the end-of-line value labels so
     # the overlap is legible rather than hidden.
-    style = {
+    style: dict[str, dict[str, Any]] = {
         "lexical": dict(linestyle="-", marker="o", linewidth=1.8, zorder=2),
         "semantic": dict(linestyle="-", marker="s", linewidth=1.8, zorder=2),
         "hybrid": dict(linestyle="--", marker="x", linewidth=1.8, zorder=3),
@@ -429,12 +434,16 @@ def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) ->
     """
     path = _prepare(output_path)
     rows = sorted(data.rows, key=lambda r: (r.neural_f1 - r.extractive_f1, r.category))
-    labels = [_pretty(r.category) for r in rows]
+    category_codes = {
+        category: "".join(part[0] for part in category.split("_"))[:3].upper()
+        for category in {row.category for row in rows}
+    }
+    labels = [f"{index + 1}\n{category_codes[r.category]}" for index, r in enumerate(rows)]
     ext = [r.extractive_f1 for r in rows]
     neu = [r.neural_f1 for r in rows]
     x = list(range(len(rows)))
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.2))
+    fig, ax = plt.subplots(figsize=(9.5, 4.4))
     for i, (e, n) in enumerate(zip(ext, neu)):
         ax.plot([i, i], [e, n], color="#BBBBBB", linewidth=1.2, zorder=1)
     ax.scatter(x, ext, color=PALETTE["muted"], edgecolor=PALETTE["ink"], linewidth=0.5, s=48, label="extractive")
@@ -449,13 +458,34 @@ def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) ->
         label=f"neural ({data.model})",
     )
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=25, ha="right")
+    ax.set_xticklabels(labels, rotation=0, ha="center", fontsize=8)
     ax.set_ylabel("Token-F1 vs gold answer")
+    ax.set_xlabel("Paired example index (category code below index)")
     ax.set_ylim(0, 1)
-    ax.set_title(f"Backend comparison by example (n={data.n})")
+    summary = data.extractive_statistics or data.neural_statistics
+    confidence = int(summary.confidence * 100) if summary else int(DEFAULT_CONFIDENCE_LEVEL * 100)
+    ax.set_title(f"Paired backend comparison by example (n={data.n}; {confidence}% CI)")
     me, mn = data.mean_extractive_f1, data.mean_neural_f1
     ax.axhline(me, color=PALETTE["muted"], linestyle=":", linewidth=1.0, zorder=0)
     ax.axhline(mn, color=PALETTE["semantic"], linestyle=":", linewidth=1.0, zorder=0)
+    if data.extractive_statistics:
+        ax.axhspan(
+            data.extractive_statistics.low,
+            data.extractive_statistics.high,
+            color=PALETTE["muted"],
+            alpha=0.10,
+            zorder=0,
+            label=f"extractive {int(data.extractive_statistics.confidence * 100)}% CI",
+        )
+    if data.neural_statistics:
+        ax.axhspan(
+            data.neural_statistics.low,
+            data.neural_statistics.high,
+            color=PALETTE["semantic"],
+            alpha=0.10,
+            zorder=0,
+            label=f"neural {int(data.neural_statistics.confidence * 100)}% CI",
+        )
     ax.annotate(
         f"mean token-F1: extractive {me:.3f} -> neural {mn:.3f}",
         (0.02, 0.95),
@@ -466,6 +496,18 @@ def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) ->
         color=PALETTE["ink"],
         bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#DDDDDD", alpha=0.9),
     )
+    if data.paired_comparison:
+        paired = data.paired_comparison
+        ax.annotate(
+            f"paired Δ={float(paired.get('mean_delta', mn - me)):+.3f}; "
+            f"p={float(paired.get('p_value', 1.0)):.3f}",
+            (0.02, 0.87),
+            xycoords="axes fraction",
+            ha="left",
+            va="top",
+            fontsize=8.5,
+            color=PALETTE["ink"],
+        )
     ax.grid(axis="y")
     ax.legend(loc="lower right")
     fig.tight_layout()
@@ -485,8 +527,13 @@ def plot_bottleneck(data: BottleneckPayload, output_path: str | Path) -> Path:
     path = _prepare(output_path)
     mws = sorted(data.extractive_grounding_by_maxwindows)
     grounding = [data.extractive_grounding_by_maxwindows[k] for k in mws]
-    nmws = sorted(data.neural_by_maxwindows)
-    neural_acc = [data.neural_by_maxwindows[mw].accuracy for mw in nmws]
+    neural_points = [
+        (mw, row.accuracy)
+        for mw, row in data.neural_by_maxwindows.items()
+        if row.accuracy is not None
+    ]
+    nmws = [mw for mw, _ in sorted(neural_points)]
+    neural_acc = [accuracy for _, accuracy in sorted(neural_points)]
 
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
     ax.plot(mws, grounding, marker="o", color=PALETTE["hybrid"], linewidth=1.8, label="extractive grounding")
@@ -520,12 +567,12 @@ def plot_bottleneck(data: BottleneckPayload, output_path: str | Path) -> Path:
             edgecolor="white",
             linewidth=0.8,
             zorder=6,
-            label=f"adaptive Inspector (auto-tuned): {adaptive.accuracy:.3f}",
+            label=f"adaptive Inspector (fixed policy): {adaptive.accuracy:.3f}",
         )
     ax.set_xlabel("Inspector max_windows (context-narrowing budget)")
     ax.set_ylabel("Rate")
     ax.set_ylim(0, max(max(grounding), max(v for v in neural_acc if v is not None)) + 0.12)
-    ax.set_title("Widening the Inspector recovers grounding and accuracy")
+    ax.set_title("Observed effect of widening the Inspector")
     mode = data.ranking_recall_by_mode
     if mode:
         mode_text = (
@@ -553,12 +600,11 @@ def plot_bottleneck(data: BottleneckPayload, output_path: str | Path) -> Path:
 
 
 def plot_longmemeval(data: LongMemEvalPayload, output_path: str | Path) -> Path:
-    """Real LongMemEval_S: extractive vs neural accuracy + session grounding, with CIs.
+    """LongMemEval_S accuracy and session reachability on retained rows.
 
-    The headline real-data result: accuracy collapses versus the synthetic set, the
-    neural advantage becomes statistically real (CIs barely overlap), and session
-    grounding caps both — retrieval is the bottleneck on real long-context data. Data
-    from :func:`src.evaluation.longmemeval.longmemeval_eval` (committed aggregates).
+    Intervals are descriptive summaries for unequal extractive/neural samples, not
+    a formal between-model test. Session grounding is an upper-bound reachability
+    measure rather than line-level attribution.
     """
     path = _prepare(output_path)
     backends = ["Extractive", f"Neural\n({data.neural_model})"]
@@ -579,8 +625,8 @@ def plot_longmemeval(data: LongMemEvalPayload, output_path: str | Path) -> Path:
     ax.set_xticks(list(x))
     ax.set_xticklabels(backends)
     ax.set_ylim(0, max(0.55, max(gm) + 0.12))
-    ax.set_ylabel("Rate (95% bootstrap CI)")
-    ax.set_title(f"Real benchmark: LongMemEval_S (n={data.n_extractive} ext, {data.n_neural} neural)")
+    ax.set_ylabel(f"Rate ({int(data.confidence * 100)}% descriptive bootstrap interval)")
+    ax.set_title(f"LongMemEval_S retained slice (n={data.n_extractive} ext, {data.n_neural} neural)")
     ax.annotate(
         "grounding is session-level upper bound",
         (0.5, -0.18),
@@ -598,10 +644,10 @@ def plot_longmemeval(data: LongMemEvalPayload, output_path: str | Path) -> Path:
 
 
 def plot_scaling_ci(data: ScalingCiPayload, output_path: str | Path) -> Path:
-    """Per-category accuracy with 95% bootstrap CIs on the seeded large dataset.
+    """Per-category accuracy with descriptive intervals on seeded synthetic data.
 
-    The first figure in the paper with real error bars: the demo set is n=6 point
-    estimates, this is n per category with dispersion. Data from
+    The demo set is a point diagnostic, while this seeded synthetic set has
+    repeated observations. Data from
     :func:`src.evaluation.large_dataset_eval`.
     """
     path = _prepare(output_path)
@@ -618,12 +664,244 @@ def plot_scaling_ci(data: ScalingCiPayload, output_path: str | Path) -> Path:
     ax.set_yticks(list(y))
     ax.set_yticklabels(labels)
     ax.set_xlim(0, 1)
-    ax.set_xlabel("Token-F1 accuracy (95% bootstrap CI)")
-    ax.set_title(f"Per-category accuracy at scale (n={data.n}, {data.per_category}/category)")
+    ax.set_xlabel(f"Token-F1 accuracy ({int(data.confidence * 100)}% descriptive bootstrap interval)")
+    ax.set_title(f"Seeded synthetic category diagnostic (n={data.n}, {data.per_category}/category)")
     overall_accuracy = sum(means) / len(means)
     ax.axvline(overall_accuracy, color=PALETTE["accent"], linestyle="--", linewidth=1.0, zorder=1, label=f"mean accuracy {overall_accuracy:.3f}")
     ax.grid(axis="x")
     ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_sample_size_precision(data: SampleSizePayload, output_path: str | Path) -> Path:
+    """Show precision growth and paired method deltas across sample sizes.
+
+    The left panel reports method means with bootstrap intervals over multiple
+    independent seeds.  The right panel reports paired hybrid-minus-baseline
+    deltas with the same uncertainty, plus Holm-adjusted q-values.
+    This makes both sample-size accounting and inferential comparisons visible.
+    """
+    path = _prepare(output_path)
+    rows = sorted(data.rows, key=lambda row: row.n_total)
+    x = [row.n_total for row in rows]
+    colors = {"hybrid": PALETTE["hybrid"], "lexical": PALETTE["lexical"], "semantic": PALETTE["semantic"]}
+    accounting = data.accounting or {}
+    unique_examples = int(accounting.get("n_unique_examples", sum(row.n_total for row in rows)))
+    method_evaluations = int(accounting.get("n_method_evaluations", unique_examples * 3))
+    failed = int(accounting.get("n_failed", 0))
+    family = data.comparison_family or {}
+    interval_label = str(accounting.get("interval_interpretation", "descriptive resampling interval"))
+    cluster_warning = bool(accounting.get("small_cluster_warning", False))
+
+    fig, (ax_mean, ax_delta) = plt.subplots(1, 2, figsize=(10.2, 4.2), sharex=False)
+    for method in ("hybrid", "lexical", "semantic"):
+        if not all(method in row.methods for row in rows):
+            continue
+        summaries = [row.methods[method] for row in rows]
+        means = [summary.estimate for summary in summaries]
+        errors = [
+            [summary.estimate - summary.low for summary in summaries],
+            [summary.high - summary.estimate for summary in summaries],
+        ]
+        ax_mean.errorbar(
+            x,
+            means,
+            yerr=errors,
+            marker="o",
+            linewidth=1.7,
+            capsize=3,
+            color=colors[method],
+            label=method,
+        )
+    ax_mean.set_xlabel("Total unique examples (paired across methods)")
+    ax_mean.set_ylabel(f"Composite (mean ± {int(data.confidence * 100)}% descriptive interval)")
+    ax_mean.set_title("Precision diagnostic as sample size grows")
+    ax_mean.set_xticks(x)
+    ax_mean.set_ylim(0, 1)
+    ax_mean.grid(True)
+    ax_mean.legend(loc="best")
+
+    comparison_keys = ("hybrid_vs_lexical", "hybrid_vs_semantic")
+    comparison_colors = {comparison_keys[0]: PALETTE["lexical"], comparison_keys[1]: PALETTE["semantic"]}
+    labels = {comparison_keys[0]: "Hybrid − lexical", comparison_keys[1]: "Hybrid − surrogate semantic"}
+    for key in comparison_keys:
+        if not all(key in row.paired_comparisons for row in rows):
+            continue
+        comparisons = [row.paired_comparisons[key] for row in rows]
+        means = [float(comparison["mean_delta"]) for comparison in comparisons]
+        errors = [
+            [mean - float(comparison["low"]) for mean, comparison in zip(means, comparisons)],
+            [float(comparison["high"]) - mean for mean, comparison in zip(means, comparisons)],
+        ]
+        ax_delta.errorbar(
+            x,
+            means,
+            yerr=errors,
+            marker="o",
+            linewidth=1.7,
+            capsize=3,
+            color=comparison_colors[key],
+            label=labels[key],
+        )
+        last_q: float | None = None
+        for index, (n_value, mean, comparison) in enumerate(zip(x, means, comparisons)):
+            q_value = float(comparison["holm_adjusted_p_value"])
+            # Avoid printing the same correction label over every neighbouring
+            # point on a flat diagnostic curve while retaining every change and
+            # the endpoint needed to audit a non-flat future run.
+            if index < len(comparisons) - 1 and last_q is not None and q_value == last_q:
+                continue
+            ax_delta.annotate(
+                f"q={q_value:.3f}",
+                (n_value, mean),
+                textcoords="offset points",
+                xytext=(0, 8 if key == comparison_keys[0] else -15),
+                ha="center",
+                fontsize=7,
+                color=comparison_colors[key],
+            )
+            last_q = q_value
+    ax_delta.axhline(0.0, color=PALETTE["ink"], linewidth=0.8)
+    ax_delta.set_xlabel("Total unique examples (paired across methods)")
+    ax_delta.set_ylabel("Paired composite delta")
+    ax_delta.set_title("Paired comparisons (Holm-adjusted q)")
+    ax_delta.grid(True)
+    ax_delta.legend(loc="best")
+    fig.suptitle(
+        f"Seeded statistical audit: {data.categories} categories × {len(data.seed_values)} seeds; "
+        f"{data.n_boot:,} resamples",
+        y=1.08,
+        fontsize=13,
+        fontweight="semibold",
+    )
+    fig.text(
+        0.5,
+        1.015,
+        f"ledger: {unique_examples:,} unique examples · {method_evaluations:,} method evaluations · "
+        f"{failed:,} failed · Holm family m={family.get('size', '—')} · {interval_label}"
+        + (f" · WARNING: {len(data.seed_values)} seed clusters" if cluster_warning else ""),
+        ha="center",
+        va="center",
+        fontsize=8.5,
+        color=PALETTE["muted"],
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.91))
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def plot_statistical_audit(data: SampleSizePayload, output_path: str | Path) -> Path:
+    """Render exact seed-cluster paired effects by stratum.
+
+    The paired interval is computed from aligned hybrid/baseline outcomes within
+    each stratum and resamples whole seed clusters.  This is intentionally not the
+    difference between two marginal confidence limits: the figure shows the
+    comparison estimand that the paired test actually evaluates.
+    """
+    path = _prepare(output_path)
+    row = sorted(data.rows, key=lambda item: item.n_total)[-1]
+    strata = sorted({stratum for values in row.stratum_statistics.values() for stratum in values})
+    labels: list[str] = []
+    effects: list[float] = []
+    lows: list[float] = []
+    highs: list[float] = []
+    colors: list[str] = []
+    q_values: list[float | None] = []
+    paired_by_baseline = row.stratum_paired_comparisons
+    for stratum in strata:
+        for baseline, color in (("lexical", PALETTE["lexical"]), ("semantic", PALETTE["semantic"])):
+            comparison_key = f"hybrid_vs_{baseline}"
+            comparison = paired_by_baseline.get(comparison_key, {}).get(stratum)
+            if comparison and "mean_delta" in comparison:
+                effect = float(comparison["mean_delta"])
+                low = float(comparison["low"])
+                high = float(comparison["high"])
+                q = comparison.get("holm_adjusted_p_value")
+            else:
+                # Backward-compatible rendering for pre-v2 aggregates. New
+                # artifacts always take the exact paired branch above.
+                hybrid = row.stratum_statistics.get("hybrid", {}).get(stratum)
+                reference = row.stratum_statistics.get(baseline, {}).get(stratum)
+                if not hybrid or not reference:
+                    continue
+                effect = float(hybrid["estimate"]) - float(reference["estimate"])
+                low = float(hybrid["low"]) - float(reference["high"])
+                high = float(hybrid["high"]) - float(reference["low"])
+                q = None
+            if high < low:
+                continue
+            effects.append(effect)
+            lows.append(low)
+            highs.append(high)
+            labels.append(f"{_pretty(stratum)}: H−{baseline[0].upper()}")
+            colors.append(color)
+            q_values.append(float(q) if q is not None else None)
+    y = list(range(len(labels)))
+    fig, (ax, info) = plt.subplots(1, 2, figsize=(10.2, 4.8), gridspec_kw={"width_ratios": [3.2, 1.2]})
+    if effects:
+        for effect, low, high, position, color, q in zip(effects, lows, highs, y, colors, q_values):
+            ax.errorbar(
+                effect,
+                position,
+                xerr=[[effect - low], [high - effect]],
+                fmt="none",
+                ecolor=color,
+                elinewidth=1.3,
+                capsize=3,
+            )
+        ax.scatter(effects, y, c=colors, edgecolors=PALETTE["ink"], zorder=3)
+        for effect, high, position, q in zip(effects, highs, y, q_values):
+            if q is not None:
+                ax.annotate(
+                    f"q={q:.3f}",
+                    (high, position),
+                    textcoords="offset points",
+                    xytext=(4, 0),
+                    va="center",
+                    fontsize=7,
+                    color=PALETTE["muted"],
+                )
+    ax.axvline(0.0, color=PALETTE["ink"], linewidth=0.8)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.set_xlabel(f"Hybrid − baseline (seed-cluster paired {int(data.confidence * 100)}% descriptive interval)")
+    ax.set_title("Paired method effects by difficulty stratum")
+    ax.grid(axis="x")
+    accounting = getattr(row, "n_total", 0)
+    total_accounting = data.accounting or {}
+    family = data.comparison_family or {}
+    info.axis("off")
+    info.text(0.0, 0.95, "Audit accounting", fontweight="bold", va="top")
+    info.text(
+        0.0,
+        0.82,
+        f"Largest row\nn={accounting:,} unique examples\n{row.n_seeds} seed clusters\n"
+        f"{len(strata)} strata\n{data.n_boot:,} cluster resamples\n"
+        f"failed={int(total_accounting.get('n_failed', 0))}\n"
+        f"small-cluster warning={bool(total_accounting.get('small_cluster_warning', False))}",
+        va="top",
+    )
+    info.text(0.0, 0.48, "Estimand and inference", fontweight="bold", va="top")
+    info.text(
+        0.0,
+        0.38,
+        "paired mean delta\nseed-cluster descriptive interval\nHolm-adjusted q-values",
+        va="top",
+    )
+    info.text(0.0, 0.20, "Holm family", fontweight="bold", va="top")
+    family_size = family.get("size", "unknown")
+    info.text(0.0, 0.10, f"full method-by-stratum grid\nfamily size m={family_size}", va="top")
+    if effects:
+        ax.set_xlim(min(-0.2, min(lows)), max(0.2, max(highs)))
+        ax.legend(handles=[
+            Line2D([0], [0], marker="o", color="none", markerfacecolor=PALETTE["lexical"], markeredgecolor=PALETTE["ink"], label="H−lexical"),
+            Line2D([0], [0], marker="o", color="none", markerfacecolor=PALETTE["semantic"], markeredgecolor=PALETTE["ink"], label="H−semantic"),
+        ], loc="best")
+    fig.suptitle("Statistical evidence audit", y=1.02, fontsize=13, fontweight="semibold")
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
@@ -648,14 +926,14 @@ def plot_injection_resistance(data: InjectionEvalPayload, output_path: str | Pat
     ]
     n = data.n_probes
     conditions = [
-        ("Harness", "harness_poisoned", "harness_auditable"),
-        ("Naive", "naive_poisoned", "naive_auditable"),
+        ("Harness", "harness_poisoned", "harness_auditable", data.harness_poison_ci),
+        ("Naive", "naive_poisoned", "naive_auditable", data.naive_poison_ci),
     ]
     if data.neural_poison_rate is not None:
-        conditions.append((f"Neural\n({data.neural_model})", "neural_poisoned", "neural_auditable"))
+        conditions.append((f"Neural\n({data.neural_model})", "neural_poisoned", "neural_auditable", data.neural_poison_ci))
 
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    for y, (_label, poison_key, audit_key) in enumerate(conditions):
+    fig, ax = plt.subplots(figsize=(max(7.5, min(13.0, 0.32 * n)), 4.2))
+    for y, (_label, poison_key, audit_key, _interval) in enumerate(conditions):
         for x, row in enumerate(rows):
             poisoned = bool(getattr(row, poison_key))
             auditable = bool(getattr(row, audit_key))
@@ -673,28 +951,38 @@ def plot_injection_resistance(data: InjectionEvalPayload, output_path: str | Pat
                     color="white",
                     zorder=4,
                 )
-            else:
-                # Keep the audit failure label outside the marker: the longer
-                # text otherwise collides with the X/o glyph at publication size.
-                ax.text(
-                    x,
-                    y + 0.24,
-                    "no cite",
-                    ha="center",
-                    va="top",
-                    fontsize=6.5,
-                    color=PALETTE["ink"],
-                    zorder=4,
-                )
-    ax.set_xticks(list(range(len(rows))))
-    ax.set_xticklabels([f"Probe {r.probe}" for r in rows])
+    tick_step = max(1, len(rows) // 8)
+    tick_positions = list(range(0, len(rows), tick_step))
+    if tick_positions[-1] != len(rows) - 1:
+        tick_positions.append(len(rows) - 1)
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels([str(rows[index].probe) for index in tick_positions])
+    ax.set_xlabel("Probe index (labels shown at regular intervals)")
     ax.set_yticks(list(range(len(conditions))))
-    ax.set_yticklabels([c[0] for c in conditions])
+    labels = []
+    for label, poison_key, _audit_key, interval in conditions:
+        rate = sum(bool(getattr(row, poison_key)) for row in rows) / n if n else 0.0
+        suffix = f"\n{rate:.2f} poisoned"
+        if interval:
+            suffix += f" [{float(interval[1]):.2f}, {float(interval[2]):.2f}]"
+        labels.append(label + suffix)
+    ax.set_yticklabels(labels)
     ax.set_xlim(-0.55, len(rows) - 0.45)
     ax.set_ylim(-0.65, len(conditions) - 0.25)
     ax.invert_yaxis()
     ax.grid(False)
-    ax.set_title(f"Context-poisoning exact cases (n={n}; X = poisoned, A = true source cited)")
+    ax.set_title(f"Context-poisoning cases (n={n}; X = poisoned, A = source cited)")
+    ax.legend(
+        handles=[
+            Line2D([0], [0], marker="X", color="none", markerfacecolor=PALETTE["accent"], markeredgecolor=PALETTE["ink"], label="poisoned"),
+            Line2D([0], [0], marker="o", color="none", markerfacecolor=PALETTE["hybrid"], markeredgecolor=PALETTE["ink"], label="not poisoned"),
+            Line2D([0], [0], marker="o", color="none", markerfacecolor=PALETTE["hybrid"], markeredgecolor=PALETTE["ink"], label="A = source cited"),
+        ],
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.12),
+        ncol=3,
+        frameon=False,
+    )
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
@@ -704,22 +992,22 @@ def plot_injection_resistance(data: InjectionEvalPayload, output_path: str | Pat
 def plot_orchestration_value(baseline: OrchestrationBaseline, output_path: str | Path) -> Path:
     """Stacked composite decomposition: naive full-context baseline vs full pipeline.
 
-    Each bar stacks the weighted metric components (0.6·accuracy, 0.3·grounding,
-    0.1·efficiency) so they sum to the composite. Shows that the orchestration's lift
+    Each bar stacks the weighted metric components from ``src.compiler.metrics`` so
+    they sum to the composite. Shows that the orchestration's lift
     is entirely grounding + efficiency — raw accuracy ties. Data from
     :func:`src.evaluation.no_harness_baseline`.
     """
     path = _prepare(output_path)
-    labels = ["Naive\n(full context to LM)", "Full pipeline\n(5 stages)"]
-    acc = [0.6 * baseline.naive_accuracy, 0.6 * baseline.pipeline_accuracy]
-    grd = [0.3 * baseline.naive_grounding, 0.3 * baseline.pipeline_grounding]
-    eff = [0.1 * baseline.naive_efficiency, 0.1 * baseline.pipeline_efficiency]
+    labels = ["Naive\n(full context to LM)", "Full pipeline\n(typed stages)"]
+    acc = [ACCURACY_WEIGHT * baseline.naive_accuracy, ACCURACY_WEIGHT * baseline.pipeline_accuracy]
+    grd = [GROUNDING_WEIGHT * baseline.naive_grounding, GROUNDING_WEIGHT * baseline.pipeline_grounding]
+    eff = [EFFICIENCY_WEIGHT * baseline.naive_efficiency, EFFICIENCY_WEIGHT * baseline.pipeline_efficiency]
 
     fig, ax = plt.subplots(figsize=(5.6, 4.2))
-    ax.bar(labels, acc, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
-    ax.bar(labels, grd, bottom=acc, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    ax.bar(labels, acc, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{ACCURACY_WEIGHT:.1f} · accuracy")
+    ax.bar(labels, grd, bottom=acc, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{GROUNDING_WEIGHT:.1f} · grounding")
     bottom2 = [a + g for a, g in zip(acc, grd)]
-    ax.bar(labels, eff, bottom=bottom2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
+    ax.bar(labels, eff, bottom=bottom2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{EFFICIENCY_WEIGHT:.1f} · efficiency")
     for i, total in enumerate([baseline.naive_composite, baseline.pipeline_composite]):
         ax.text(i, total + 0.012, f"{total:.3f}", ha="center", va="bottom", fontsize=10, fontweight="semibold")
     raw = (
@@ -754,7 +1042,14 @@ def plot_paraphrase_retrieval(data: LearnedRetrievalPayload, output_path: str | 
     colors = [PALETTE["muted"], PALETTE["semantic"]]
 
     fig, ax = plt.subplots(figsize=(5.4, 4.0))
-    bars = ax.bar(labels, values, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6, width=0.6)
+    errors = None
+    if data.surrogate_recall_ci is not None and data.learned_recall_ci is not None:
+        complete_intervals = [data.surrogate_recall_ci, data.learned_recall_ci]
+        errors = [
+            [value - float(interval[1]) for value, interval in zip(values, complete_intervals)],
+            [float(interval[2]) - value for value, interval in zip(values, complete_intervals)],
+        ]
+    bars = ax.bar(labels, values, yerr=errors, capsize=4, color=colors, edgecolor=PALETTE["ink"], linewidth=0.6, width=0.6, error_kw={"elinewidth": 1.1})
     ax.set_ylabel(f"Recall@1 over {data.n_probes} paraphrase probes")
     ax.set_title("Paraphrase retrieval exact counts")
     ax.set_ylim(0, 1.16)
@@ -766,6 +1061,17 @@ def plot_paraphrase_retrieval(data: LearnedRetrievalPayload, output_path: str | 
             ha="center",
             va="bottom",
             fontsize=9,
+        )
+    if data.paired_comparison:
+        ax.annotate(
+            f"paired Δ={float(data.paired_comparison.get('delta', values[1] - values[0])):+.2f}; "
+            f"exact p={float(data.paired_comparison.get('p_value', 1.0)):.3f}",
+            (0.5, 0.98),
+            xycoords="axes fraction",
+            ha="center",
+            va="top",
+            fontsize=8.5,
+            color=PALETTE["ink"],
         )
     fig.tight_layout()
     fig.savefig(path)
@@ -782,9 +1088,9 @@ def plot_category_components(
     Each row is one :class:`~src.signatures.TaskCategory`.  The three stacked
     segments show the weighted contribution to the composite:
 
-    * **0.6 · accuracy** (blue / lexical)
-    * **0.3 · grounding** (green / hybrid)
-    * **0.1 · efficiency** (pink / accent)
+    * accuracy (blue / lexical)
+    * grounding (green / hybrid)
+    * efficiency (pink / accent)
 
     so the total bar length equals the per-category composite metric.
 
@@ -802,20 +1108,22 @@ def plot_category_components(
     items = sorted(
         breakdown.items(),
         key=lambda kv: (
-            0.6 * kv[1]["accuracy"] + 0.3 * kv[1]["grounding"] + 0.1 * kv[1]["efficiency"]
+            ACCURACY_WEIGHT * kv[1]["accuracy"]
+            + GROUNDING_WEIGHT * kv[1]["grounding"]
+            + EFFICIENCY_WEIGHT * kv[1]["efficiency"]
         ),
     )
     labels = [_pretty(cat) for cat, _ in items]
-    acc_w = [0.6 * v["accuracy"] for _, v in items]
-    grd_w = [0.3 * v["grounding"] for _, v in items]
-    eff_w = [0.1 * v["efficiency"] for _, v in items]
+    acc_w = [ACCURACY_WEIGHT * v["accuracy"] for _, v in items]
+    grd_w = [GROUNDING_WEIGHT * v["grounding"] for _, v in items]
+    eff_w = [EFFICIENCY_WEIGHT * v["efficiency"] for _, v in items]
     y = list(range(len(labels)))
 
     fig, ax = plt.subplots(figsize=(7.2, 4.4))
-    ax.barh(y, acc_w, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.6 · accuracy")
-    ax.barh(y, grd_w, left=acc_w, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.3 · grounding")
+    ax.barh(y, acc_w, color=PALETTE["lexical"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{ACCURACY_WEIGHT:.1f} · accuracy")
+    ax.barh(y, grd_w, left=acc_w, color=PALETTE["hybrid"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{GROUNDING_WEIGHT:.1f} · grounding")
     left2 = [a + g for a, g in zip(acc_w, grd_w)]
-    ax.barh(y, eff_w, left=left2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label="0.1 · efficiency")
+    ax.barh(y, eff_w, left=left2, color=PALETTE["accent"], edgecolor=PALETTE["ink"], linewidth=0.5, label=f"{EFFICIENCY_WEIGHT:.1f} · efficiency")
 
     # Annotate total composite at the end of each bar
     for i, (aw, gw, ew) in enumerate(zip(acc_w, grd_w, eff_w)):

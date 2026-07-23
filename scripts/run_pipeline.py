@@ -24,6 +24,7 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
 from src.config import default_config  # noqa: E402
 from src.evaluation import build_demo_dataset  # noqa: E402
 from src.pipeline import Pipeline  # noqa: E402
+from src.provenance import write_artifact_manifest  # noqa: E402
 
 
 def main() -> Path:
@@ -36,9 +37,11 @@ def main() -> Path:
 
     rows = []
     for example in dataset:
-        pipe = Pipeline(config=config).with_all_stages()
-        out = pipe.run(query=example.query, session_history=example.session_history)
-        intermediate_names = [name for name, _ in pipe.intermediates]
+        with Pipeline(config=config).with_all_stages() as pipe:
+            out = pipe.run(query=example.query, session_history=example.session_history)
+            intermediate_names = [name for name, _ in pipe.intermediates]
+        if out.delivery_mode is None:
+            raise RuntimeError("full pipeline did not produce a delivery mode")
         rows.append(
             {
                 "query": example.query,
@@ -64,6 +67,7 @@ def main() -> Path:
 
     out_path = output_dir / "pipeline_result.json"
     out_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    write_artifact_manifest(PROJECT_ROOT)
     print(str(out_path))
     return out_path
 

@@ -1,12 +1,13 @@
-# Evaluation: Baseline, Neural Validation, and Context Poisoning {#sec:evaluation-baseline-neural-context-poisoning}
+# Evaluation: Baselines, Model Dependence, and Context-Poisoning Diagnostics {#sec:evaluation-baseline-neural-context-poisoning}
 
 ## Does the orchestration help? A no-harness baseline {#sec:eval-baseline}
 
-A fair challenge: does the five-stage pipeline earn its complexity, or could a naive
+A fair challenge: does the {{CONFIG_NUM_STAGES}}-stage pipeline earn its complexity, or could a naive
 baseline — hand the LM the *entire* session with no Inspector windowing, no Retriever
 ranking, and no citations — do as well? [@fig:orchestration_value] decomposes both.
 On raw accuracy they *tie* exactly ({{RESULT_NAIVE_ACCURACY}} each): on this compact
-set the extractive LM recovers the gold line whether or not the context is narrowed,
+set the extractive LM retrieves the gold line under the declared token-overlap rule
+whether or not the context is narrowed,
 so the pipeline does not raise accuracy. But the naive baseline earns zero grounding
 (it cites nothing) and zero efficiency (it dumps the full context), so its composite
 is only {{RESULT_NAIVE_COMPOSITE}} against the pipeline's {{RESULT_COMPOSITE}} — a
@@ -15,12 +16,12 @@ efficiency the orchestration provides. The honest reading is precise: on this da
 the pipeline's value is provenance and bounded context, not raw answer accuracy
 (which is LM-bounded — [@sec:eval-neural]).
 
-![Composite decomposition for the naive full-context baseline versus the full pipeline, stacked into weighted accuracy/grounding/efficiency components. Accuracy ties; the orchestration's entire lift is the grounding and efficiency the naive baseline structurally cannot earn.](../output/figures/orchestration_value.png){#fig:orchestration_value width=60%}
+![Composite score per condition on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo: naive full-context baseline versus full pipeline, stacked into weighted accuracy/grounding/efficiency components. Accuracy ties; the observed contrast is the grounding and efficiency the naive baseline structurally cannot earn under this finite extractive-LM configuration. It is descriptive and non-causal, with no interval or population interpretation.](../output/figures/orchestration_value.png){#fig:orchestration_value width=60%}
 
 The composite weights themselves are a fair target. Sweeping the accuracy weight
 across [{{RESULT_WEIGHT_SWEEP_LOW}}, {{RESULT_WEIGHT_SWEEP_HIGH}}] (grounding and
 efficiency splitting the remainder in the default {{CONFIG_WEIGHT_GROUND}}:{{CONFIG_WEIGHT_EFF}} ratio), the compiler's winning configuration is
-{{RESULT_WEIGHT_ROBUST}} — always {{RESULT_WEIGHT_WINNER}} — so the headline
+{{RESULT_WEIGHT_ROBUST}} — the declared finite sweep selects {{RESULT_WEIGHT_WINNER}} — so the headline
 {{CONFIG_WEIGHT_ACC}}/{{CONFIG_WEIGHT_GROUND}}/{{CONFIG_WEIGHT_EFF}} choice is not load-bearing. (The efficiency term's
 $1 - |\text{ranked}|/{{CONFIG_EFFICIENCY_SCALE}}$ uses {{CONFIG_EFFICIENCY_SCALE}} as the inline context budget in evidence slots; on
 this compact set ranked evidence sits far below it, which is exactly why efficiency
@@ -29,7 +30,7 @@ stays high and near-constant.)
 ## Real DSPy and neural validation {#sec:eval-neural}
 
 The accuracy ceiling above is a property of the *default extractive LM*, so we
-measure that claim rather than assert it. The same five-stage contract runs
+measure that claim rather than assert it. The same {{CONFIG_NUM_STAGES}}-stage contract runs
 unchanged under (i) a real `dspy.Predict` program compiled by a real
 `dspy.BootstrapFewShot` optimizer and (ii) a real neural model
 (`{{RESULT_NEURAL_MODEL}}`, served locally through Ollama) dropped into the Reasoner
@@ -47,67 +48,69 @@ we report that null rather than imply an improvement the data does not show
 
 [@fig:backend_comparison] reports token-F1 per task category for the deterministic
 extractive backend versus the neural model on all {{RESULT_NEURAL_N}} examples.
-Swapping in the neural LM raises mean accuracy from {{RESULT_EXTRACTIVE_MEAN_F1}} to
-{{RESULT_NEURAL_MEAN_F1}}, and the gain concentrates exactly where extraction
-*cannot* synthesise an answer: on **code** the extractive backend scores
-{{RESULT_EXTRACTIVE_CODE_F1}} (it can only echo a transcript line) against
-{{RESULT_NEURAL_CODE_F1}} for the neural model, and on **multi-session**
-{{RESULT_EXTRACTIVE_MULTI_F1}} against {{RESULT_NEURAL_MULTI_F1}}. Those two classes
-are the harness's weakest under the extractive LM, and they are the ones a real LM
-rescues — direct evidence that the accuracy ceiling is LM-bounded, not
-pipeline-bounded.
+On this expanded local aggregate, swapping in the neural LM changes mean accuracy
+from {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}}; paired mean delta
+{{RESULT_NEURAL_PAIRED_DELTA}} with {{CONFIG_CI_LEVEL}}% interval
+{{RESULT_NEURAL_PAIRED_CI}} and permutation p={{RESULT_NEURAL_PAIRED_P}} is not a
+statistically distinguishable improvement under the declared finite comparison, so we do not call it a lift. The neural model is
+higher on **code** ({{RESULT_EXTRACTIVE_CODE_F1}} to {{RESULT_NEURAL_CODE_F1}}) and
+multi-session ({{RESULT_EXTRACTIVE_MULTI_F1}} to {{RESULT_NEURAL_MULTI_F1}}), but
+lower on the other categories. This mixed result is useful evidence that the
+extractive ceiling is model- and metric-dependent, not evidence that every local LM
+has a higher mean on the retained task slice; that aggregate does not establish
+improvement for every task or model.
 
 The comparison also surfaces a metric caveat that strengthens the honesty story: on
 single-session and preference the neural model scores *lower* on token-F1 despite
-answers that are arguably more correct (it returns "bluefish42" where the gold
+answers that may be semantically appropriate but are not separately human-annotated (it returns "bluefish42" where the gold
 string is "wifi password is bluefish42"). Token-F1 rewards lexical overlap with the
-gold phrasing, so a terse-but-correct neural answer is penalised; the metric, not
+gold phrasing, so a terse answer can be penalised; the metric, not
 the model, is the limiting factor there. With {{RESULT_NEURAL_N}} examples this is a
 diagnostic signal, not a population estimate, so the figure is case-level rather
 than a category-rate bar chart. Unlike the bit-identical deterministic path, the
-neural numbers are reproducible *on a host* (temperature 0) rather than across
+neural numbers are reproducible *on a host* (temperature {{RESULT_NEURAL_TEMPERATURE}}) rather than across
 machines and Ollama versions. Both backends and this table regenerate with
 `scripts/run_neural_eval.py`.
 
-![Per-example token-F1 for the deterministic extractive Reasoner versus a real neural model (`{{RESULT_NEURAL_MODEL}}`) dropped into the same five-stage contract. Lines pair the two backends on each of the {{RESULT_NEURAL_N}} examples; horizontal guides mark the means. Recorded at temperature 0 via `scripts/run_neural_eval.py`; reproducible on a host serving the model, not bit-pinned.](../output/figures/backend_comparison.png){#fig:backend_comparison width={{CONFIG_BACKEND_FIGURE_WIDTH}}%}
+![Paired token-F1 per synthetic evaluation example for the deterministic extractive Reasoner versus the recorded neural model (`{{RESULT_NEURAL_MODEL}}`) under the same {{CONFIG_NUM_STAGES}}-stage contract. Lines preserve the pairing on each of the {{RESULT_NEURAL_N}} cases; guides and translucent bands show marginal means and {{CONFIG_CI_LEVEL}}% intervals, while the text reports the paired delta and permutation p-value. Recorded with temperature {{RESULT_NEURAL_TEMPERATURE}} and max_tokens {{RESULT_NEURAL_MAX_TOKENS}} via `scripts/run_neural_eval.py`; the neural estimate is model- and configuration-dependent, not bit-pinned or a population estimate.](../output/figures/backend_comparison.png){#fig:backend_comparison width={{CONFIG_BACKEND_FIGURE_WIDTH}}%}
 
 ## Cloud neural validation via OpenRouter {#sec:eval-openrouter}
 
 To stress-test the accuracy ceiling claim beyond a single local model, we ran the
-same six-example evaluation against **`tencent/hy3-preview`** accessed through
+same {{RESULT_OPENROUTER_N}}-example evaluation against **`{{RESULT_OPENROUTER_MODEL}}`** accessed through
 OpenRouter — routed via `dspy.LM` → litellm → the OpenRouter API, with no changes
-to the five-stage harness contract. The recorded results live at
+to the {{CONFIG_NUM_STAGES}}-stage harness contract. The recorded results live at
 `data/openrouter_eval.json`.
 
 The headline numbers appear to favour the extractive backend: mean token-F1 of
-**0.477** (4/6 pass) for extractive versus **0.467** (2/6 pass) for Hy3. That raw
+**{{RESULT_OPENROUTER_EXT_MEAN_F1}}** ({{RESULT_OPENROUTER_EXT_PASS}}/{{RESULT_OPENROUTER_N}} pass) for extractive versus **{{RESULT_OPENROUTER_NEURAL_MEAN_F1}}** ({{RESULT_OPENROUTER_NEURAL_PASS}}/{{RESULT_OPENROUTER_N}} pass) for the neural backend. That raw
 ordering is misleading, however, because it reflects a well-known token-F1
-pathology — **concise answers are structurally penalised**. Hy3 returns
-atomic, information-dense replies ("Rust", "bluefish42", "April 12th", "5000
-dollars") while the gold strings encode the surrounding sentence ("favorite
-programming language is Rust", "wifi password is bluefish42"). Token overlap with a
+pathology — **concise answers are structurally penalised**. The recorded model returns
+atomic, information-dense replies (short values and dates) while the gold strings
+encode the surrounding sentence. Token overlap with a
 longer gold string is higher for the extractive backend precisely because it echoes
-the full transcript line verbatim; Hy3's answer is correct but lexically shorter,
-so token-F1 penalises it. The "Rust" vs. "favorite programming language is Rust"
-pair (F1 0.333 vs. 0.833) is the clearest illustration.
+the full transcript line verbatim; the recorded model's answer is shorter and is not separately
+human-annotated here, so token-F1 can penalise it. The programming-language pair (F1
+{{RESULT_OPENROUTER_RUST_NEURAL_F1}} vs. {{RESULT_OPENROUTER_RUST_EXT_F1}}) is the clearest illustration.
 
-The ordering **reverses** on the two question types that require reasoning beyond
+The ordering **reverses** on the two question types intended to require reasoning beyond
 verbatim extraction. On the **cross-session budget synthesis** query ("What budget
-did I mention across our sessions?") the extractive backend scores 0.000 — it can
+did I mention across our sessions?") the extractive backend scores {{RESULT_OPENROUTER_BUDGET_EXT_F1}} — it can
 only return the closest matching transcript line, which happens to mention vendors
-rather than the dollar figure — while Hy3 answers "5000 dollars" for an F1 of
-0.667. On the **multi-hop deploy error** query ("What error does the deploy code
-raise without CONFIG?") extractive again scores 0.000 (it surfaces the file path,
-not the exception), while Hy3 answers "KeyError" for an F1 of 0.333. These are
-precisely the synthesis and cross-document reasoning cases the harness was designed
-to surface; Hy3 wins both of them cleanly.
+rather than the dollar figure — while the neural backend answers with the budget value for an F1 of
+{{RESULT_OPENROUTER_BUDGET_NEURAL_F1}}. On the **multi-hop deploy error** query ("What error does the deploy code
+raise without CONFIG?") extractive again scores {{RESULT_OPENROUTER_MULTIHOP_EXT_F1}} (it surfaces the file path,
+not the exception), while the neural backend answers "KeyError" for an F1 of {{RESULT_OPENROUTER_MULTIHOP_NEURAL_F1}}. These are
+the synthesis and cross-document cases included to stress the contract; in this
+finite probe, {{RESULT_OPENROUTER_MODEL}} has the higher token-F1 on both.
 
 The conclusion reinforces the Ollama finding in [@sec:eval-neural]: accuracy on
 simple retrieval questions is LM-bounded and the pipeline adds provenance, not raw
 score; on hard synthesis and multi-hop questions a capable neural model lifts the
 ceiling in ways the extractive backend structurally cannot match. The full
-per-example breakdown is at `data/openrouter_eval.json` (`temperature: 0.0`,
-`max_tokens: 1024`, `model: tencent/hy3-preview`, six examples).
+per-example breakdown is at `data/openrouter_eval.json` (`temperature: {{RESULT_OPENROUTER_TEMPERATURE}}`,
+`max_tokens: {{RESULT_OPENROUTER_MAX_TOKENS}}`, `model: {{RESULT_OPENROUTER_MODEL}}`,
+{{RESULT_OPENROUTER_N}} examples).
 
 ## Cognitive security: context-poisoning {#sec:eval-injection}
 
@@ -134,4 +137,4 @@ neural row rather than inferring one. The property THALIA actually provides is
 therefore **visibility, not immunity**: grounding does not stop poisoning, but it
 refuses to hide it (`scripts/run_injection_probe.py`).
 
-![Context-poisoning over {{RESULT_INJECT_N}} probes as exact cases, not population rates. `X` marks a poisoned answer and `A` marks that the true source remains cited. Lexical extraction is poisonable, but only the grounded harness keeps the true source auditable; optional neural rows appear only when `data/injection_eval.json` contains a live neural measurement.](../output/figures/injection_resistance.png){#fig:injection_resistance width=65%}
+![Context-poisoning outcome per synthetic paired probe ({{RESULT_INJECT_N}} cases), reported as exact finite-set counts rather than population rates. `X` marks a poisoned answer and `A` marks that the true source remains cited; row labels show case rates with Wilson intervals when available. Lexical extraction is poisonable, but the grounded harness keeps the true source auditable; optional neural rows appear only when `data/injection_eval.json` contains a live neural measurement and remain model-dependent. No causal or universal robustness claim follows.](../output/figures/injection_resistance.png){#fig:injection_resistance width=65%}

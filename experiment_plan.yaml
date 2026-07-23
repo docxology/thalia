@@ -16,7 +16,7 @@ metrics:
       - {name: accuracy, weight: 0.6}
       - {name: grounding, weight: 0.3}
       - {name: efficiency, weight: 0.1}
-protocol: "Run the deterministic LongMemEval-style dataset through AutoHarness under each retrieval condition with identical seeds, evidence budgets, and the deterministic extractive LM. Compare composite metrics; then sweep RRF lane weight and scale session noise. Preserve the two scope boundaries: accuracy is bounded by the deterministic extractive LM, and the semantic lane is a hashing-embedding surrogate rather than a learned dense retriever."
+protocol: "Preserve the six-example deterministic demo as a regression fixture, then run lexical-only, surrogate-semantic-only, and hybrid retrieval over the balanced seeded research dataset at per-category sizes (10, 25, 50, 100) and five fixed seeds. Use paired metrics on identical examples, within-stratum and seed-cluster bootstrap intervals, Wilson binary-rate intervals, exact paired binary tests, a complete Holm comparison family, and explicit ledger/event accounting. Then sweep RRF lane weight and session noise. Preserve the two scope boundaries: accuracy is bounded by the deterministic extractive LM, and the semantic lane is a hashing-embedding surrogate rather than a learned dense retriever. Synthetic results are machinery evidence, not population estimates."
 expected_figures:
   - fig:retriever_comparison
   - fig:rrf_sensitivity
@@ -29,6 +29,8 @@ expected_figures:
   - fig:method_ablation
   - fig:orchestration_value
   - fig:scaling_ci
+  - fig:sample_size_precision
+  - fig:statistical_audit
   - fig:backend_comparison
   - fig:paraphrase_retrieval
   - fig:injection_resistance
@@ -40,3 +42,34 @@ baselines:
   - lexical_only
 ablations:
   - semantic_only
+v2_campaign:
+  evidence_tiers: [contract, finite_synthetic, live_model, external_benchmark]
+  benchmark: LongMemEval_S
+  benchmark_path: data/longmemeval/longmemeval_s.json
+  raw_output_root: /Volumes/blue/data/thalia_campaigns
+  generation:
+    temperature: 0.0
+    num_predict: 512
+    model_digest_required: true
+  nested_cohorts:
+    selection: "SHA-256(selection_salt || question_id), balanced by question_type, round-robin prefix"
+    sizes: [100, 250, 500]
+    gemma_model: gemma3:4b
+    hermes_model: hermes3:latest
+  tiers:
+    - {id: gemma-100, model: gemma3:4b, sample_size: 100, status: preregistered}
+    - {id: gemma-250, model: gemma3:4b, sample_size: 250, status: preregistered}
+    - {id: gemma-500, model: gemma3:4b, sample_size: 500, status: preregistered}
+    - {id: hermes-100, model: hermes3:latest, sample_size: 100, status: preregistered}
+  bottleneck:
+    sample_size: 100
+    policies: [15, 30, 50, 100, adaptive]
+    ranking_diagnostics: [lexical, dense_nomic_embed_text, hybrid_rrf]
+  secondary_measures: [line_level_support_proxy, session_reachability, citation_precision, failure_rate, latency_seconds, poisoning_outcome]
+  synthetic_extensions:
+    seed_sensitivity_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    compiler_validation: train_held_out_by_stable_id
+  promotion_contract:
+    required: [benchmark_sha256, model_digest, generation_options, cohort_ids, code_fingerprint, config_fingerprint]
+    incomplete_tiers: "remain partial and cannot replace committed aggregates"
+  interpretation: "Live and external rows are finite local observations; no population inference or universal causal bottleneck claim."
