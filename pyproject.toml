@@ -3,15 +3,35 @@
 # Inherits workspace settings from the repository root pyproject.toml.
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "thalia"
 version = "0.1.0"
 description = "Agentic Typed-pipeline with Lexical And Self-improving stages: a DSPy + Hermes auto-harness"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Daniel Ari Friedman", email = "daniel@activeinference.institute"},
+]
+keywords = [
+    "agentic systems",
+    "long-context memory",
+    "retrieval-augmented generation",
+    "reproducible research",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -35,9 +55,16 @@ dev = [
     "ruff>=0.14.0",
     "dspy-ai>=3.2.1",
 ]
+
 neural = [
     "dspy-ai>=3.2.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/docxology/thalia"
+Repository = "https://github.com/docxology/thalia"
+Issues = "https://github.com/docxology/thalia/issues"
+Changelog = "https://github.com/docxology/thalia/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 # THALIA intentionally exposes the package's ``src.*`` import surface.  The

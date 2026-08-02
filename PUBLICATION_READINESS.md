@@ -7,13 +7,13 @@ integrity, or production readiness remain unpromoted._
 
 ## Current evidence
 
-- **Executable package:** the authoritative strict suite collected 851 tests,
-  passed 844, skipped 7 optional live-model tests, and recorded 90.50% `src/`
+- **Executable package:** the authoritative strict suite collected 852 tests,
+  passed 849, skipped 3 optional live-model tests, and recorded 90.50% `src/`
   coverage against the 90% gate. Ruff, mypy, compileall, `uv lock --check`,
   and `uv build` pass. The aggregate gate is authoritative; some optional or
   defensive modules have lower local coverage and remain visible in the
   coverage report.
-- **Artifact integrity:** the fail-closed validator reports `checked=46
+- **Artifact integrity:** the fail-closed validator reports `checked=47
   required=43 ok=True`. It also reports 22 numbered manuscript sections with
   exact source-to-injected substitution parity. The independent verifier
   rejects missing/extra files, unresolved tokens, and content drift.
@@ -72,15 +72,14 @@ production-readiness result.
 ## GitHub and Zenodo release decision
 
 The repository is **not yet ready for a public GitHub or Zenodo release**. At
-this review the GitHub repository is private, no release tag exists, and no
-software license has been selected. Generated `output/` artifacts remain ignored
-and therefore are not an automatically source-current public bundle. A starter
-[`CITATION.cff`](CITATION.cff) and the detailed
-[`docs/release_readiness.md`](docs/release_readiness.md) checklist are now in
-the source tree, but no DOI or license has been fabricated. Public release
-requires an exact tagged commit, a reviewed license and redistribution boundary,
-a clean-clone receipt, an intentional PDF/HTML/artifact bundle, and Zenodo
-metadata verified against the same tag.
+this review the GitHub repository is private and no release tag exists. MIT is
+selected for the authored source code and is declared in `LICENSE`,
+`pyproject.toml`, `CITATION.cff`, and `.zenodo.json`; no DOI has been minted.
+Generated `output/` artifacts remain ignored and therefore are not an
+automatically source-current public bundle. Public release still requires an
+exact tagged commit, a reviewed redistribution boundary, a clean-clone
+receipt, an intentional PDF/HTML/artifact bundle, and Zenodo metadata verified
+against the same tag.
 
 ## Remaining work before stronger claims or public release
 

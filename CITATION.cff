@@ -4,6 +4,7 @@ title: "THALIA: Typed Harness with Analytical Lexical-Integrated Architecture"
 type: software
 version: "0.1.0"
 date-released: 2026-08-02
+license: MIT
 authors:
   - family-names: Friedman
     given-names: Daniel Ari

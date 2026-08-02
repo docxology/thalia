@@ -7,11 +7,12 @@ decision from the authority required to publish a public software release.
 
 The project is **not yet ready for a public GitHub or Zenodo release**.
 
-The current GitHub repository is private, has no release tag, and has no selected
-software license. Generated `output/` artifacts are intentionally ignored, so a
-source checkout alone is not the source-current manuscript bundle. The repository
-now carries a valid citation-metadata starting point in [`CITATION.cff`](../CITATION.cff),
-but it must not be treated as a DOI or license declaration.
+The current GitHub repository is private and has no release tag. MIT is now the
+selected source-code license and is declared in [`LICENSE`](../LICENSE),
+[`pyproject.toml`](../pyproject.toml), [`CITATION.cff`](../CITATION.cff), and
+[`.zenodo.json`](../.zenodo.json). Generated `output/` artifacts are intentionally
+ignored, so a source checkout alone is not the source-current manuscript bundle.
+No DOI record exists yet.
 
 The manuscript itself is conditionally suitable for a narrowly scoped methods
 submission, subject to the separate evidence boundaries in
@@ -21,9 +22,10 @@ scientific gates are independent of making the code repository public.
 
 ## Blocking decisions
 
-- **License and rights:** choose a software license with the author/rights
-  holder. Review the license and redistribution terms for bundled figures,
-  benchmark-derived data, model metadata, and any external-volume artifacts.
+- **Rights review:** confirm that the author/rights holder can redistribute all
+  code and every bundled or archived artifact. MIT applies to THALIA code; it
+  does not override rights for benchmark-derived data, model weights, raw
+  answers, private-volume artifacts, or third-party figures and metadata.
 - **Release authority:** select one exact commit as the release source, create an
   annotated version tag, and record the tag, commit digest, package version, and
   manuscript source digest in the release receipt.
@@ -40,9 +42,20 @@ scientific gates are independent of making the code repository public.
   DOI metadata, then record the minted DOI back in `CITATION.cff` and the README
   in a source-controlled follow-up.
 
+## What the MIT decision covers
+
+The source-controlled [`LICENSE`](../LICENSE) grants the standard MIT rights
+for THALIA's authored source code. The decision does not certify that all files
+in a future release bundle are authored by the project or legally redistributable.
+Before publication, inventory the exact files included in the GitHub release
+and Zenodo archive, record their provenance, and exclude or separately license
+anything whose rights are not established. In particular, do not publish raw
+answers, annotations, credentials, private external-volume data, or model
+weights merely because the code is MIT-licensed.
+
 ## Recommended release sequence
 
-1. Resolve the license and data/model redistribution review.
+1. Complete the MIT-scope and data/model redistribution review.
 2. Run the full local test, lint, typing, package, artifact, and manuscript
    injection gates from the exact candidate commit.
 3. Rebuild the rendered PDF/HTML and visually inspect the cover, new
@@ -52,7 +65,8 @@ scientific gates are independent of making the code repository public.
    regenerated from the tag and that ignored output is copied into the release
    bundle intentionally.
 5. Create the annotated version tag and GitHub release. Make the repository
-   public only after the preceding checks pass.
+   public only after the preceding checks pass and the publication authority
+   explicitly approves that visibility change.
 6. Archive that tagged release in Zenodo and verify the DOI landing page and
    downloadable archive.
 7. Add the DOI to `CITATION.cff`, README, manuscript metadata, and the final

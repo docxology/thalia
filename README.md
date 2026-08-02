@@ -18,11 +18,11 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 > see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) for the current
 > assessment of whether *this checkout's* code and manuscript are ready to submit.
 
-> **Public release gate:** this checkout is not yet ready for a public GitHub or
-> Zenodo release. The exact gates are recorded in
-> [`docs/release_readiness.md`](docs/release_readiness.md); the repository remains
-> private until licensing, clean-clone, release-bundle, and DOI authority are
-> resolved.
+> **Public release gate:** MIT is now the selected source-code license, but this
+> checkout is not yet a public GitHub or Zenodo release. The exact gates are
+> recorded in [`docs/release_readiness.md`](docs/release_readiness.md); the
+> repository remains private until the exact tagged bundle, clean-clone receipt,
+> redistribution review, and DOI authority are resolved.
 
 ## What THALIA is
 
@@ -341,6 +341,18 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
   the figures and tokens.
 - **Generated manuscript variables** referenced across the sections — all emitted
   from live code, with the integrity gate rejecting missing or hardcoded result values.
+
+## License and release metadata
+
+The THALIA source code is licensed under the [MIT License](LICENSE). Citation
+and archive metadata are maintained in [`CITATION.cff`](CITATION.cff) and
+`.zenodo.json`; the latter is a deposition template, not a minted DOI. MIT
+covers this project's code and does not by itself grant redistribution rights
+for external benchmark data, model weights, raw answers, credentials, or other
+third-party artifacts. The current release boundary is tracked in
+[`docs/release_readiness.md`](docs/release_readiness.md).
+Contributor workflow and responsible security reporting are documented in
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
 
 ## Layout
 

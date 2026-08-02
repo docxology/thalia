@@ -1,9 +1,15 @@
 """Tests for source-controlled public-release metadata (real files, no mocks)."""
 
+import json
 from datetime import date
 from pathlib import Path
 
 import yaml
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 uses the declared backport
+    import tomli as tomllib
 
 from src import __version__
 
@@ -17,6 +23,7 @@ def test_citation_metadata_is_parseable_and_matches_package() -> None:
     assert metadata["cff-version"] == "1.2.0"
     assert metadata["type"] == "software"
     assert metadata["version"] == __version__
+    assert metadata["license"] == "MIT"
     assert metadata["repository-code"] == "https://github.com/docxology/thalia"
     assert metadata["authors"]
     assert metadata["title"]
@@ -28,5 +35,25 @@ def test_release_checklist_keeps_license_and_doi_as_explicit_gates() -> None:
     checklist = (PROJECT_ROOT / "docs" / "release_readiness.md").read_text()
 
     assert "not yet ready for a public GitHub or Zenodo release" in checklist
-    assert "choose a software license" in checklist
+    assert "MIT-scope and data/model redistribution review" in checklist
     assert "minted DOI" in checklist
+
+
+def test_mit_metadata_is_consistent_across_package_and_archive_files() -> None:
+    project = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text())
+    assert project["project"]["license"] == "MIT"
+    assert project["project"]["license-files"] == ["LICENSE"]
+
+    license_text = (PROJECT_ROOT / "LICENSE").read_text()
+    assert license_text.startswith("MIT License")
+    assert "Copyright (c) 2026 Daniel Ari Friedman" in license_text
+
+    zenodo = json.loads((PROJECT_ROOT / ".zenodo.json").read_text())
+    assert zenodo["license"] == "MIT"
+    assert zenodo["upload_type"] == "software"
+    assert zenodo["version"] == __version__
+    assert zenodo["creators"]
+    assert any(
+        item["identifier"] == "https://github.com/docxology/thalia"
+        for item in zenodo["related_identifiers"]
+    )

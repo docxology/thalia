@@ -27,6 +27,8 @@ jobs:
         run: uv sync --project . --locked --extra dev
       - name: Verify lockfile
         run: uv lock --project . --check
+      - name: Check tracked-file whitespace
+        run: git diff --check
       - name: Compile source and scripts
         run: uv run --project . --extra dev python -m compileall -q src scripts
       - name: Run static type check
@@ -62,6 +64,8 @@ jobs:
           test -n "$wheel"
           unzip -l "$wheel" | grep -q 'src/__init__.py'
           unzip -l "$wheel" | grep -q 'src/harness.py'
+          unzip -l "$wheel" | grep -q 'licenses/LICENSE'
+          unzip -p "$wheel" '*/METADATA' | grep -Eq '^(License-Expression: MIT|License: MIT)$'
       - name: Install wheel in an isolated environment and import it
         run: |
           wheel="$(find dist -name '*.whl' -print -quit)"
