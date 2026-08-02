@@ -48,6 +48,9 @@ grant third-party redistribution rights.
 - PDF: 72 pages, PDF 2.0, tagged, unencrypted; `qpdf --check` passed.
 - DOI resolution: `https://doi.org/10.5281/zenodo.21763245` resolves to the
   public Zenodo record above.
+- Clean public clone: cloning `v0.1.0` from GitHub resolved to the tagged
+  commit, contained 261 tracked files, had zero worktree changes, and passed
+  `uv lock --check`.
 
 These checks establish software and reproducibility release integrity. They do
 not promote model-quality, true-source-recovery, integrity-advantage, or
