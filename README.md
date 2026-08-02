@@ -10,7 +10,9 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-> **Status:** development-stage research package, rendered only when
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21763245.svg)](https://doi.org/10.5281/zenodo.21763245)
+
+> **Status:** public v0.1.0 research release, rendered only when
 > explicitly requested through the template pipeline. Runnable
 > and covered by the strict local test gate; generated outputs are gitignored. "In-progress"
 > describes the project's lifecycle stage (not yet promoted to a public template
@@ -19,15 +21,16 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 > assessment of whether *this checkout's* code and manuscript are ready to submit.
 
 > **Release identity:** MIT-licensed source and the rendered manuscript are
-> archived under the reserved Zenodo DOI
+> archived in the public Zenodo record
 > [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245), with the
 > canonical source at [github.com/docxology/thalia](https://github.com/docxology/thalia).
 
-> **Public release gate:** MIT is now the selected source-code license, but this
-> checkout is not yet a public GitHub or Zenodo release. The exact gates are
-> recorded in [`docs/release_readiness.md`](docs/release_readiness.md); the
-> repository remains private until the exact tagged bundle, clean-clone receipt,
-> redistribution review, and DOI authority are resolved.
+> **Public release:** v0.1.0 is public on GitHub at the annotated `v0.1.0` tag
+> and archived at the DOI above. The exact commit, file checksums, validation
+> gates, and release boundary are recorded in
+> [`docs/release_receipt.md`](docs/release_receipt.md). This release authority
+> does not promote model-quality, integrity-advantage, or production-readiness
+> claims; those remain separately gated in [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md).
 
 ## What THALIA is
 

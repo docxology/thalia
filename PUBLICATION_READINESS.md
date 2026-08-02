@@ -71,17 +71,19 @@ production-readiness result.
 
 ## GitHub and Zenodo release decision
 
-The repository is **not yet ready for a public GitHub or Zenodo release**. At
-this review the GitHub repository is private and no release tag exists. MIT is
-selected for the authored source code and is declared in `LICENSE`,
-`pyproject.toml`, `CITATION.cff`, and `.zenodo.json`; no DOI has been minted.
-Generated `output/` artifacts remain ignored and therefore are not an
-automatically source-current public bundle. Public release still requires an
-exact tagged commit, a reviewed redistribution boundary, a clean-clone
-receipt, an intentional PDF/HTML/artifact bundle, and Zenodo metadata verified
-against the same tag.
+The public `v0.1.0` release is complete. The GitHub repository is public, the
+annotated tag points to commit `ab6543c1b139a6ac4ca0b8a091b588384997bcf9`, and
+Zenodo record [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245)
+is published with open-access MIT metadata, the exact source archive, the
+rendered PDF, and the derived artifact bundle. File sizes and SHA-256 values
+are recorded in [`docs/release_receipt.md`](docs/release_receipt.md).
 
-## Remaining work before stronger claims or public release
+This release is a reproducibility and software-availability milestone, not a
+promotion of model-quality, true-source-recovery, integrity-advantage, or
+production-readiness claims. The manuscript's conditional decision and
+evidence ceilings remain unchanged.
+
+## Remaining work before stronger claims or future promoted releases
 
 1. **P0 integrity confirmation:** freeze the protocol and adjudication rubric;
    collect matched, balanced attack families across the specified conditions;
@@ -100,12 +102,12 @@ against the same tag.
    benchmark results, rerun those lanes on the declared host/model versions and
    preserve their independent run receipts; do not fold them into the
    deterministic headline.
-5. **Release hygiene:** review the dirty checkout as a single intentional
-   change set, create a clean-clone reproduction, choose the release authority
-   (tag/DOI/bundle), and ship the current PDF/HTML plus source and receipts.
-   After any accepted promotion, regenerate the ledger, figures, dashboard,
-   variables, PDF, and supplementary outputs, then repeat the full test,
-   typing, lint, artifact, and rendering gates.
+5. **Post-release maintenance:** retain the tag/DOI/bundle as the immutable
+   v0.1.0 authority. For any accepted scientific promotion or new version,
+   regenerate the ledger, figures, dashboard, variables, PDF, and supplementary
+   outputs, then repeat the full test, typing, lint, artifact, and rendering
+   gates against a new exact tag. Reassess redistribution rights before adding
+   any external benchmark, model, raw-answer, or annotation artifacts.
 
 Until the independent P0, expert-quality, and production acceptance records
 exist, the paper should describe those lanes as protocols and open validation

@@ -35,9 +35,9 @@ def test_citation_metadata_is_parseable_and_matches_package() -> None:
 def test_release_checklist_keeps_license_and_doi_as_explicit_gates() -> None:
     checklist = (PROJECT_ROOT / "docs" / "release_readiness.md").read_text()
 
-    assert "not yet ready for a public GitHub or Zenodo release" in checklist
-    assert "MIT-scope and data/model redistribution review" in checklist
-    assert "minted DOI" in checklist
+    assert "THALIA `v0.1.0` is publicly released" in checklist
+    assert "MIT applies to THALIA's authored source code" in checklist
+    assert "10.5281/zenodo.21763245" in checklist
 
 
 def test_mit_metadata_is_consistent_across_package_and_archive_files() -> None:

@@ -1,18 +1,22 @@
-# Public GitHub and Zenodo release readiness
+# Public GitHub and Zenodo release record
 
-_Review refreshed 2026-08-02._ This checklist separates a manuscript submission
-decision from the authority required to publish a public software release.
+_Release recorded 2026-08-02._ This record separates the completed public
+software release from the manuscript and scientific-promotion decision.
 
-## Decision at this checkout
+## Completed release
 
-The project is **not yet ready for a public GitHub or Zenodo release**.
+THALIA `v0.1.0` is publicly released.
 
-The current GitHub repository is private and has no release tag. MIT is now the
-selected source-code license and is declared in [`LICENSE`](../LICENSE),
-[`pyproject.toml`](../pyproject.toml), [`CITATION.cff`](../CITATION.cff), and
-[`.zenodo.json`](../.zenodo.json). Generated `output/` artifacts are intentionally
-ignored, so a source checkout alone is not the source-current manuscript bundle.
-No DOI record exists yet.
+- GitHub repository: [docxology/thalia](https://github.com/docxology/thalia),
+  public with default branch `main`.
+- Release authority: annotated tag `v0.1.0`, commit
+  `ab6543c1b139a6ac4ca0b8a091b588384997bcf9`.
+- Zenodo record: [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245),
+  published open access as software, version `0.1.0`, with MIT metadata.
+- Uploaded files: exact tagged source archive, rendered PDF, and the curated
+  artifact bundle containing the hydrated manuscript, HTML, figures, slides,
+  derived data, and validation receipts.
+- Checksums and the release boundary: [`release_receipt.md`](release_receipt.md).
 
 The manuscript itself is conditionally suitable for a narrowly scoped methods
 submission, subject to the separate evidence boundaries in
@@ -20,27 +24,20 @@ submission, subject to the separate evidence boundaries in
 expert-rater quality, and production acceptance remain unpromoted. Those open
 scientific gates are independent of making the code repository public.
 
-## Blocking decisions
+## Post-release controls
 
-- **Rights review:** confirm that the author/rights holder can redistribute all
-  code and every bundled or archived artifact. MIT applies to THALIA code; it
-  does not override rights for benchmark-derived data, model weights, raw
-  answers, private-volume artifacts, or third-party figures and metadata.
-- **Release authority:** select one exact commit as the release source, create an
-  annotated version tag, and record the tag, commit digest, package version, and
-  manuscript source digest in the release receipt.
-- **Release bundle:** regenerate the source-current PDF/HTML, figures, dashboard,
-  variables, manifests, test reports, coverage report, and clean-clone receipt.
-  Do not upload private raw answers, annotations, credentials, or data whose
-  redistribution rights have not been checked.
-- **Public repository state:** make GitHub public only after the license,
-  README, citation metadata, contribution/security contact, and release bundle
-  are complete. Configure the release description and topics after the exact
-  release tag exists.
-- **Zenodo record:** create the Zenodo version from the exact GitHub tag, verify
-  authorship, license, access rights, source archive, supplementary files, and
-  DOI metadata, then record the minted DOI back in `CITATION.cff` and the README
-  in a source-controlled follow-up.
+- **Rights boundary:** MIT applies to THALIA's authored source code. It does
+  not override rights for benchmark-derived data, model weights, raw answers,
+  private-volume artifacts, or third-party figures and metadata. The v0.1.0
+  upload excludes those private or unverified materials.
+- **Source-current regeneration:** future versions must regenerate the PDF,
+  HTML, figures, dashboard, variables, manifests, test reports, and coverage
+  from a new exact candidate commit before tagging.
+- **Immutable authority:** do not move `v0.1.0` or repurpose its DOI. A
+  substantive change requires a new version tag and a Zenodo new-version
+  record.
+- **Scientific scope:** no public release note or DOI citation should imply a
+  promoted model-quality, integrity-advantage, or production-readiness result.
 
 ## What the MIT decision covers
 
@@ -53,24 +50,18 @@ anything whose rights are not established. In particular, do not publish raw
 answers, annotations, credentials, private external-volume data, or model
 weights merely because the code is MIT-licensed.
 
-## Recommended release sequence
+## Completed release sequence
 
-1. Complete the MIT-scope and data/model redistribution review.
-2. Run the full local test, lint, typing, package, artifact, and manuscript
-   injection gates from the exact candidate commit.
-3. Rebuild the rendered PDF/HTML and visually inspect the cover, new
-   claim-ceiling figure, dense statistical figures, tables, references, and
-   browser layout.
-4. Build a clean-clone release receipt. Confirm that every claimed artifact is
-   regenerated from the tag and that ignored output is copied into the release
-   bundle intentionally.
-5. Create the annotated version tag and GitHub release. Make the repository
-   public only after the preceding checks pass and the publication authority
-   explicitly approves that visibility change.
-6. Archive that tagged release in Zenodo and verify the DOI landing page and
-   downloadable archive.
-7. Add the DOI to `CITATION.cff`, README, manuscript metadata, and the final
-   release receipt; rerun the source-current validation on the follow-up commit.
+1. The strict suite, typing, lint, build, artifact, manuscript-injection, and
+   external PDF/HTML gates passed for the candidate.
+2. The rendered PDF was visually inspected, including the DOI-bearing cover,
+   reproducibility page, formalism, evaluation, and validation pages.
+3. The exact candidate was pushed as `ab6543c1b139a6ac4ca0b8a091b588384997bcf9`,
+   tagged `v0.1.0`, and made public on GitHub.
+4. Zenodo was populated from that release boundary, published, and verified
+   through the public API and DOI redirect.
+5. The DOI, tag, checksums, validation receipts, and excluded-materials
+   boundary were recorded in [`release_receipt.md`](release_receipt.md).
 
 No public release should imply a promoted model-quality, integrity-advantage,
 or production-readiness result. The release notes should preserve the negative
