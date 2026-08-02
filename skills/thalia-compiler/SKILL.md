@@ -43,7 +43,7 @@ search trace, not a demonstrated accuracy gain).
 - Evolved skill artifacts must be ≤ 15 KB and non-empty (`check_skill_constraints`).
 - `to_dspy_signature` is gated on the optional `dspy` import; the core never needs it.
 - The in-house compilers are "-style" analogues. Real DSPy use is only the gated
-  `src.dspy_runtime.py` path.
+  `src/dspy_runtime/` package.
 
 ## Modules
 `src.compiler.metrics`, `src.compiler.mipro`, `src.compiler.gepa`

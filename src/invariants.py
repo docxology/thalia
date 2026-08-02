@@ -32,7 +32,7 @@ class InvariantResult:
     Attributes:
         name: Stable identifier for the invariant.
         passed: Whether the property held.
-        detail: Human-readable evidence for the outcome.
+        detail: Readable evidence for the outcome.
     """
 
     name: str

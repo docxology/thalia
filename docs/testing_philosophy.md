@@ -1,6 +1,7 @@
 # Testing philosophy
 
-Correctness is a build-time property. Three layers enforce it; all are deterministic.
+Correctness is a build-time property. Three layers enforce it; the deterministic
+core is reproducible, while optional live-model adapters are explicitly model-dependent.
 
 ## 1. Zero-Mock tests
 
@@ -50,3 +51,11 @@ flips a golden assertion red before it can reach the manuscript.
 3. If you added a structural guarantee, encode it in `src/invariants.py`.
 4. Re-run the suite with coverage before declaring done. The repository also
    enforces `mypy src` and `ruff check src tests scripts` as static gates.
+
+The model-quality lane has its own zero-mock contract. Tests use real
+temporary files and real deterministic model adapters to exercise the pilot
+partition, held-out exclusion, strict ordinal/binary labels, blinded packets,
+paired condition completeness, answer/config/model/code provenance, confidence
+parsing, calibration, inter-rater agreement, clustered paired statistics, failed
+rows, threshold failures, certificate digests, and promotion refusal. The v2 live
+campaign remains operational evidence and is not converted into quality labels.

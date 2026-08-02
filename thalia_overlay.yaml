@@ -1,0 +1,161 @@
+# THALIA-local research overlay.
+#
+# Keep generic template contracts in domain_profile.yaml and experiment_plan.yaml.
+# This file is consumed only by THALIA's local evidence, manuscript, and release
+# tooling; the sibling template must not be taught these project-specific keys.
+
+quality_evidence:
+  schema: src/evaluation/quality.py
+  protocol_source: thalia_overlay.yaml:model_quality
+  raw_output_root: /Volumes/blue/data/thalia_quality
+  conditional_committed_artifacts:
+    - data/quality_results.json
+    - output/data/quality_results.json
+    - output/figures/quality_protocol.png
+    - output/reports/quality_certificate.json
+  promotion_rule: 'Only an explicitly accepted, certificate-digest-valid status=passed report may enter committed data.'
+  non_promotion_rule: 'Operational campaign evidence and complete-but-below-threshold quality runs remain external or complete_not_promoted.'
+  production_readiness_is_independent: true
+
+production_readiness:
+  schema: src/evaluation/production_readiness.py
+  raw_output_root: /Volumes/blue/data/thalia_production_readiness
+  acceptance_dimensions:
+    - p95_latency
+    - p99_latency
+    - cost_and_throughput
+    - failure_and_retry_behavior
+    - privacy_and_data_handling
+    - model_pinning
+    - rollback
+    - monitoring
+    - drift_detection
+    - red_team_coverage
+  quality_certificate_does_not_imply_readiness: true
+
+v2_campaign:
+  evidence_tiers: [contract, finite_synthetic, live_model, external_benchmark]
+  benchmark: LongMemEval_S
+  benchmark_path: data/longmemeval/longmemeval_s.json
+  raw_output_root: /Volumes/blue/data/thalia_campaigns
+  generation:
+    temperature: 0.0
+    num_predict: 512
+    model_digest_required: true
+  nested_cohorts:
+    selection: "SHA-256(selection_salt || question_id), balanced by question_type, round-robin prefix"
+    sizes: [100, 250, 500]
+    gemma_model: gemma3:4b
+    hermes_model: hermes3:latest
+  tiers:
+    - {id: gemma-100, model: gemma3:4b, sample_size: 100, status: preregistered}
+    - {id: gemma-250, model: gemma3:4b, sample_size: 250, status: preregistered}
+    - {id: gemma-500, model: gemma3:4b, sample_size: 500, status: preregistered}
+    - {id: hermes-100, model: hermes3:latest, sample_size: 100, status: preregistered}
+  bottleneck:
+    sample_size: 100
+    policies: [15, 30, 50, 100, adaptive]
+    ranking_diagnostics: [lexical, dense_nomic_embed_text, hybrid_rrf]
+  secondary_measures: [line_level_support_proxy, session_reachability, citation_precision, failure_rate, latency_seconds, poisoning_outcome]
+  synthetic_extensions:
+    seed_sensitivity_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    compiler_validation: train_held_out_by_stable_id
+  promotion_contract:
+    required: [benchmark_sha256, model_digest, generation_options, cohort_ids, code_fingerprint, config_fingerprint]
+    incomplete_tiers: "remain partial and cannot replace committed aggregates"
+  interpretation: "Live and external rows are finite local observations; no population inference or universal causal bottleneck claim."
+
+# Model quality is a separate answer-level evidence lane. It does not retrofit
+# labels onto v2_campaign: that campaign retains hashes/automated metrics and no
+# retained answer text. The local LLM judge is exploratory engineering evidence;
+# publication promotion requires expert-human raters.
+model_quality:
+  schema_version: 3
+  protocol_version: quality-v3
+  blind_packet_version: blind-v3
+  evaluation_mode: expert_human
+  benchmark: LongMemEval_S
+  benchmark_path: data/longmemeval/longmemeval_s.json
+  benchmark_binding: sha256_and_size
+  total_questions: 500
+  pilot:
+    selection: deterministic_sha256_by_question_type
+    per_question_type: 10
+    total_questions: 60
+    role: exploratory_only
+  confirmatory:
+    selection: all_non_pilot_question_ids
+    total_questions: 440
+    primary_estimand_excludes_pilot: true
+    pilot_leakage_policy: fail_closed
+  models:
+    - gemma3:4b
+    - hermes3:latest
+  conditions:
+    - {id_suffix: harness-default, mode: harness, role: proposed}
+    - {id_suffix: no-harness, mode: no_harness, role: full_context_baseline}
+    - {id_suffix: oracle-evidence, mode: oracle_evidence, role: gold_evidence_baseline}
+  annotation:
+    raters: 2
+    rater_ids: [judge-a, judge-b]
+    qualification: independent_domain_experts
+    adjudicator_id: adjudicator
+    blinding: randomized_condition_neutral_common_source_packet
+    adjudication: third_blinded_expert_review_of_disagreements
+    atomic_claims:
+      required: true
+      labels: [supported, unsupported, uncertain, not_applicable]
+      unit: generated_atomic_claim
+      interpretation: "supported means the claim is entailed or directly supported by the supplied source material; unsupported means the source does not support it; uncertain is reserved for genuinely unresolved cases; not_applicable is used only when a claim has no evidentiary content."
+    dimensions:
+      - correctness
+      - completeness
+      - faithfulness
+      - usefulness
+      - abstention_appropriateness
+      - calibration
+      - critical_safety_failure
+    ordinal_scores: [0, 1, 2]
+    ordinal_definitions:
+      0: "incorrect, absent, or unusable for the target question"
+      1: "partly correct, incomplete, weakly supported, or conditionally useful"
+      2: "fully correct, complete for the stated task, supported, or useful as applicable"
+    binary_outcomes: [abstention_appropriateness, critical_safety_failure]
+  primary_outcome:
+    name: correctness_full_rate
+    definition: adjudicated_correctness_equals_2
+    threshold_status: frozen_after_pilot
+    required_thresholds:
+      - correctness_lower_bound
+      - critical_safety_failure_rate_upper_bound
+  secondary_outcomes:
+    - completeness
+    - evidence_faithfulness
+    - usefulness
+    - abstention_appropriateness
+    - critical_safety_failure
+    - brier_score
+    - expected_calibration_error
+    - reliability_curve
+    - selective_accuracy
+    - latency
+    - failure_rate
+  statistics:
+    confidence_level: 0.95
+    paired_interval: question_clustered_bootstrap
+    paired_estimand: mean_paired_delta_cluster_weighted
+    paired_unit: question_cluster
+    paired_binary_test: exact_mcnemar
+    agreement: quadratic_weighted_cohen_kappa_between_raters
+    stratification: question_type
+  raw_output_root: /Volumes/blue/data/thalia_quality
+  promotion:
+    committed_artifact: data/quality_results.json
+    required_status: passed
+    incomplete_status: complete_not_promoted
+    below_threshold_status: complete_not_promoted
+    require_certificate_digest: true
+    require_explicit_acceptance: true
+    raw_evidence_binding: required
+    annotation_and_adjudication_binding: required
+    production_readiness_independent: true

@@ -5,7 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..compiler.gepa import GEPAOptimizer
-from ..compiler.metrics import EvalExample, answer_score, evaluate, grounding_score, efficiency_score
+from ..compiler.metrics import (
+    EvalExample,
+    answer_score,
+    citation_precision,
+    efficiency_score,
+    evaluate,
+    grounding_score,
+    session_reachability_score,
+    source_recall,
+)
 from ..config import HarnessConfig, default_config
 from ..harness import AutoHarness, build_run_fn
 from ..signatures import TaskCategory
@@ -256,6 +265,58 @@ def category_component_breakdown(
     }
 
 
+def metric_construct_audit(
+    dataset: list[EvalExample] | None = None,
+    config: HarnessConfig | None = None,
+) -> dict[str, object]:
+    """Decompose the support proxy into adjacent observable constructs.
+
+    The audit keeps the declared composite components alongside source-index
+    precision, source-index recall, and session reachability.  It is a finite
+    diagnostic over the supplied examples; no auxiliary value is promoted to
+    entailment or model-quality evidence.  The result is intentionally shaped
+    for both the manuscript figure and downstream JSON inspection.
+    """
+    dataset = dataset or build_demo_dataset()
+    if not dataset:
+        raise ValueError("dataset must be non-empty")
+    config = config or default_config()
+    run_fn = build_run_fn(config)
+    metric_names = (
+        "answer_token_f1",
+        "citation_support_proxy",
+        "citation_precision",
+        "source_recall",
+        "session_reachability",
+        "evidence_efficiency",
+    )
+    sums: dict[str, dict[str, float]] = {}
+    counts: dict[str, int] = {}
+    for example in dataset:
+        category = example.task_category.value if example.task_category is not None else "unknown"
+        output = run_fn(example)
+        values = {
+            "answer_token_f1": answer_score(output, example),
+            "citation_support_proxy": grounding_score(output, example),
+            "citation_precision": citation_precision(output, example),
+            "source_recall": source_recall(output, example),
+            "session_reachability": session_reachability_score(output, example),
+            "evidence_efficiency": efficiency_score(output),
+        }
+        category_sum = sums.setdefault(category, {name: 0.0 for name in metric_names})
+        for name, value in values.items():
+            category_sum[name] += value
+        counts[category] = counts.get(category, 0) + 1
+    return {
+        "n_examples": len(dataset),
+        "metric_names": list(metric_names),
+        "by_category": {
+            category: {name: values[name] / counts[category] for name in metric_names}
+            for category, values in sorted(sums.items())
+        },
+    }
+
+
 def gepa_component_trajectory(
     dataset: list[EvalExample] | None = None,
     seed_config: HarnessConfig | None = None,
@@ -330,5 +391,6 @@ __all__ = [
     "method_ablation",
     "consolidation_simulation",
     "category_component_breakdown",
+    "metric_construct_audit",
     "gepa_component_trajectory",
 ]

@@ -1,29 +1,26 @@
-# Evaluation: Compiler Search, Method Diagnostics, and Synthesis {#sec:evaluation-compiler-added-methods-summary}
+## Compiler Search, Method Diagnostics, and Synthesis {#sec:evaluation-compiler-added-methods-summary}
 
-## Compiler {#sec:eval-compiler}
+### Bounded Compiler Search {#sec:eval-compiler}
 
 [@fig:compiler_convergence] shows the MIPRO-style search over
-{{RESULT_NUM_CANDIDATES}} candidate configurations. On this dataset **every
-candidate ties to full floating-point precision** — not merely to display
-rounding: composite {{RESULT_COMPILED_SCORE}}, and the accuracy, grounding, and
-efficiency components are bit-identical across all candidates. The tie is
-*structural*, not a numerical coincidence: every config retrieves the same gold
-spans (so accuracy and grounding are unchanged) and the dataset only ever yields a
-couple of evidence windows, far below any candidate's `max_evidence` cap (so the
-efficiency reward is the same too). With all three components pinned, no retrieval
-depth can separate the configurations. The
-reported optimum at top-k {{RESULT_COMPILED_TOP_K}} and max-evidence
-{{RESULT_COMPILED_MAX_EVIDENCE}} is therefore a **tie-break** (the search returns
-the first config achieving the shared maximum, which happens to be a tighter
-budget), not a measured win — we report the exact tie rather than narrating a
-nonexistent gain. The GEPA-style optimizer reaches the same plateau by reflective
-mutation; its trace is recorded for audit. A perfectly flat convergence curve is
-the honest outcome for a dataset whose gold evidence is trivially retrievable: the
-search machinery is exercised end-to-end, and on a harder distribution — where
-retrieval depth changes which spans survive — the same loop has room to move (see
-the ablation and MMR sweep above, where a tight budget does separate the methods).
+{{RESULT_NUM_CANDIDATES}} candidate configurations. Every candidate reaches the
+same composite to full floating-point precision: {{RESULT_COMPILED_SCORE}}. The
+answer token-F1, citation-support, and efficiency components are bit-identical
+across the search trace. The equality follows from the data and metric contract:
+each configuration retrieves the same gold spans, and the compact dataset produces
+only a few evidence windows, below every candidate's `max_evidence` cap. The three
+components therefore remain constant across retrieval depths.
 
-### Held-out compiler generalization {#sec:eval-compiler-generalization}
+The reported configuration, top-k {{RESULT_COMPILED_TOP_K}} and max-evidence
+{{RESULT_COMPILED_MAX_EVIDENCE}}, is the first configuration reaching the shared
+maximum under the deterministic tie rule. This result describes selection under an
+equal score. The GEPA-style optimizer reaches the same plateau through reflective
+mutation, and its full trace is recorded for audit. A harder distribution with
+competitive evidence windows supplies the conditions under which retrieval depth
+can change the score; the tight-budget ablation and MMR sweep provide local
+examples of that regime.
+
+#### Held-Out Compiler Generalization {#sec:eval-compiler-generalization}
 
 The compiler claim is tested separately from the easy in-sample trace. Across
 {{RESULT_COMPILER_SEEDS}} fixed generated-task seeds, each split contains
@@ -38,121 +35,224 @@ examples. The held-out composite means are:
 
 The aggregate accounts for {{RESULT_COMPILER_ACCOUNTED_N}} executed example
 evaluations, including {{RESULT_COMPILER_CANDIDATE_N}} candidate configurations
-evaluated on training data rather than counting only the final holdout scores.
-The small observed MIPRO-style held-out change and the GEPA-style null result are
-finite generated-task evidence, not a claim of compiler generalization to a human,
-external-benchmark, or production population.
+evaluated on training data alongside the final holdout scores. The small observed
+MIPRO-style held-out change and the GEPA-style null result are finite
+generated-task observations. They characterize this seeded split family;
+generalization to an external benchmark or production workload requires a
+separately sampled evaluation.
 
 Two further diagnostics close the section. The RRF lane-weight sweep
-([@fig:rrf_sensitivity]) confirms that under a *tight* budget the fusion does have a
-shape — a non-monotonic dip at the balanced midpoint — even where every weight ties
-under the slack default. And the consolidation curves ([@fig:consolidation])
-illustrate, **schematically rather than empirically**, the memory-fault mechanism of
-@zhang2026memory that the episodic-first Memory Gate is built to avoid: forced
-per-turn consolidation degrades below the no-memory baseline while the gated regime
-does not.
+([@fig:rrf_sensitivity]) records a non-monotonic dip near the balanced midpoint
+under the *tight* budget; every weight remains tied under the slack default. The
+consolidation curves ([@fig:consolidation]) provide a mechanism schematic for the
+memory-fault discussion in [@zhang2026memory]. They encode the design expectation
+that forced per-turn consolidation can degrade utility as memory accumulates and
+that episodic-first gating can preserve a useful baseline. The schematic carries
+no observed memory trajectory.
 
-![MIPRO-style compiler search on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo using the deterministic extractive responder: candidate composite scores and the best-so-far curve. Every candidate ties exactly on this easy dataset, so the curve is intentionally flat and the optimum is a tie-break rather than a measured improvement. The inset decomposes the composite into its weighted accuracy/grounding/efficiency components, each constant across candidates. This is a finite deterministic configuration trace with no sampling interval, model generalization, or causal interpretation.](../output/figures/compiler_convergence.png){#fig:compiler_convergence width=70%}
+![MIPRO-style compiler trace for {{RESULT_NUM_CANDIDATES}} candidate configurations on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a candidate configuration; each candidate reaches composite {{RESULT_COMPILED_SCORE}}, and the inset shows the constant weighted answer token-F1, citation-support, and efficiency components. The selected top-k {{RESULT_COMPILED_TOP_K}} and max-evidence {{RESULT_COMPILED_MAX_EVIDENCE}} follow the deterministic first-achieving tie rule. The trace is a finite project-source diagnostic.](../output/figures/compiler_convergence.png){#fig:compiler_convergence width=70%}
 
 The GEPA-style optimizer is designed to move when a harder distribution exposes a
 weak component: it reflects on that component and mutates accordingly.
-[@fig:gepa_trajectory]
-shows one such reflective run: each iteration plots accuracy, grounding, efficiency,
-and the composite, and the open halo marks the component the optimizer identified as
-weakest at that step (the target of the next bounded mutation). On the easy set the
-composite still plateaus, but the trajectory is no longer a single flat line — it
-exposes *which* component the search would push first, and records the full trace so
-a reader can audit the mutation strategy on generated evaluation data rather than trust a prose
-summary.
+[@fig:gepa_trajectory] shows the reflective run. Each iteration plots answer
+token-F1, citation support, efficiency, and the composite; the open halo marks the
+component identified as weakest at that step and targeted by the next bounded
+mutation. The composite plateaus on the easy set while the component trace records
+the optimizer's decision path. Readers can inspect the mutation strategy directly
+in the generated trace and its provenance fields.
 
-![GEPA-style component trajectory over a deterministic compiler run on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo: per-iteration accuracy, grounding, efficiency, and composite (dashed). The open halo marks the weakest component at each step — the target of the next bounded mutation — so the reader can audit which component the engine would push first on harder data. Iterations, not independent observations, are the unit; no sampling interval or population/model claim is intended.](../output/figures/gepa_trajectory.png){#fig:gepa_trajectory width=70%}
+![GEPA-style component trajectory over a deterministic compiler run on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an optimizer iteration; solid lines show answer token-F1, citation support, and efficiency, the dashed line shows the composite, and the open halo marks the weakest component selected for the next bounded mutation. The trace records an algorithmic decision path and carries no sampling estimate.](../output/figures/gepa_trajectory.png){#fig:gepa_trajectory width=70%}
 
-![RRF lane-weight sensitivity on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under a tight retrieval budget: composite per tested weight setting as the lexical weight sweeps across its feasible range. On this clean set the sub-word semantic surrogate ranks the gold line marginally better than BM25, so semantic-heavy fusion scores highest; the curve then steps down non-monotonically around the balanced midpoint before settling onto a slightly lower lexical-heavy plateau. Under the loose default budget every weight ties. This is a deterministic finite sweep, not an uncertainty interval, model comparison, or population effect.](../output/figures/rrf_sensitivity.png){#fig:rrf_sensitivity width=70%}
+![Weighted RRF sensitivity on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lexical weight; the line reports composite score across the feasible weight sweep, with the highest tied settings and the change from the maximum annotated. The slack default budget yields a flat score because every setting retains the same gold evidence. This finite deterministic sweep describes budget-conditioned ranking behaviour.](../output/figures/rrf_sensitivity.png){#fig:rrf_sensitivity width=70%}
 
-![Schematic memory-utility curves: forced per-turn consolidation rises then degrades below the no-memory baseline, while the episodic-first gated regime is drawn above it in this illustrative mechanism. Illustrative of the mechanism in [@zhang2026memory], not an empirical measurement: there is no observation unit, sample size, uncertainty method, model estimate, or population interpretation.](../output/figures/consolidation_curve.png){#fig:consolidation width=70%}
+![Mechanism schematic for memory utility across turns. The curves encode the design expectation that forced per-turn consolidation can accumulate harmful derived memory while episodic-first gating preserves a useful trajectory. Values are illustrative indices tied to the mechanism discussion in [@zhang2026memory]; the panel contains no observed trajectory, sample, model estimate, or population estimand.](../output/figures/consolidation_curve.png){#fig:consolidation width=70%}
 
-## Added-method diagnostics {#sec:eval-added}
+### Added-Method Diagnostics {#sec:eval-added}
 
 Four further figures characterise the pipeline and the added methods. The
 **evidence funnel** ([@fig:evidence_funnel]) quantifies the narrowing from raw
-session lines through Inspector windows and ranked evidence down to cited sources —
-the context-rot defence made visible. The **per-category breakdown**
-([@fig:category_breakdown]) shows where the harness is strong and weak across the
-{{CONFIG_NUM_CATEGORIES}} task classes. The **noise-scaling** curves ([@fig:noise_scaling]) plot each
-lane's composite as distractor lines accumulate; under the default RRF weights the
-hybrid lane tracks the lexical lane *exactly* (it is drawn dashed so it stays
-visible over the solid lexical line), a direct, honest read-out of the scope
-boundary that the sub-word semantic surrogate contributes nothing the lexical
-signal does not already capture. The **MMR tradeoff** ([@fig:mmr_tradeoff]) sweeps
-$\lambda$ in [@eq:mmr] from pure diversity to pure relevance under the same tight
-retrieval budget (`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`) as the ablation and noise study:
-the pure-diversity endpoint scores measurably lower because maximizing
-dissimilarity can evict the discriminative span from the tight evidence budget, and the
-curve steps up to its plateau once relevance receives a non-zero weight.
-Under the loose default budget the sweep would be flat by construction; the tight
-budget surfaces the real diversity penalty without tuning the dataset.
+session lines through Inspector windows and ranked evidence to cited sources. The
+**per-category breakdown** ([@fig:category_breakdown]) locates composite variation
+across the {{CONFIG_NUM_CATEGORIES}} task classes. The **noise-scaling** curves
+([@fig:noise_scaling]) plot each lane's composite as distractor lines accumulate;
+under the default RRF weights, hybrid and lexical traces coincide in this finite
+probe. The dashed hybrid trace remains visible above the lexical trace in the
+rendered figure and the value table records the equality. The **MMR tradeoff**
+([@fig:mmr_tradeoff]) sweeps $\lambda$ in [@eq:mmr] from pure diversity to pure
+relevance under the same tight retrieval budget
+(`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`) as
+the ablation and noise study. The pure-diversity endpoint receives a selection
+penalty because dissimilarity can evict the discriminative span from the retained
+evidence; the curve reaches its plateau once relevance receives a positive weight.
+The slack budget supplies the flat reference regime.
 
-![Evidence narrowing funnel: mean line counts per query from raw session lines through Inspector windows, ranked evidence, and cited sources on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The in-figure retention rates make the design tradeoff explicit: the Inspector narrows early, while the Reasoner cites selectively. These deterministic counts have no sampling interval or model-comparison interpretation; the figure measures context narrowing, not answer quality or attribution by itself.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
+![Evidence narrowing funnel for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a query; bars show mean line counts at raw session, Inspector-window, ranked-evidence, and cited-source boundaries, while annotations report Inspector and citation retention. The panel measures context narrowing and source exposure; answer quality uses the separate token-F1 and support estimands.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
 
-The funnel is a mean view; [@fig:pipeline_flow] makes the per-example narrowing
-concrete by plotting, for each of the {{RESULT_NUM_EXAMPLES}} demo examples (one per task category),
-the evidence count at each pipeline stage — Inspector windows → Retriever ranked
-→ Reasoner cited. The gaps between the three bars are exactly the drops the funnel
-averages: an example that enters with two windows and cites both shows the
-harness lost nothing in transit, while an example whose cited count falls below its
-ranked count is a concrete grounding-failure case to inspect.
+The funnel is a mean view. [@fig:pipeline_flow] shows the per-example evidence
+path for the {{RESULT_NUM_EXAMPLES}} demo examples, one per task category, with
+counts at Inspector windows, Retriever-ranked evidence, and Reasoner-cited
+sources. Each bar triplet exposes the exact transition contributing to the funnel
+means. A matched ranked and cited count indicates full source selection for that
+example; a lower cited count identifies a concrete support gap for inspection.
 
-![Per-example evidence path across pipeline stages for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo: Inspector windows (lexical blue), Retriever ranked (hybrid green), and Reasoner cited (accent pink) for each task category. The unit is an example-level evidence path; the annotation reports citation retention and marks each concrete ranked-to-cited gap. This deterministic diagnostic has no uncertainty interval, model comparison, entailment claim, or population interpretation.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
+![Per-example evidence path across pipeline stages for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an example: blue bars show Inspector windows, green bars show hybrid ranked evidence, and pink bars show Reasoner citations for each task category. The annotation reports citation retention and marks ranked-to-cited gaps. The panel is a deterministic source-exposure diagnostic.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
 
-![Composite score per task category on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo (one example per category). Each bar is a deterministic descriptive mean of the same token-F1, grounding, and efficiency components used for the headline results; there is no sampling interval, model variation, or population estimate. The categories expose diagnostic failure modes only.](../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
+![Composite score by task category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo, with one example per category. Each bar is the declared weighted combination of answer token-F1, citation-support, and evidence-count efficiency. The observation unit is a generated example and the panel is a deterministic diagnostic of category-specific failure modes.](../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
 
-The composite hides the components that produced it. [@fig:category_components]
-decomposes each category's composite into its weighted accuracy/grounding/efficiency
-contributions (the same {{CONFIG_WEIGHT_ACC}}/{{CONFIG_WEIGHT_GROUND}}/{{CONFIG_WEIGHT_EFF}} weights behind [@eq:composite]); the weak
-category bars in [@fig:category_breakdown] read, on inspection, as accuracy-bounded
-(code, multi-session) rather than grounding or efficiency failures — consistent with
-the LM-bounded-accuracy story in [@sec:eval-neural].
+The composite is a sum of three declared components. [@fig:category_components]
+decomposes each category into the weighted answer token-F1, citation-support, and
+efficiency terms defined in [@eq:composite]. The code and multi-session categories
+carry the lowest answer-token-F1 component in this extractive-LM run; the support
+and efficiency contributions remain separately visible. The pattern is consistent
+with the answer ceiling documented in [@sec:eval-neural] and identifies the
+component that a stronger generator would need to change.
 
-![Per-category weighted component breakdown for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo: each bar stacks {{CONFIG_WEIGHT_ACC}}·token-F1 accuracy (blue), {{CONFIG_WEIGHT_GROUND}}·citation-support proxy (green), and {{CONFIG_WEIGHT_EFF}}·evidence-count efficiency (pink) to its composite. This deterministic metric audit has no sampling interval or population interpretation; weak categories are accuracy-bounded by the extractive responder and do not establish that retrieval, attribution, or efficiency is universally solved.](../output/figures/category_components.png){#fig:category_components width=70%}
+![Weighted component audit by category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. Stacks show {{CONFIG_WEIGHT_ACC}}·answer token-F1 in blue, {{CONFIG_WEIGHT_GROUND}}·citation-support proxy in green, and {{CONFIG_WEIGHT_EFF}}·evidence-count efficiency in pink; their sum equals the composite in [@eq:composite]. The observation unit is a generated example, and the extractive responder bounds the answer token-F1 component.](../output/figures/category_components.png){#fig:category_components width=70%}
 
-![Deterministic composite score per retrieval lane and noise level on the fixed synthetic demo, with lexical false-friend distractors appended under the tight budget (`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`). The unit is an example-level score aggregated over the six demo cases; no interval or population inference is intended. The semantic line is the hashing surrogate, so the measured ordering is local to this finite mechanical probe and does not reproduce learned dense retrieval.](../output/figures/noise_scaling.png){#fig:noise_scaling width=70%}
+![Composite score by retrieval lane and distractor level on the fixed synthetic demo. Lexical false-friend lines are appended under the tight budget (`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`); the observation unit is an example-level score aggregated across the six demo cases. The semantic trace uses the deterministic hashing surrogate, so the ordering describes this finite mechanical probe and its recorded budget regime.](../output/figures/noise_scaling.png){#fig:noise_scaling width=70%}
 
-![Deterministic composite score per MMR lambda setting on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the same tight retrieval budget: composite across the full diversity-to-relevance sweep. The pure-diversity endpoint incurs a selection penalty on this compact diagnostic set; under the loose default budget the curve would be flat by construction. The sweep has no sampling interval, learned-model dependence, causal interpretation, or population claim.](../output/figures/mmr_tradeoff.png){#fig:mmr_tradeoff width=70%}
+![MMR composite across the full diversity-to-relevance lambda sweep on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lambda setting; the pure-diversity endpoint carries the measured selection penalty, and the curve reaches its plateau as relevance receives weight. The slack budget supplies the flat reference regime.](../output/figures/mmr_tradeoff.png){#fig:mmr_tradeoff width=70%}
 
-## Added-method ablation {#sec:eval-ablation}
+### Added-Method Ablations {#sec:eval-ablation}
 
 [@fig:method_ablation] reports the composite for the base pipeline and each added
-retrieval method (query expansion, recency weighting, MMR), plus all combined, on
-the single-turn dataset. The ablation runs under the same *tight* retrieval budget
-(`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`) as the MMR sweep and noise study: under the loose
-default budget every gold span is retrieved regardless of method, so the ablation
-is null *by construction* — every condition is byte-identical, which measures the
-budget, not the methods. A tight budget instead forces a genuine selection contest,
-where each method can change which evidence survives. We do not tune the dataset to
-manufacture a gap; we use a realistic budget under which the methods can operate at
-all. Under that budget recency weighting has the highest observed composite in this
-finite run — reordering by
-recency promotes the discriminative span into the surviving evidence — while query
-expansion is mildly negative (the extra terms dilute a query that was already
-precise) and MMR is neutral on a set this small. **Memory recall is excluded from
-this single-turn ablation** because it requires a populated episodic store; it is
-exercised directly in the recall and harness tests, where a fact held only in the
-episodic store (absent from the immediate session history) is recalled and surfaces
-in the answer's citations.
+retrieval method (query expansion, recency weighting, MMR), plus the combined
+configuration, on the single-turn dataset. The ablation uses the same *tight*
+retrieval budget (`top_k={{CONFIG_TIGHT_TOP_K}}`,
+`max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`) as the MMR sweep and noise study.
+The loose default budget retrieves every gold span for every condition, producing
+the expected equality reference. The tight budget creates a selection contest in
+which each method can change the evidence that survives.
 
-![Finite-set added-method ablation on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under a tight retrieval budget: composite per configuration for base, each retrieval method, and all combined. Bars are deterministic descriptive contrasts from the extractive responder and hashing surrogate; recency weighting is highest in this run, expansion is lower, and MMR is near the base, without a causal, learned-model, or population-wide superiority claim.](../output/figures/method_ablation.png){#fig:method_ablation width=70%}
+The experiment keeps the generated dataset and scoring rule fixed. Recency
+weighting has the highest observed composite in this finite run because recency
+promotes the discriminative span into the surviving evidence. Query expansion is
+mildly lower as extra terms dilute an already precise query, and MMR is close to
+the base configuration on this small set. Memory recall uses a separate populated
+episodic-store contract; recall and harness tests exercise a fact held only in the
+episodic store and verify its appearance in answer citations.
 
-## Summary {#sec:eval-summary}
+![Added-method ablation on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a configuration; bars show composite for the base pipeline, query expansion, recency weighting, MMR, and the combined setting. Recency weighting is highest in this run, expansion is lower, and MMR is near the base. The extractive responder and hashing surrogate define the evidence tier.](../output/figures/method_ablation.png){#fig:method_ablation width=70%}
 
-The deterministic contract is tested on {{RESULT_NUM_EXAMPLES}}
-examples across all task categories, with observed citation-support and efficiency
-lane comparison, a noise-scaling probe, and a compiler that searches and reports an
-optimum. The two honest boundaries — extractive-LM accuracy and the hashing
-semantic surrogate — are exactly the two designed plug-in points (a real LM, a real
-embedder), neither of which perturbs the rest of the architecture.
+### Integrity-Advantage Screen: Current Findings and Open Tests {#sec:eval-integrity-advantage}
 
-The result is therefore not "THALIA beats another agent." The result is that a
-typed, lexical-anchored, episodic-first, compiler-optimized harness can be implemented
-as deterministic code, measured with auditable citations, regenerated through the
-template pipeline, and extended at precisely identified model and embedding
-boundaries.
+The integrity screen ranks endpoint-specific comparisons by claimability. Positive
+effects use the declared direction of each endpoint, and the source rows retain
+their native units. Binary probe effects use exact paired McNemar tests with Wilson
+intervals for the two condition rates and paired bootstrap intervals for the rate
+differences. The compiler comparison resamples seed
+clusters. The neural comparison uses its recorded paired aggregate. Aggregate
+comparisons without matched rows remain point estimates.
+
+![Endpoint-level integrity-advantage screen. The observation units remain separate: binary probe effects use direction-normalized rate differences; continuous panels retain composite, token-F1, and context-policy units. Filled markers show recorded intervals, open markers show point-only aggregates, and the lower panel retains the two condition rates with Wilson intervals. Positive effects favor the left condition. Rows are not pooled. The legacy injection “auditability” row is a lexical cited-excerpt/source-exposure proxy, not a source-record-recovery or claim-level-auditability test; raw and exploratory-Holm paired p-values are displayed where available.](../output/figures/integrity_advantage_audit.png){#fig:integrity_advantage_audit width=100%}
+
+The strongest current screen row is the legacy lexical cited-excerpt/source-exposure
+proxy under the recorded injection probes. THALIA's cited excerpts contain the
+supplied gold value on every one of the {{RESULT_INTEGRITY_AUDIT_N}} probes,
+giving a direction-normalized paired rate difference of
+{{RESULT_INTEGRITY_AUDIT_DELTA}}, raw exact $p={{RESULT_INTEGRITY_AUDIT_P}}$, and
+exploratory Holm-adjusted $p={{RESULT_INTEGRITY_AUDIT_ADJ_P}}$; the paired bootstrap
+interval is {{RESULT_INTEGRITY_AUDIT_CI}}. The naive baseline emits no cited
+excerpts in this comparison. This finite lexical contrast does not demonstrate
+source-record recovery, citation entailment, claim-level auditability, or answer
+quality.
+
+The same probes show no poisoning-rate advantage: the direction-normalized
+poisoning effect is {{RESULT_INTEGRITY_POISON_DELTA}} because both conditions
+record the same poisoned count; raw exact $p={{RESULT_INTEGRITY_POISON_P}}$,
+exploratory Holm-adjusted $p={{RESULT_INTEGRITY_POISON_ADJ_P}}$, and the paired
+bootstrap interval is {{RESULT_INTEGRITY_POISON_CI}}.
+The composite baseline comparison supplies a separate,
+conditional orchestration result. Its lift is {{RESULT_INTEGRITY_COMPOSITE_LIFT}}
+while raw answer token-F1 ties; citation support and evidence efficiency supply
+the lift. The composite therefore measures the declared evidence-and-efficiency
+utility function rather than a general answer-quality gain.
+
+Three results are promising research leads. The learned embedder improves
+paraphrase recall by {{RESULT_INTEGRITY_LEARNED_DELTA}} on the paired probe set,
+with raw exact $p={{RESULT_INTEGRITY_LEARNED_P}}$, exploratory Holm-adjusted
+$p={{RESULT_INTEGRITY_LEARNED_ADJ_P}}$, and paired bootstrap interval
+{{RESULT_INTEGRITY_LEARNED_CI}}. The adaptive context policy
+improves the recorded external-slice aggregate by {{RESULT_INTEGRITY_ADAPTIVE_DELTA}}
+across {{RESULT_INTEGRITY_ADAPTIVE_N}} retained questions, but the source
+aggregate lacks paired question-level rows. The MIPRO-style held-out change is
+{{RESULT_INTEGRITY_COMPILER_DELTA}} with a descriptive cluster interval of
+{{RESULT_INTEGRITY_COMPILER_CI}}, raw sign-flip $p={{RESULT_INTEGRITY_COMPILER_P}}$,
+and exploratory Holm-adjusted $p={{RESULT_INTEGRITY_COMPILER_ADJ_P}}$ across
+{{RESULT_COMPILER_SEEDS}} seed clusters. These results motivate replication; they do not yet
+support promoted general advantages.
+
+The local neural comparison provides a negative control for broad answer claims:
+the neural-minus-extractive token-F1 effect is {{RESULT_INTEGRITY_NEURAL_DELTA}},
+with interval {{RESULT_INTEGRITY_NEURAL_CI}}, raw $p={{RESULT_INTEGRITY_NEURAL_P}}$,
+and exploratory Holm-adjusted $p={{RESULT_INTEGRITY_NEURAL_ADJ_P}}$. The interval
+spans zero. Current evidence therefore records a finite lexical source-exposure
+contrast and a conditional composite lift. General answer quality, a
+poisoning-rate advantage, model superiority, and population-level performance
+remain unestablished.
+
+### Discussion: Findings, Contributions, and Evidence Boundaries {#sec:eval-summary}
+
+This study evaluates THALIA as a research instrument across deterministic, neural,
+and external-benchmark tiers. Five findings organize the discussion.
+
+- **Contract integrity.** The typed stage graph, append-before-consolidate memory
+  rule, formal anchors, generated variables, and artifact checks execute as one
+  reproducible path. The deterministic contract is tested on
+  {{RESULT_NUM_EXAMPLES}} examples across all task categories.
+- **Controlled diagnostics localize failure.** The deterministic tier records
+  citation-support and efficiency by retrieval lane, noise-scaling behavior,
+  added-method responses, and compiler traces. Tight budgets create observable
+  selection differences; the slack budget supplies an equality reference. The
+  metric-construct audit separates answer token-F1, the blended support proxy,
+  source-index precision/recall, reachability, and efficiency.
+- **Model transfer changes the outcome.** The local backend comparison and the
+  external {{RESULT_LME_BENCHMARK}} slice show model dependence. The extractive LM
+  bounds token-F1 in the deterministic lane, while the neural backend changes
+  answer behavior under recorded host and model settings.
+- **The clearest current difference is lexical cited-excerpt/source exposure.** The
+  integrity screen shows that the recorded cited excerpts contain the supplied gold
+  value under the injection probes, while the poisoning endpoint remains equal
+  across conditions. This is not true-source recovery or claim-level auditability.
+  The composite baseline lift is conditional on citation support and evidence
+  efficiency; raw answer token-F1 ties. Answer quality and a poisoning-rate
+  advantage remain open questions.
+- **Context narrowing is an intervention surface.** The bottleneck study links
+  the retained loss to Inspector recall. In the retained slice, ranking recall is
+  {{RESULT_BN_RANKING_RECALL}} and Inspector recall is
+  {{RESULT_BN_INSPECTOR_RECALL}}; the adaptive context policy changes neural answer
+  token-F1 from {{RESULT_BN_NEURAL_ACC_LO}} to {{RESULT_BN_ADAPTIVE_ACC}} while
+  compact-context outputs remain unchanged. This result motivates controlled
+  context-policy experiments under fixed generators and retrieval contracts.
+
+The important contribution is a reusable, source-bound measurement boundary. A
+typed, lexically anchored, episodic-first, compiler-assisted pipeline preserves
+raw evidence, records its transformations, and exposes model and embedding
+interfaces for targeted experiments. The package therefore supports reproducible
+method comparison and failure localization within the declared tiers.
+
+The promising extensions are broader task families, learned retrieval, stronger
+generators, and preregistered interventions over context budgets and memory gates.
+The current implementation supplies stable contracts for those comparisons. The
+answer-level labels needed to rank general model quality remain unmeasured.
+
+#### Model Quality, Causal Robustness, and Production Readiness Require Separate Evidence {#sec:eval-instrument-vs-model}
+
+The deterministic tier measures execution, lexical overlap, source exposure, and
+context access. Source-index precision and recall measure declared citation-set
+alignment. Sentence-level entailment, factual completeness, usefulness,
+calibration, abstention, safety, causal robustness, and production reliability
+remain unmeasured by these observables.
+
+The typed quality protocol specifies the missing evidence: a prespecified target,
+stronger baselines, held-out questions, two blinded expert ratings, adjudication,
+atomic-claim support labels, calibration and agreement analysis, and a fail-closed
+certificate. The production protocol separately evaluates latency, cost, failures,
+privacy, model pinning, rollback, monitoring, drift, and red-team coverage.
+Neither certificate is present in the current result layer.
+
+This separation gives the manuscript a clear forward path. Researchers can keep
+the contracts fixed while varying models, embeddings, context policies, and memory
+gates, then attach the appropriate expert and operational acceptance records. The
+present evidence establishes an auditable instrument and localized diagnostics;
+broader quality and production claims remain open studies.

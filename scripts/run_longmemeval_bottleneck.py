@@ -2,7 +2,7 @@
 """Thin orchestrator: localise the LongMemEval bottleneck and record the fix.
 
 Writes ``data/longmemeval_bottleneck.json`` (KB of aggregates): ranking-vs-Inspector
-recall, the extractive ``max_windows`` grounding sweep, and the neural accuracy gain
+recall, the extractive ``max_windows`` citation-support sweep, and the neural accuracy gain
 from a wider Inspector. Logic in
 :func:`src.evaluation.longmemeval.bottleneck_analysis`.
 

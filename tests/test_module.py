@@ -1,5 +1,7 @@
 """Tests for the Module / LM abstraction layer (Zero-Mock)."""
 
+from typing import Any
+
 import pytest
 from src.module import (
     EVIDENCE_MARKER,
@@ -104,8 +106,9 @@ class TestPredict:
 
 
 class _Concrete(Module):
-    def forward(self, x):
-        return x * 2
+    def forward(self, *args: Any, **kwargs: Any) -> int:
+        del kwargs
+        return args[0] * 2
 
 
 class TestModule:

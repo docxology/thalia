@@ -49,7 +49,11 @@ _CATEGORY_WEIGHTS: dict[TaskCategory, tuple[float, float]] = {
 
 
 def estimate_tokens(texts: list[str]) -> int:
-    """Estimate the token footprint of ``texts`` (whitespace token proxy)."""
+    """Estimate ``texts`` with the shared lowercase alphanumeric tokenizer.
+
+    This is a deterministic structural budget proxy, not a model tokenizer or a
+    latency, memory, or monetary cost estimate.
+    """
     return sum(len(tokenize(t)) for t in texts)
 
 

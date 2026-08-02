@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 scope: code_to_paper_publication_red_team
 evidence_boundary: finite_synthetic_and_recorded_local_external_evidence
 interpretation_policy:
@@ -7,7 +7,135 @@ interpretation_policy:
   benchmark: external input identified by size and SHA-256
   grounding: citation-support proxy unless explicitly labelled session reachability
   token_f1: set-based token overlap; repeated token multiplicity is intentionally ignored
-  intervals: descriptive resampling diagnostics; five seed clusters are too few for ordinary population coverage claims
+  intervals: descriptive percentile or cluster-resampling diagnostics; finite seed-cluster counts do not establish ordinary population coverage claims
+  multiplicity: Holm step-down adjusted values are p_Holm, not FDR q-values
+  paired_continuous_tests: sign-flip randomization diagnostics require paired-difference exchangeability; exhaustive enumeration is limited to small paired samples
+  paired_binary_tests: exact two-sided McNemar conditional on discordant pairs
+notation:
+  supplemental_section: manuscript/12_supplemental_notation.md
+  symbols:
+    - {symbol: 'T(x)', meaning: ordered lowercase alphanumeric token sequence}
+    - {symbol: 'U(x)', meaning: set of distinct tokens in T(x)}
+    - {symbol: '\\mathcal H', meaning: raw session transcript supplied to the Inspector}
+    - {symbol: '\\mathcal M', meaning: frozen memory snapshot for one invocation}
+    - {symbol: '\\theta', meaning: immutable HarnessConfig for one invocation}
+    - {symbol: 'W_I', meaning: Inspector evidence-window sequence}
+    - {symbol: '\\mu_I', meaning: Inspector metadata}
+    - {symbol: 'W_R', meaning: Retriever ranked evidence sequence}
+    - {symbol: '\\delta_R', meaning: Retriever delivery decision}
+    - {symbol: '\\hat y', meaning: generated answer}
+    - {symbol: '\\tau_N', meaning: Reasoner routing and evidence-use trace}
+    - {symbol: 'e', meaning: episodic append result}
+    - {symbol: '\\Delta_{\\mathcal M}', meaning: optional derived memory delta}
+    - {symbol: 'I_\\theta', meaning: Inspector stage function}
+    - {symbol: 'R_\\theta', meaning: Retriever stage function}
+    - {symbol: 'N_\\theta', meaning: Reasoner stage function}
+    - {symbol: 'G_\\theta', meaning: Memory Gate stage function}
+    - {symbol: q, meaning: current query text whose T(q) tokens drive retrieval}
+    - {symbol: c_q, meaning: task category classified from query q}
+    - {symbol: t, meaning: turn identifier used by the episodic store}
+    - {symbol: s, meaning: session-ending indicator supplied to the Memory Gate}
+    - {symbol: b_N, meaning: Reasoner gate payload containing consolidation and explicit-request flags}
+    - {symbol: r_N, meaning: Reasoner consolidation-request flag}
+    - {symbol: x_N, meaning: explicit memory-request indicator derived from the query}
+    - {symbol: '\\Sigma_G', meaning: Memory Gate state containing episodic and derived-memory state}
+    - {symbol: '\\Theta', meaning: Compiler candidate configuration surface}
+    - {symbol: '\\mathcal D', meaning: finite evaluation set supplied to a Compiler run}
+    - {symbol: '\\hat\\theta', meaning: first maximum-scoring configuration under stable candidate order}
+    - {symbol: '\\mathcal T_C', meaning: complete Compiler candidate-and-trace ledger}
+    - {symbol: '\\bar M', meaning: mean composite score for a configuration on the evaluation set}
+    - {symbol: '\\prec_\\Theta', meaning: stable candidate order used to resolve equal Compiler scores}
+    - {symbol: d, meaning: candidate document or window token sequence}
+    - {symbol: R, meaning: ranked evidence collection}
+    - {symbol: A, meaning: answer token-F1 component}
+    - {symbol: H, meaning: expected-source citation indicator}
+    - {symbol: 'r_l(c)', meaning: zero-based candidate rank in lane l}
+    - {symbol: 'B_b', meaning: Inspector partition block}
+    - {symbol: B, meaning: evidence token budget}
+    - {symbol: 'Q_I', meaning: Inspector query-token set}
+    - {symbol: 'S_MMR', meaning: candidates selected by greedy MMR}
+    - {symbol: 'C_cite', meaning: cited source-index set}
+    - {symbol: 'E_cite', meaning: joined cited excerpts}
+    - {symbol: 'G_gold', meaning: expected source-index set}
+    - {symbol: 'G_sup', meaning: citation-support proxy}
+    - {symbol: 'P_cite', meaning: source-index citation precision}
+    - {symbol: 'R_src', meaning: source-index citation recall}
+    - {symbol: 'S_eff', meaning: structural-efficiency scale}
+    - {symbol: 'E_eff', meaning: structural-efficiency score}
+    - {symbol: M, meaning: per-example composite score}
+    - {symbol: 'Y_q', meaning: outcome for analysis unit q}
+    - {symbol: 'Delta_q', meaning: paired left-minus-right outcome difference}
+    - {symbol: 'p_Holm', meaning: Holm-adjusted paired-test p-value}
+    - {symbol: 'n_obs', meaning: observed denominator row count}
+    - {symbol: 'n_cluster', meaning: cluster count}
+  crosswalk:
+    - {formalism: typed_stage_composition, symbols: ['I_\\theta', 'R_\\theta', 'N_\\theta', 'G_\\theta', 'b_N', 'r_N', 'x_N', '\\Sigma_G']}
+    - {formalism: compiler_selection, symbols: ['\\Theta', '\\mathcal D', '\\hat\\theta', '\\mathcal T_C', '\\bar M', '\\prec_\\Theta']}
+    - {formalism: shared_tokenizer, symbols: ['T(x)', 'U(x)']}
+    - {formalism: token_f1_set, symbols: ['T(x)', 'U(x)']}
+    - {formalism: bm25, symbols: [q, d]}
+    - {formalism: hashing_cosine, symbols: [d]}
+    - {formalism: weighted_rrf, symbols: ['r_l(c)']}
+    - {formalism: mmr, symbols: [S_MMR]}
+    - {formalism: inspector_relevance, symbols: [Q_I]}
+    - {formalism: inspector_partition, symbols: [B_b]}
+    - {formalism: prf_expansion, symbols: [q, d]}
+    - {formalism: recency_bonus, symbols: [d]}
+    - {formalism: evidence_budget, symbols: [B]}
+    - {formalism: grounding_support, symbols: [C_cite, E_cite, G_gold, G_sup]}
+    - {formalism: citation_precision, symbols: [C_cite, G_gold, P_cite]}
+    - {formalism: source_recall, symbols: [C_cite, G_gold, R_src]}
+    - {formalism: evidence_efficiency, symbols: [S_eff, E_eff]}
+    - {formalism: composite_metric, symbols: [M, G_sup, E_eff]}
+    - {formalism: stratified_cluster_resampling, symbols: [Y_q, n_obs, n_cluster]}
+    - {formalism: research_dataset, symbols: [Y_q, n_obs]}
+    - {formalism: evaluation_ledger, symbols: [n_obs]}
+    - {formalism: adjudicated_quality, symbols: [Y_q, n_obs]}
+    - {formalism: quality_primary_estimand, symbols: [Y_q, n_obs]}
+    - {formalism: operational_readiness, symbols: [Y_q, n_obs]}
+statistical_contracts:
+  - id: percentile_bootstrap
+    implementation: src/evaluation/statistics.py::bootstrap_mean
+    tests: tests/test_statistics.py::TestBootstrapMean.test_summary_has_provenance_and_bounds
+    method: descriptive percentile bootstrap interval
+    estimand: finite-set arithmetic mean of continuous observations
+    interval_interpretation: descriptive_percentile_bootstrap_interval
+    assumption: iid resampling is a finite-data descriptive construction, not a population guarantee
+  - id: stratified_cluster_bootstrap
+    implementation: [src/evaluation/statistics.py::stratified_bootstrap_mean, src/evaluation/statistics.py::clustered_bootstrap_mean]
+    tests: tests/test_statistics.py::TestBootstrapMean.test_stratified_and_clustered_provenance
+    method: fixed-stratum or whole-cluster resampling interval
+    estimand: declared finite-set mean with observed stratum or cluster weighting
+    interval_interpretation: descriptive_stratified_or_cluster_resampling_interval
+    assumption: the resampling unit and weighting must match the declared estimand
+  - id: wilson_score
+    implementation: src/evaluation/statistics.py::wilson_interval
+    tests: tests/test_statistics.py::TestRatesAndPairedComparisons.test_wilson_interval_matches_independent_golden_value
+    method: Wilson score interval for a binary rate
+    estimand: observed binary success rate
+    interval_interpretation: binomial_score_interval
+    assumption: binary trials with a common success probability for the score construction
+  - id: exact_mcnemar
+    implementation: src/evaluation/statistics.py::exact_paired_binary
+    tests: tests/test_statistics.py::TestRatesAndPairedComparisons.test_mcnemar_golden_two_sided_tail
+    method: exact two-sided conditional McNemar binomial test
+    estimand: paired binary discordance under equal success probabilities
+    interval_interpretation: p_value_only
+    assumption: paired binary outcomes and conditional discordant-pair null
+  - id: paired_sign_flip
+    implementation: src/evaluation/statistics.py::paired_permutation_p_value
+    tests: tests/test_statistics.py::TestRatesAndPairedComparisons.test_sign_flip_metadata_distinguishes_exhaustive_and_monte_carlo
+    method: exhaustive or seeded Monte Carlo paired sign-flip randomization diagnostic
+    estimand: mean paired continuous difference
+    interval_interpretation: p_value_only
+    assumption: paired differences are sign-exchangeable under the null
+  - id: holm_step_down
+    implementation: src/evaluation/statistics.py::holm_bonferroni
+    tests: tests/test_statistics.py::TestRatesAndPairedComparisons.test_holm_golden_step_down_values
+    method: Holm step-down multiplicity adjustment
+    estimand: complete named comparison family
+    interval_interpretation: adjusted_p_value
+    assumption: the declared family is complete before adjustment
 formalisms:
   - id: shared_tokenizer
     equation: eq:tokenizer
@@ -22,7 +150,44 @@ formalisms:
     outputs: [lowercase alphanumeric tokens]
     dependencies: []
     invariants: [deterministic_tokenization]
+    invariant_anchors:
+      deterministic_tokenization: tests/test_module.py::TestTokenize.test_lowercases_and_splits
     limitation: punctuation and morphology are not modeled beyond regex token boundaries
+  - id: typed_stage_composition
+    equation: eq:typed-composition
+    implementation: src/pipeline.py::Pipeline
+    tests: tests/test_pipeline.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: stage invocation
+    estimand: ordered typed handoffs from transcript and query to answer, citations, and memory decision
+    inputs: [session_history, query, config, memory_snapshot, task_category, turn_state, memory_gate_state]
+    outputs: [inspector_windows, ranked_evidence, answer, citations, episodic_append, memory_delta, updated_memory_gate_state]
+    dependencies: [shared_tokenizer]
+    invariants: [ordered_stage_handoffs, append_before_consolidation]
+    invariant_anchors:
+      ordered_stage_handoffs: tests/test_pipeline.py
+      append_before_consolidation: tests/test_pipeline.py
+    limitation: the composition exposes software state and evidence flow; answer correctness requires a model-quality protocol
+  - id: compiler_selection
+    equation: eq:compiler-selection
+    implementation: src/compiler/mipro.py::MIPROCompiler
+    tests: tests/test_mipro.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: candidate configuration
+    estimand: first stable-order maximizer of the finite-set mean composite score
+    inputs: [candidate_surface, evaluation_set, stable_candidate_order]
+    outputs: [selected_configuration, candidate_trace]
+    dependencies: [composite_metric, evaluation_ledger]
+    invariants: [deterministic_candidate_order, complete_trace, first_maximum_tie_rule]
+    invariant_anchors:
+      deterministic_candidate_order: tests/test_mipro.py
+      complete_trace: tests/test_mipro.py
+      first_maximum_tie_rule: tests/test_mipro.py
+    limitation: configuration selection on a finite declared evaluation set; generalization requires held-out or external evidence
   - id: token_f1_set
     equation: eq:token-f1
     implementation: src/compiler/metrics.py::token_f1
@@ -36,6 +201,9 @@ formalisms:
     outputs: [precision, recall, f1]
     dependencies: [shared_tokenizer]
     invariants: [bounded_metric, empty-empty_is_one]
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestTokenF1.test_perfect_match_is_one
+      empty-empty_is_one: tests/test_metrics.py::TestTokenF1.test_both_empty_is_one
     limitation: token multiplicity, synonymy, entailment, factuality, and semantic correctness are not measured
   - id: bm25
     equation: eq:bm25
@@ -50,6 +218,10 @@ formalisms:
     outputs: [ranked_document_indices, scores]
     dependencies: [shared_tokenizer]
     invariants: [nonnegative_idf, zero_score_exclusion, deterministic_ties]
+    invariant_anchors:
+      nonnegative_idf: src/invariants.py::check_bm25_idf_nonnegative
+      zero_score_exclusion: tests/test_lexical.py::TestBM25TopK.test_zero_score_docs_excluded
+      deterministic_ties: tests/test_lexical.py::TestBM25TopK.test_ties_break_on_index
     limitation: query terms are a multiset, OOV terms contribute zero, and no learned semantic representation is used
   - id: hashing_cosine
     equation: eq:hash-cosine
@@ -64,6 +236,9 @@ formalisms:
     outputs: [unit_vector, cosine_similarity]
     dependencies: []
     invariants: [deterministic_embedding, zero_vector_similarity_zero]
+    invariant_anchors:
+      deterministic_embedding: tests/test_semantic.py::TestEmbed.test_deterministic
+      zero_vector_similarity_zero: tests/test_semantic.py::TestCosine.test_zero_vector_zero
     limitation: a hashing sub-word surrogate; it is not a learned embedding model or a semantic correctness measure
   - id: weighted_rrf
     equation: eq:rrf
@@ -78,6 +253,10 @@ formalisms:
     outputs: [fused_ranked_list]
     dependencies: [bm25, hashing_cosine]
     invariants: [zero_based_rank, first_duplicate_occurrence, deterministic_ties]
+    invariant_anchors:
+      zero_based_rank: tests/test_fusion.py::TestRRFFusion.test_ranks_recorded
+      first_duplicate_occurrence: tests/test_fusion.py::TestRRFFusion.test_duplicate_id_in_a_lane_is_deduped_to_first_occurrence
+      deterministic_ties: tests/test_fusion.py::TestRRFFusion.test_ties_break_on_id
     limitation: absent lanes contribute nothing, native scores are not calibrated, and only the ordering key is fixed-precision rounded
   - id: mmr
     equation: eq:mmr
@@ -92,6 +271,10 @@ formalisms:
     outputs: [selected_order]
     dependencies: [hashing_cosine, weighted_rrf]
     invariants: [lambda_one_relevance_order, deterministic_ties, bounded_selection]
+    invariant_anchors:
+      lambda_one_relevance_order: tests/test_mmr.py::TestBehaviour.test_lambda_one_preserves_relevance_order
+      deterministic_ties: tests/test_mmr.py::TestBehaviour.test_deterministic
+      bounded_selection: tests/test_mmr.py::TestBehaviour.test_k_limits_length
     limitation: first selection is seeded by relevance and pairwise similarity uses the hashing surrogate
   - id: inspector_relevance
     equation: eq:inspector-relevance
@@ -106,6 +289,9 @@ formalisms:
     outputs: [relevance in 0..1]
     dependencies: [shared_tokenizer]
     invariants: [bounded_relevance, empty_query_zero]
+    invariant_anchors:
+      bounded_relevance: src/stages/inspector.py::_relevance
+      empty_query_zero: src/stages/inspector.py::_relevance
     limitation: distinct-token overlap is lexical and does not detect paraphrase meaning
   - id: inspector_partition
     equation: eq:inspector-partition
@@ -120,6 +306,9 @@ formalisms:
     outputs: [allowed_record_indices]
     dependencies: [inspector_relevance]
     invariants: [consecutive_partition, at_least_one_block]
+    invariant_anchors:
+      consecutive_partition: tests/test_inspector.py::TestREPLPartition.test_partition_blocks
+      at_least_one_block: tests/test_inspector.py::TestInspectorRecursion.test_long_context_triggers_coarse_filter
     limitation: discarded blocks cannot be recovered by later fine ranking; this is a diagnostic bottleneck candidate
   - id: prf_expansion
     equation: eq:prf
@@ -134,6 +323,9 @@ formalisms:
     outputs: [expanded_query]
     dependencies: [bm25, shared_tokenizer]
     invariants: [distinct_feedback_terms, frequency_then_alphabetical_order]
+    invariant_anchors:
+      distinct_feedback_terms: tests/test_expansion.py::TestExpansion.test_adds_feedback_terms
+      frequency_then_alphabetical_order: src/retrieval/expansion.py::expand_query
     limitation: RM3-inspired heuristic; it is not a learned query-expansion model
   - id: recency_bonus
     equation: eq:recency
@@ -148,6 +340,10 @@ formalisms:
     outputs: [adjusted_score, reordered_candidates]
     dependencies: [weighted_rrf]
     invariants: [zero_weight_noop, recalled_window_exemption, deterministic_ties]
+    invariant_anchors:
+      zero_weight_noop: tests/test_retriever.py::TestRetrieverForward.test_recency_zero_is_noop
+      recalled_window_exemption: src/stages/retriever.py::Retriever._apply_recency
+      deterministic_ties: src/stages/retriever.py::Retriever._apply_recency
     limitation: source position is a structural recency proxy, not elapsed time or a causal temporal effect
   - id: evidence_budget
     equation: eq:evidence-budget
@@ -157,15 +353,18 @@ formalisms:
     evidence_tier: project_source
     status: executable_contract
     unit: ranked evidence list
-    estimand: whitespace-token estimate and inline/file delivery decision
+    estimand: shared alphanumeric-token estimate and inline/file delivery decision
     inputs: [window_texts, context_budget_tokens]
     outputs: [estimated_tokens, delivery_mode]
     dependencies: []
     invariants: [deterministic_token_count, budget_threshold]
-    limitation: whitespace count is a structural proxy, not tokenizer cost, latency, memory, or monetary cost
+    invariant_anchors:
+      deterministic_token_count: tests/test_retriever.py::TestEstimateTokens.test_counts_shared_alphanumeric_tokens
+      budget_threshold: tests/test_retriever.py::TestRetrieverForward.test_file_based_when_budget_exceeded
+    limitation: shared alphanumeric-token count is a structural proxy, not tokenizer cost, latency, memory, or monetary cost
   - id: grounding_support
     equation: eq:grounding
-    implementation: src/compiler/metrics.py::grounding_score
+    implementation: src/compiler/metrics.py::citation_support_proxy
     tests: tests/test_metrics.py
     manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
@@ -176,7 +375,10 @@ formalisms:
     outputs: [support_score]
     dependencies: [token_f1_set]
     invariants: [bounded_metric, no_citation_zero]
-    limitation: not entailment, factual attribution, line-level grounding, or human judgment
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestComponentScores.test_grounding_with_expected_index_hit
+      no_citation_zero: tests/test_metrics.py::TestComponentScores.test_grounding_no_citations_is_zero
+    limitation: not entailment, factual attribution, line-level grounding, or answer-quality judgment
   - id: evidence_efficiency
     equation: eq:efficiency
     implementation: src/compiler/metrics.py::efficiency_score
@@ -190,7 +392,44 @@ formalisms:
     outputs: [efficiency_score]
     dependencies: []
     invariants: [bounded_metric, floor_at_zero]
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestComponentScores.test_efficiency_decreases_with_more_evidence
+      floor_at_zero: tests/test_metrics.py::TestComponentScores.test_efficiency_floored_at_zero
     limitation: does not measure latency, prompt tokens, memory, cost, or energy
+  - id: citation_precision
+    equation: eq:citation-precision
+    implementation: src/compiler/metrics.py::citation_precision
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_contract
+    unit: evaluation example
+    estimand: fraction of cited source indices that belong to the declared expected source set
+    inputs: [cited_source_indices, expected_source_indices]
+    outputs: [citation_precision]
+    dependencies: []
+    invariants: [bounded_metric, no_citation_zero]
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestComponentScores.test_citation_precision_and_source_recall
+      no_citation_zero: tests/test_metrics.py::TestComponentScores.test_citation_auxiliaries_have_fail_closed_empty_behavior
+    limitation: source-index precision does not test sentence-level entailment, citation necessity, or factuality
+  - id: source_recall
+    equation: eq:source-recall
+    implementation: src/compiler/metrics.py::source_recall
+    tests: tests/test_metrics.py
+    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    evidence_tier: finite_generated_evaluation
+    status: executable_contract
+    unit: evaluation example
+    estimand: fraction of the declared expected source-index set represented in citations
+    inputs: [cited_source_indices, expected_source_indices]
+    outputs: [source_recall]
+    dependencies: []
+    invariants: [bounded_metric, empty_expected_neutral]
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestComponentScores.test_citation_precision_and_source_recall
+      empty_expected_neutral: tests/test_metrics.py::TestComponentScores.test_citation_auxiliaries_have_fail_closed_empty_behavior
+    limitation: source-index recall is an exposure/citation proxy and inherits the benchmark adapter's evidence granularity
   - id: composite_metric
     equation: eq:composite
     implementation: src/compiler/metrics.py::harness_metric
@@ -204,6 +443,9 @@ formalisms:
     outputs: [composite_score]
     dependencies: [token_f1_set, grounding_support, evidence_efficiency]
     invariants: [bounded_metric, fixed_weights_sum_to_one]
+    invariant_anchors:
+      bounded_metric: tests/test_metrics.py::TestHarnessMetric.test_bounded_zero_to_one
+      fixed_weights_sum_to_one: tests/test_metrics.py::TestHarnessMetric.test_fixed_weights_sum_to_one
     limitation: the headline score inherits every proxy limitation and is descriptive over the declared finite set
   - id: stratified_cluster_resampling
     equation: none
@@ -218,7 +460,11 @@ formalisms:
     outputs: [interval, cluster_warning, provenance]
     dependencies: []
     invariants: [explicit_seed, finite_values, failure_denominator_preserved]
-    limitation: five seed clusters do not establish ordinary population interval coverage
+    invariant_anchors:
+      explicit_seed: tests/test_statistics.py::TestBootstrapMean.test_stratified_and_clustered_provenance
+      finite_values: tests/test_statistics.py::TestBootstrapMean.test_rejects_invalid_sample
+      failure_denominator_preserved: tests/test_accounting.py::test_failure_is_accounted_by_class
+    limitation: finite seed-cluster counts do not establish ordinary population interval coverage
   - id: research_dataset
     equation: none
     implementation: src/evaluation/dataset.py::build_research_dataset
@@ -232,7 +478,11 @@ formalisms:
     outputs: [stable_example_id, content_fingerprint, construct_metadata]
     dependencies: []
     invariants: [balanced_categories, unique_ids, stable_seed_replay]
-    limitation: generated content is not human or population data; template reuse is reported rather than treated as independent novelty
+    invariant_anchors:
+      balanced_categories: tests/test_scaling.py::TestLargeDataset.test_research_dataset_is_balanced_stratified_and_unique
+      unique_ids: tests/test_scaling.py::TestLargeDataset.test_research_dataset_is_balanced_stratified_and_unique
+      stable_seed_replay: tests/test_scaling.py::TestLargeDataset.test_seeded_deterministic
+    limitation: generated content is not observational or population data; template reuse is reported rather than treated as independent novelty
   - id: evaluation_ledger
     equation: none
     implementation: src/evaluation/accounting.py::ledger_row
@@ -246,7 +496,65 @@ formalisms:
     outputs: [ledger_row, deterministic_events]
     dependencies: [research_dataset]
     invariants: [contiguous_sequence, failure_reason, deterministic_jsonl]
+    invariant_anchors:
+      contiguous_sequence: tests/test_accounting.py::test_ledger_validation_requires_global_contiguous_sequence
+      failure_reason: tests/test_accounting.py::test_failure_is_accounted_by_class
+      deterministic_jsonl: tests/test_accounting.py::test_ledger_schema_and_event_order
     limitation: ledger provenance does not make model-dependent outputs deterministic
+  - id: adjudicated_quality
+    equation: none
+    implementation: src/evaluation/quality.py::build_quality_report
+    tests: tests/test_quality.py
+    manuscript_sections: manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: question-condition-output with two blinded expert raters and expert adjudication
+    estimand: adjudicated correctness rate with declared secondary quality and calibration metrics
+    inputs: [quality_protocol, raw_observations, blinded_annotations, adjudications]
+    outputs: [quality_report, certificate_status, threshold_results]
+    dependencies: []
+    invariants: [pilot_confirmatory_disjoint, paired_condition_completeness, digest_bound_certificate]
+    invariant_anchors:
+      pilot_confirmatory_disjoint: tests/test_quality.py::test_protocol_partition_is_deterministic_and_disjoint
+      paired_condition_completeness: tests/test_quality.py::test_quality_report_requires_two_judges_and_adjudication
+      digest_bound_certificate: tests/test_quality.py::test_report_roundtrip_and_promotion_is_fail_closed
+    limitation: a valid certificate records a completed protocol-bound estimate; it is not evidence until explicitly accepted and can remain complete_not_promoted when thresholds fail
+  - id: quality_primary_estimand
+    equation: eq:quality-primary
+    implementation: src/evaluation/quality.py::build_quality_report
+    tests: tests/test_quality.py::test_quality_report_requires_two_judges_and_adjudication
+    manuscript_sections: manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: held-out confirmatory question
+    estimand: question-weighted rate of adjudicated default-harness correctness score 2
+    inputs: [confirmatory_question_ids, adjudicated_correctness_labels]
+    outputs: [correctness_full_rate, wilson_interval, paired_baseline_contrasts]
+    dependencies: [adjudicated_quality]
+    invariants: [pilot_excluded, question_level_pairing, fail_closed_missing_data]
+    invariant_anchors:
+      pilot_excluded: tests/test_quality.py::test_protocol_partition_is_deterministic_and_disjoint
+      question_level_pairing: tests/test_quality.py::test_quality_report_requires_two_judges_and_adjudication
+      fail_closed_missing_data: tests/test_quality.py::test_quality_report_rejects_duplicate_judges_failed_rows_and_bad_provenance
+    limitation: a frozen estimand and valid certificate establish protocol execution, not external validity or production readiness
+  - id: operational_readiness
+    equation: none
+    implementation: src/evaluation/production_readiness.py::build_production_readiness_report
+    tests: tests/test_production_readiness.py
+    manuscript_sections: manuscript/11_validation.md
+    evidence_tier: project_source
+    status: executable_contract
+    unit: service observation and operational control
+    estimand: declared latency, reliability, cost, privacy, model-pinning, and operational-control thresholds
+    inputs: [production_protocol, production_observations, production_controls]
+    outputs: [readiness_report, control_results, certificate_status]
+    dependencies: []
+    invariants: [failed_rows_block_readiness, controls_required, model_pinning]
+    invariant_anchors:
+      failed_rows_block_readiness: tests/test_production_readiness.py::test_failed_rows_and_controls_keep_readiness_unaccepted
+      controls_required: tests/test_production_readiness.py::test_failed_rows_and_controls_keep_readiness_unaccepted
+      model_pinning: tests/test_production_readiness.py::test_ready_report_computes_operational_metrics_and_roundtrips
+    limitation: operational readiness is deployment evidence under declared controls; it neither validates answer quality nor follows from a model-quality certificate
 connections:
   - id: retrieval-to-evidence
     sources: [bm25, hashing_cosine, weighted_rrf, recency_bonus, mmr]
@@ -269,6 +577,13 @@ connections:
     implementation: src/compiler/metrics.py::harness_metric
     tests: tests/test_metrics.py
     manuscript_anchor: eq:composite
+  - id: metric-construct-audit
+    sources: [grounding_support, citation_precision, source_recall]
+    targets: [evaluation_ledger]
+    relation: finite construct audit records the support proxy alongside source-index precision and recall
+    implementation: src/evaluation/experiments.py::metric_construct_audit
+    tests: tests/test_ablation.py::TestMetricConstructAudit
+    manuscript_anchor: fig:metric_construct_audit
   - id: dataset-to-ledger
     sources: [research_dataset]
     targets: [evaluation_ledger, stratified_cluster_resampling]
@@ -276,6 +591,13 @@ connections:
     implementation: [src/evaluation/accounting.py::fingerprint_examples, src/evaluation/accounting.py::deterministic_events]
     tests: [tests/test_accounting.py, tests/test_scaling.py]
     manuscript_anchor: sec:eval-statistics
+  - id: quality-to-release
+    sources: [adjudicated_quality, quality_primary_estimand]
+    targets: [operational_readiness]
+    relation: separate evidence gates; a quality certificate does not imply deployment readiness
+    implementation: [src/evaluation/quality.py::promote_quality_report, src/evaluation/production_readiness.py::promote_production_readiness]
+    tests: [tests/test_quality.py, tests/test_production_readiness.py]
+    manuscript_anchor: sec:validation
 claims:
   - id: typed_pipeline_contract
     strength: contract
@@ -287,7 +609,7 @@ claims:
     limitation: tested contract, not proof of correctness for all integrations
   - id: citation_support
     strength: operational_metric
-    implementation: src/compiler/metrics.py::grounding_score
+    implementation: src/compiler/metrics.py::citation_support_proxy
     artifact: output/data/eval_results.json
     tests: tests/test_metrics.py
     token_source: generated_evaluation_bundle
@@ -308,7 +630,15 @@ claims:
     tests: tests/test_ablation.py
     token_source: committed_probe_aggregate
     evidence_tier: finite_generated_evaluation
-    limitation: visibility and citation auditability are not injection immunity
+    limitation: lexical cited-excerpt/source exposure is not source-record recovery, claim-level auditability, or an assurance beyond the finite probe
+  - id: integrity_advantage_screen
+    strength: exploratory_source_bound_screen
+    implementation: [src/evaluation/integrity_advantage.py::build_integrity_advantage_report, scripts/analyze_integrity_advantage.py::main]
+    artifact: data/integrity_advantage.json
+    tests: [tests/test_integrity_advantage.py, tests/test_manuscript_integrity.py]
+    token_source: committed_integrity_advantage_screen
+    evidence_tier: heterogeneous_recorded_endpoint_screen
+    limitation: the screen preserves endpoint-native units and source fingerprints, but legacy injection auditability is a lexical cited-excerpt/source-exposure proxy and P0 confirmation plus provenance-versus-poisoning separation remain unexecuted and unpromoted
   - id: formalism_traceability
     strength: publication_integrity_contract
     implementation: src/formalism_traceability.py::validate_traceability
@@ -324,7 +654,7 @@ claims:
     tests: tests/test_scaling.py
     token_source: generated_evaluation_bundle
     evidence_tier: finite_generated_evaluation
-    limitation: repeated templates and five seed clusters limit generalization; failures remain in requested denominators
+    limitation: repeated templates and finite seed clusters limit generalization; failures remain in requested denominators
   - id: neural_measurement
     strength: model_conditioned_measurement
     implementation: [src/dspy_runtime/live_eval.py, src/llm.py::OllamaLM]

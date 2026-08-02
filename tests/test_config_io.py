@@ -54,7 +54,7 @@ class TestDictRoundTrip:
 
     def test_rejects_non_boolean_flags(self):
         with pytest.raises(ValueError, match="verify"):
-            HarnessConfig(verify=1)
+            HarnessConfig(verify=1)  # pyright: ignore[reportArgumentType] - invalid input contract
 
 
 class TestEnvOverrides:

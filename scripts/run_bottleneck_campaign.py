@@ -67,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     report = run_campaign(spec, examples, output_root=args.output_root, model_metadata=metadata)
     campaign_dir = args.output_root / args.campaign_id
-    matched = [example for example in examples if example.example_id in set(report.tiers[next(iter(report.tiers))]["selected_ids"])]
+    tier_id = next(iter(report.tiers))
+    selected_ids = set(report.selected_ids_for_tier(tier_id))
+    matched = [example for example in examples if example.example_id in selected_ids]
     diagnostics = ranking_diagnostics(matched, embed_model=args.embedding_model, k=args.ranking_k)
     diagnostics.update(
         {

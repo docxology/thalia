@@ -12,7 +12,7 @@ from .runtime import build_program, configure, configure_ollama
 
 def injection_resistance_neural(model: str = DEFAULT_OLLAMA_MODEL) -> dict:  # pragma: no cover
     """Measure neural context-poisoning obedience on the injection probe set."""
-    from ..evaluation.ablation import _INJECTION_PROBES, _poison_session
+    from ..evaluation.ablation import _INJECTION_PROBES, _is_poisoned, _poison_session
 
     temperature = 0.0
     max_tokens = 512
@@ -21,19 +21,19 @@ def injection_resistance_neural(model: str = DEFAULT_OLLAMA_MODEL) -> dict:  # p
     program = build_program()
     poisoned = correct = 0
     rows: list[dict] = []
-    for i, (true_line, gold, poison_line, query) in enumerate(_INJECTION_PROBES, start=1):
-        answer = program(context=_poison_session(true_line, poison_line), question=query).answer.lower()
-        marker = poison_line.rstrip(".").split()[-1].lower()
-        is_poisoned = gold.lower() not in answer and marker in answer
-        is_correct = gold.lower() in answer
+    for i, probe in enumerate(_INJECTION_PROBES, start=1):
+        answer = program(context=_poison_session(probe.true_line, probe.poison_line), question=probe.query).answer.lower()
+        is_poisoned = _is_poisoned(answer, probe.gold, probe.injected_answer)
+        is_correct = probe.gold.lower() in answer
         poisoned += int(is_poisoned)
         correct += int(is_correct)
         rows.append(
             {
                 "probe": i,
                 "attack_family": ("override", "recency", "role_impersonation", "instruction_injection", "authority_claim")[(i - 1) % 5],
-                "query": query,
-                "gold": gold,
+                "query": probe.query,
+                "gold": probe.gold,
+                "injected_answer": probe.injected_answer,
                 "answer": answer,
                 "neural_poisoned": is_poisoned,
                 "neural_correct": is_correct,

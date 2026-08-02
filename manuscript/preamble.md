@@ -53,7 +53,7 @@ the final Pandoc/XeLaTeX pass.
   \parbox{\textwidth}{%
     \centering
     \makebox[\textwidth][c]{%
-      \includegraphics[width=0.99\textwidth,height=0.42\textheight,keepaspectratio]{../figures/thalia_cover.png}%
+      \includegraphics[alt={THALIA visual abstract showing typed stages, evidence flow, and episodic-first memory},width=0.99\textwidth,height=0.42\textheight,keepaspectratio]{../figures/thalia_cover.png}%
     }\par
     \vspace{0.45em}%
   }%

@@ -24,7 +24,7 @@
     "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
     "model": "nomic-embed-text:latest",
     "modified_at": "2026-07-19T20:17:45.008280034-07:00",
-    "ollama_version": "0.32.1",
+    "ollama_version": "0.32.3",
     "requested_model": "nomic-embed-text",
     "size": 274302450
   },
@@ -34,47 +34,30 @@
     "50": 0.5112650760290759,
     "100": 0.5749184285100113
   },
+  "extractive_session_reachability_by_maxwindows": {
+    "15": 0.65,
+    "30": 0.75,
+    "50": 0.8333333333333334,
+    "100": 0.9666666666666667
+  },
   "inspector_recall": 0.6,
   "n_neural": 30,
   "n_ranking": 40,
   "neural_adaptive": {
-    "accuracy": 0.17139864315937106,
-    "grounding": 0.5389062138128728
-  },
-  "sample_accounting": {
-    "benchmark": "LongMemEval_S",
-    "extractive_sweep": {
-      "n_evaluated": 240,
-      "n_failed": 0,
-      "n_requested": 240
-    },
-    "neural": {
-      "n_evaluated": 90,
-      "n_failed": 0,
-      "n_requested": 90,
-      "status": "complete"
-    },
-    "ranking": {
-      "n_evaluated": 40,
-      "n_failed": 0,
-      "n_requested": 40
-    },
-    "ranking_modes": {
-      "n_evaluated": 8,
-      "n_failed": 0,
-      "n_requested": 8,
-      "status": "complete"
-    },
-    "unit": "longmemeval_question_or_configuration"
+    "accuracy": 0.17062569629946767,
+    "grounding": 0.5392636483104348,
+    "session_reachability": 0.9666666666666667
   },
   "neural_by_maxwindows": {
     "15": {
       "accuracy": 0.08586991232360248,
-      "grounding": 0.3630892905276244
+      "grounding": 0.3630892905276244,
+      "session_reachability": 0.6
     },
     "100": {
       "accuracy": 0.16457495691539495,
-      "grounding": 0.5392765378605164
+      "grounding": 0.5392765378605164,
+      "session_reachability": 0.9666666666666667
     }
   },
   "neural_generation_options": {
@@ -97,7 +80,7 @@
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
     "modified_at": "2026-07-19T20:17:29.24740752-07:00",
-    "ollama_version": "0.32.1",
+    "ollama_version": "0.32.3",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },
@@ -137,7 +120,7 @@
         "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
         "model": "nomic-embed-text:latest",
         "modified_at": "2026-07-19T20:17:45.008280034-07:00",
-        "ollama_version": "0.32.1",
+        "ollama_version": "0.32.3",
         "requested_model": "nomic-embed-text",
         "size": 274302450
       },
@@ -158,13 +141,53 @@
         "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
         "model": "gemma3:4b",
         "modified_at": "2026-07-19T20:17:29.24740752-07:00",
-        "ollama_version": "0.32.1",
+        "ollama_version": "0.32.3",
         "requested_model": "gemma3:4b",
         "size": 3338801804
       }
     },
     "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
     "python": "3.13.11 (main, Dec  5 2025, 21:16:49) [Clang 21.1.4 ]"
+  },
+  "sample_accounting": {
+    "benchmark": "LongMemEval_S",
+    "extractive_sweep": {
+      "n_evaluated": 240,
+      "n_excluded_no_gold": 0,
+      "n_failed": 0,
+      "n_loaded": 60,
+      "n_requested": 240,
+      "n_retained": 60,
+      "status": "complete"
+    },
+    "neural": {
+      "n_evaluated": 90,
+      "n_excluded_no_gold": 0,
+      "n_failed": 0,
+      "n_loaded": 30,
+      "n_requested": 90,
+      "n_retained": 30,
+      "status": "complete"
+    },
+    "ranking": {
+      "n_evaluated": 40,
+      "n_excluded_no_gold": 0,
+      "n_failed": 0,
+      "n_loaded": 40,
+      "n_requested": 40,
+      "n_retained": 40,
+      "status": "complete"
+    },
+    "ranking_modes": {
+      "n_evaluated": 8,
+      "n_excluded_no_gold": 0,
+      "n_failed": 0,
+      "n_loaded": 8,
+      "n_requested": 8,
+      "n_retained": 8,
+      "status": "complete"
+    },
+    "unit": "longmemeval_question_or_configuration"
   },
   "sweep_values": [
     15,

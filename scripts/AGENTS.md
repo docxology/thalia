@@ -37,3 +37,21 @@ external `/Volumes/blue/data/thalia_campaigns` root. They never promote an
 incomplete report into the repository's `data/` layer; promotion requires
 complete accounting plus benchmark, model, generation, cohort, code, and config
 provenance.
+
+The model-quality scripts use a separate external root,
+`/Volumes/blue/data/thalia_quality`. `run_quality_campaign.py` writes raw answer
+and evidence packets, observations, blinded annotation templates, and runtime
+metadata; `analyze_quality.py` writes an external report; and only
+`promote_quality_report.py` may create `data/quality_results.json`. Confirmation
+requires a frozen protocol with pilot-review provenance. A complete or
+below-threshold quality run is never promoted implicitly, and no production
+readiness claim may be inferred from its certificate.
+
+`analyze_production_readiness.py` consumes service observations and explicit
+control evidence for latency, cost/throughput, retries/failures, privacy/data
+handling, model pinning, rollback, monitoring, drift, and red-team coverage. Its
+report is operational evidence only; it must not be used to promote or label a
+model-quality result.
+`promote_production_readiness.py` additionally requires an explicit acceptance
+record bound to the readiness certificate before writing committed operational
+evidence.

@@ -1,7 +1,5 @@
 """Tests for reproducible uncertainty estimates and sample accounting."""
 
-import json
-
 import pytest
 
 from src.evaluation.statistics import (
@@ -18,7 +16,6 @@ from src.evaluation.statistics import (
     sample_size_for_precision,
     stratified_bootstrap_mean,
     wilson_interval,
-    write_accounting_artifacts,
 )
 
 
@@ -83,13 +80,19 @@ class TestRatesAndPairedComparisons:
         assert rate == 0.7
         assert 0.0 <= low <= rate <= high <= 1.0
 
+    def test_wilson_interval_matches_independent_golden_value(self):
+        rate, low, high = wilson_interval(7, 10)
+        assert rate == pytest.approx(0.7)
+        assert low == pytest.approx(0.396778147461, abs=1e-12)
+        assert high == pytest.approx(0.892208732594, abs=1e-12)
+
     def test_wilson_validation(self):
         with pytest.raises(ValueError, match="trials"):
             wilson_interval(0, 0)
         with pytest.raises(ValueError, match="between"):
             wilson_interval(4, 3)
         with pytest.raises(ValueError, match="integer"):
-            wilson_interval(1.0, 2)
+            wilson_interval(1.0, 2)  # pyright: ignore[reportArgumentType] - invalid input contract
 
     def test_named_binary_and_exact_mcnemar(self):
         rate = binary_rate(3, 5)
@@ -102,6 +105,17 @@ class TestRatesAndPairedComparisons:
             exact_paired_binary([1], [1, 0])
         with pytest.raises(ValueError, match="binary"):
             exact_paired_binary([2], [1])
+
+    def test_mcnemar_golden_two_sided_tail(self):
+        comparison = exact_paired_binary([1, 1, 1, 0], [0, 0, 1, 0])
+        assert comparison.left_success_right_failure == 2
+        assert comparison.left_failure_right_success == 0
+        assert comparison.p_value == pytest.approx(0.5)
+
+        comparison = exact_paired_binary([1, 1, 1, 0], [0, 0, 0, 1])
+        assert comparison.left_success_right_failure == 3
+        assert comparison.left_failure_right_success == 1
+        assert comparison.p_value == pytest.approx(0.625)
 
     def test_clustered_paired_comparison_uses_clusters_for_uncertainty(self):
         result = clustered_paired_comparison(
@@ -117,16 +131,39 @@ class TestRatesAndPairedComparisons:
         with pytest.raises(ValueError, match="same cluster"):
             clustered_paired_comparison({"a": [1]}, {"b": [0]})
 
+    def test_clustered_paired_comparison_point_estimate_is_cluster_weighted(self):
+        # The observation-weighted delta would be 3/4 here; the declared
+        # question-cluster estimand is the mean of the two cluster deltas: 1/2.
+        result = clustered_paired_comparison(
+            {"large-question": [1.0, 1.0, 1.0], "small-question": [0.0]},
+            {"large-question": [0.0, 0.0, 0.0], "small-question": [0.0]},
+            resamples=100,
+            permutations=100,
+        )
+        assert result.mean_delta == pytest.approx(0.5)
+        assert result.estimand == "mean_paired_delta_cluster_weighted"
+        assert result.unit == "question_cluster"
+        assert result.cluster_count == 2
+
     def test_paired_delta_and_exact_permutation(self):
         delta = paired_bootstrap_delta([0.8, 0.9, 0.7], [0.5, 0.6, 0.4], resamples=300)
         assert delta.estimate == pytest.approx(0.3)
         assert delta.low <= delta.estimate <= delta.high
         assert paired_permutation_p_value([1, 1, 1], [0, 0, 0]) == pytest.approx(0.25)
 
+    def test_sign_flip_metadata_distinguishes_exhaustive_and_monte_carlo(self):
+        exact = paired_comparison([1.0, 2.0], [0.0, 0.0], resamples=100, permutations=100)
+        assert exact.p_value == pytest.approx(0.5)
+        assert exact.p_value_method == "exhaustive_sign_flip"
+        assert "exchangeability" in exact.p_value_assumption
+        monte_carlo = paired_comparison([1.0] * 13, [0.0] * 13, resamples=100, permutations=25)
+        assert monte_carlo.p_value_method == "monte_carlo_sign_flip_plus_one"
+
     def test_paired_comparison_reports_effect_and_adjustment_inputs(self):
         result = paired_comparison([0.8, 0.9, 0.7], [0.5, 0.6, 0.4], resamples=200, permutations=200)
         assert result.n == 3
         assert result.mean_delta == pytest.approx(0.3)
+        assert result.effect_size is not None
         assert result.effect_size > 0
         assert 0.0 <= result.p_value <= 1.0
 
@@ -148,6 +185,9 @@ class TestRatesAndPairedComparisons:
         named = holm_named({"first": 0.01, "second": 0.2})
         assert named["first"] == pytest.approx(0.02)
 
+    def test_holm_golden_step_down_values(self):
+        assert holm_bonferroni([0.01, 0.04, 0.03]) == pytest.approx((0.03, 0.06, 0.06))
+
 
 class TestPlanningAndAccounting:
     def test_sample_size_plan_grows_with_precision(self):
@@ -159,9 +199,3 @@ class TestPlanningAndAccounting:
             sample_size_for_precision(-1)
         with pytest.raises(ValueError, match="half_width"):
             sample_size_for_precision(1, half_width=0)
-
-    def test_accounting_writes_json_and_jsonl(self, tmp_path):
-        result = {"accounting": {"schema_version": 1, "runs": [{"seed": 0, "status": "complete"}]}}
-        report, log = write_accounting_artifacts(result, tmp_path / "accounting.json", tmp_path / "events.jsonl")
-        assert json.loads(report.read_text())["schema_version"] == 1
-        assert json.loads(log.read_text())["event"] == "sample_evaluation"

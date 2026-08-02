@@ -1,5 +1,8 @@
 """Tests for figure generators (Zero-Mock; writes real PNGs to tmp_path)."""
 
+import pytest
+
+from src.config import HarnessConfig
 from src.evaluation import RetrieverComparison
 from src.figures import (
     EXPORT_DPI,
@@ -41,7 +44,12 @@ class TestRRFSensitivityPlot:
 
 class TestCompilerConvergencePlot:
     def test_writes_png(self, tmp_path):
-        trace = [(None, 0.5), (None, 0.7), (None, 0.6), (None, 0.8)]
+        trace: list[tuple[HarnessConfig | None, float]] = [
+            (None, 0.5),
+            (None, 0.7),
+            (None, 0.6),
+            (None, 0.8),
+        ]
         path = plot_compiler_convergence(trace, tmp_path / "conv.png")
         assert path.exists() and path.stat().st_size > 0
 
@@ -191,6 +199,15 @@ class TestExtendedFigures:
         path = plot_statistical_audit(data, tmp_path / "audit.png")
         assert path.exists() and path.stat().st_size > 0
 
+    def test_sample_size_payload_requires_current_pair_fields(self):
+        from src.evaluation import sample_size_scaling_eval
+        from src.evaluation.schemas import SampleSizePayload
+
+        result = sample_size_scaling_eval(per_category_values=(1,), seeds=(0, 1), n_boot=20)
+        result["rows"][0].pop("stratum_paired_comparisons")
+        with pytest.raises(KeyError, match="stratum_paired_comparisons"):
+            SampleSizePayload.from_json(result)
+
     def test_injection_resistance(self, tmp_path):
         from src.evaluation.schemas import InjectionEvalPayload, InjectionProbeRow
         from src.figures import plot_injection_resistance
@@ -228,6 +245,143 @@ class TestExtendedFigures:
             neural_rows=(),
         )
         assert plot_injection_resistance(data2, tmp_path / "inj2.png").exists()
+
+    def test_injection_missing_neural_row_is_unrecorded(self, tmp_path):
+        from src.evaluation.schemas import InjectionEvalPayload
+        from src.figures import plot_injection_resistance
+
+        data = InjectionEvalPayload.from_json(
+            {
+                "n_probes": 2,
+                "harness_poison_rate": 0.0,
+                "harness_audit_rate": 1.0,
+                "naive_poison_rate": 0.0,
+                "naive_audit_rate": 0.0,
+                "rows": [
+                    {
+                        "probe": 1,
+                        "harness_poisoned": False,
+                        "harness_auditable": True,
+                        "naive_poisoned": False,
+                        "naive_auditable": False,
+                    },
+                    {
+                        "probe": 2,
+                        "harness_poisoned": False,
+                        "harness_auditable": True,
+                        "naive_poisoned": False,
+                        "naive_auditable": False,
+                    },
+                ],
+                "neural_model": "gemma3:4b",
+                "neural_poison_rate": 0.5,
+                "neural_rows": [{"probe": 1}],
+            }
+        )
+
+        assert data.neural_rows[0].neural_poisoned is None
+        assert data.neural_rows[0].neural_auditable is None
+        path = plot_injection_resistance(data, tmp_path / "inj-missing.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_integrity_advantage_audit(self, tmp_path):
+        from src.evaluation.schemas import IntegrityAdvantagePayload
+        from src.figures import plot_integrity_advantage
+
+        data = IntegrityAdvantagePayload.from_json(
+            {
+                "confidence": 0.95,
+                "multiple_comparison_family": {"size": 3},
+                "current_conclusions": {"general_answer_quality_status": "unestablished"},
+                "comparisons": [
+                    {
+                        "id": "provenance_auditability",
+                        "label": "True-source auditability",
+                        "advantage_delta": 1.0,
+                        "low": None,
+                        "high": None,
+                        "p_value": 0.01,
+                        "adjusted_p_value": 0.03,
+                        "unit": "probe",
+                        "claim_status": "strongest_current_integrity_candidate",
+                        "left_rate": {"rate": 1.0, "low": 0.8, "high": 1.0},
+                        "right_rate": {"rate": 0.0, "low": 0.0, "high": 0.2},
+                    },
+                    {
+                        "id": "poisoning_rate",
+                        "label": "Answer poisoning rate",
+                        "advantage_delta": 0.0,
+                        "low": None,
+                        "high": None,
+                        "p_value": 1.0,
+                        "adjusted_p_value": 1.0,
+                        "unit": "probe",
+                        "claim_status": "null_security_advantage",
+                        "left_rate": {"rate": 0.2, "low": 0.05, "high": 0.5},
+                        "right_rate": {"rate": 0.2, "low": 0.05, "high": 0.5},
+                    },
+                    {
+                        "id": "learned_retrieval_recall",
+                        "label": "Paraphrase retrieval recall@1",
+                        "advantage_delta": 0.125,
+                        "low": None,
+                        "high": None,
+                        "p_value": 0.125,
+                        "adjusted_p_value": 0.25,
+                        "unit": "probe",
+                        "claim_status": "promising_unconfirmed_representation_advantage",
+                        "left_rate": {"rate": 1.0, "low": 0.8, "high": 1.0},
+                        "right_rate": {"rate": 0.875, "low": 0.7, "high": 0.95},
+                    },
+                    {
+                        "id": "orchestration_composite",
+                        "label": "Composite metric",
+                        "advantage_delta": 0.334,
+                        "low": None,
+                        "high": None,
+                        "p_value": None,
+                        "adjusted_p_value": None,
+                        "unit": "example",
+                        "claim_status": "conditional_metric_lift",
+                    },
+                    {
+                        "id": "adaptive_context_policy",
+                        "label": "Adaptive context policy",
+                        "advantage_delta": 0.085,
+                        "low": None,
+                        "high": None,
+                        "p_value": None,
+                        "adjusted_p_value": None,
+                        "unit": "question",
+                        "claim_status": "promising_unconfirmed_context_advantage",
+                    },
+                    {
+                        "id": "compiler_mipro_holdout",
+                        "label": "MIPRO-style held-out composite",
+                        "advantage_delta": 0.002,
+                        "low": 0.001,
+                        "high": 0.003,
+                        "p_value": 0.06,
+                        "adjusted_p_value": 0.18,
+                        "unit": "seed cluster",
+                        "claim_status": "promising_small_cluster_signal",
+                    },
+                    {
+                        "id": "local_neural_answer_f1",
+                        "label": "Local neural answer token-F1",
+                        "advantage_delta": -0.046,
+                        "low": -0.16,
+                        "high": 0.07,
+                        "p_value": 0.44,
+                        "adjusted_p_value": 0.88,
+                        "unit": "example",
+                        "claim_status": "no_general_answer_quality_advantage",
+                    },
+                ],
+            }
+        )
+        path = plot_integrity_advantage(data, tmp_path / "integrity.png")
+        assert path.exists() and path.stat().st_size > 0
 
     def test_orchestration_value(self, tmp_path):
         from src.evaluation.schemas import OrchestrationBaseline
@@ -292,6 +446,23 @@ class TestExtendedFigures:
         path = plot_category_components(breakdown, tmp_path / "category_components.png")
         assert path.exists() and path.stat().st_size > 0
 
+    def test_metric_construct_audit_figure(self, tmp_path):
+        from src.evaluation import metric_construct_audit
+        from src.figures import plot_metric_construct_audit
+
+        audit = metric_construct_audit()
+        assert audit["metric_names"]
+        assert audit["by_category"]
+        path = plot_metric_construct_audit(audit, tmp_path / "metric_construct_audit.png")
+        assert path.exists() and path.stat().st_size > 0
+
+        incomplete = {
+            **audit,
+            "by_category": {"single_session": {"answer_token_f1": 0.5}},
+        }
+        with pytest.raises(ValueError, match="missing"):
+            plot_metric_construct_audit(incomplete, tmp_path / "incomplete.png")
+
     def test_gepa_trajectory_figure(self, tmp_path):
         from src.evaluation import gepa_component_trajectory
         from src.figures import plot_gepa_trajectory
@@ -334,6 +505,12 @@ class TestArchitecturalFigures:
         from src.figures import plot_foundations_map
 
         path = plot_foundations_map(tmp_path / "foundations_map.png")
+        assert path.exists() and path.stat().st_size > 0
+
+    def test_quality_protocol(self, tmp_path):
+        from src.figures import plot_quality_protocol
+
+        path = plot_quality_protocol(tmp_path / "quality_protocol.png")
         assert path.exists() and path.stat().st_size > 0
 
     def test_memory_lifecycle(self, tmp_path):

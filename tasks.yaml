@@ -98,15 +98,15 @@ tasks:
   - thalia-13
   tags:
   - verification
-  notes: 'Completed: 734 passed, 94.66% src coverage, mypy, Ruff, lock/build checks, canonical artifact validation (40 checked / 39 required), and external 53-page PDF validation. Counts live in output/reports/verification_summary.json.'
+  notes: 'Historical checkpoint completed before the v2 quality/provenance expansion: 734 passed, 94.66% src coverage, mypy, Ruff, lock/build checks, canonical artifact validation, and an external PDF validation. It is retained as provenance, not as the current release count; the current gate is regenerated after the publication red-team.'
 
 # --- Phase: THALIA v2 provenance-first live research campaign (2026-07-22) ---
 - id: thalia-v2-campaign
   title: Resumable nested Gemma/Hermes LongMemEval campaign
-  status: in_progress
+  status: done
   start: '2026-07-22'
-  end: '2026-07-22'
-  progress: 0
+  end: '2026-07-24'
+  progress: 100
   milestone: true
   deps:
   - thalia-14
@@ -114,7 +114,7 @@ tasks:
   - live-research
   - provenance
   - longmemeval
-  notes: 'Raw rows/checkpoints are external under /Volumes/blue/data/thalia_campaigns. Promotion is blocked until every requested row is evaluated with benchmark hash, model digest, generation options, selected IDs, config fingerprint, and code fingerprint.'
+  notes: 'Completed external evidence: 950 active rows across the recorded Gemma/Hermes tiers with zero execution failures. The immutable report/checkpoints remain under /Volumes/blue/data/thalia_campaigns and are explicitly non-promoted: answer hashes and automated metrics are operational/provenance evidence, not model-quality evidence.'
 
 - id: thalia-v2-generalization
   title: Ten-seed sensitivity and held-out compiler validation
@@ -128,20 +128,297 @@ tasks:
   tags:
   - synthetic
   - compiler
-  notes: 'Added real deterministic seed sensitivity and train/held-out MIPRO-/GEPA-style recorders with cluster-aware statistics and regression tests; the five-seed headline remains unchanged.'
+  notes: 'Added real deterministic seed sensitivity and train/held-out MIPRO-/GEPA-style recorders with cluster-aware statistics and regression tests; the publication refresh now records enlarged ten-seed and twenty-seed grids while preserving quick smoke defaults.'
+
+- id: thalia-scholarship-metric-extension
+  title: Extend scholarship and metric-construct evidence
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-v2-generalization
+  tags:
+  - manuscript
+  - scholarship
+  - statistics
+  - figures
+  - verification
+  notes: 'Completed the second comprehensive red-team pass: added ALCE, ARES, and LoCoMo scholarship; shared source-index citation precision/recall contracts; the finite metric-construct audit and heatmap; notation, traceability, glossary, and caption updates; abstract citation-free validation; browser and accessible tagged-PDF review; 28-figure regeneration; and current artifact/test receipts. The source-index diagnostics remain bounded proxies and do not promote entailment, model quality, or production readiness.'
+
+- id: thalia-toc-citation-refactor
+  title: Consolidate evaluation TOC and correct template citation attribution
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-scholarship-metric-extension
+  tags:
+  - manuscript
+  - structure
+  - scholarship
+  notes: 'Grouped all evaluation evidence under one top-level Evaluation heading with informative nested section titles, corrected the reproducible-research template record to Daniel Ari Friedman, rebuilt the PDF/HTML/slides, and verified the rendered TOC, citation rendering, cross-references, browser layout, and tagged PDF.'
+
+- id: thalia-abstract-contributions-discussion
+  title: Clarify abstract, contributions, findings, and discussion
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-toc-citation-refactor
+  tags:
+  - manuscript
+  - scholarship
+  - discussion
+  - verification
+  notes: 'Clarified what THALIA implements, separated deterministic/local/neural/external findings, made durable contributions and promising extensions explicit, retained source-bound result tokens and model-quality/production boundaries, and regenerated validated publication outputs.'
 
 - id: thalia-v2-publication
-  title: Accept campaign evidence and regenerate manuscript/PDF artifacts
-  status: todo
-  start: '2026-07-22'
-  end: '2026-07-22'
-  progress: 0
+  title: Complete source-bound publication hardening and release gates
+  status: in_progress
+  start: '2026-08-01'
+  end: '2026-08-08'
+  progress: 90
   milestone: true
   deps:
   - thalia-v2-campaign
   - thalia-v2-generalization
+  - thalia-quality-release
+  - thalia-production-readiness
   tags:
   - manuscript
   - pdf
   - release
-  notes: 'Only validated complete aggregates may enter data/. Prior v1 aggregates remain retained until this gate passes. Supplementary slides stay separately bounded if the external renderer remains the blocker.'
+  notes: 'Source-bound manuscript red-team, notation/statistics contracts, figure/caption repair, generic-schema overlay separation, fresh artifact chain, external render validation, browser review, and tagged-PDF checks are complete. Only validated complete aggregates may enter data/. The operational campaign is not a quality certificate, and the separately scoped model-quality and production-readiness evidence gates remain open; no such claims are promoted.'
+
+# --- Phase: THALIA model-quality and production-readiness evidence (scoped 2026-08-01) ---
+- id: thalia-quality-contract
+  title: Define the model-quality construct, rubric, estimand, and promotion semantics
+  status: done
+  start: '2026-07-24'
+  end: '2026-07-25'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-v2-campaign
+  - thalia-v2-generalization
+  tags:
+  - model-quality
+  - preregistration
+  notes: 'Protocol implementation is complete in thalia_overlay.yaml and the quality schema: target use case, inclusion/exclusion rules, LongMemEval_S pilot/confirmatory split, correctness primary outcome, secondary outcomes, failure handling, ordinal rubric dimensions, safety criteria, and complete_not_promoted versus passed semantics. This is not execution evidence; pilot labels remain exploratory.'
+
+- id: thalia-quality-schema
+  title: Add typed model-quality protocol, observation, annotation, adjudication, and report schemas
+  status: done
+  start: '2026-07-24'
+  end: '2026-07-25'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-quality-contract
+  tags:
+  - model-quality
+  - typing
+  - provenance
+  notes: 'Protocol implementation is complete as the separate quality-v3 schema, with expert_human as the only promotable evaluation mode. The schema requires benchmark/model/config/code/generation provenance, answer and raw digests, raw-output locations, rubric and rater identities, atomic-claim labels, and fail-closed validation for duplicates, missing pairs, invalid labels, digest mismatches, and missing adjudication. This task does not imply a completed study; the local LLM-judge implementation is exploratory and non-promotable.'
+
+- id: thalia-quality-matrix
+  title: Implement the blinded six-condition live quality runner and confidence probe
+  status: done
+  start: '2026-07-24'
+  end: '2026-07-25'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-quality-schema
+  tags:
+  - model-quality
+  - live-research
+  - longmemeval
+  notes: 'Implemented the six-condition runner and confidence probe for Gemma and Hermes under THALIA default harness, no-harness full-context, and oracle-evidence conditions. Raw answers/evidence/failures are retained externally under /Volumes/blue, with model/config/code fingerprints, standardized confidence responses, deterministic atomic claims, and randomized condition-neutral packets; the oracle exposes gold evidence but not a gold answer field. Execution and expert annotation remain downstream tasks.'
+
+- id: thalia-quality-pilot
+  title: Execute the exploratory 60-question pilot and blinded double annotation
+  status: todo
+  start: '2026-08-04'
+  end: '2026-08-08'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-matrix
+  tags:
+  - model-quality
+  - pilot
+  notes: 'Remaining evidence task: deterministically select the pilot from the bound benchmark, run the six-condition matrix, and collect two independent blinded expert-rater labels with blinded adjudication. The local LLM-judge runner may diagnose packet/rubric mechanics, but its labels are engineering evidence only and cannot satisfy or replace the expert-rater requirement or enter the confirmatory estimate.'
+
+- id: thalia-quality-preregistration
+  title: Freeze the post-pilot rubric, estimand, thresholds, and confirmatory set
+  status: todo
+  start: '2026-08-11'
+  end: '2026-08-12'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-pilot
+  tags:
+  - model-quality
+  - preregistration
+  notes: 'Remaining evidence task: record the reviewed rubric version, primary/secondary outcomes, baseline contrasts, interval/test methods, missing-data and safety rules, thresholds, and the 440 held-out question IDs in the THALIA overlay. Confirmatory execution fails closed without this frozen protocol and pilot-review provenance.'
+
+- id: thalia-quality-confirmatory
+  title: Execute the held-out 440-question confirmatory quality study
+  status: todo
+  start: '2026-08-13'
+  end: '2026-08-22'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-preregistration
+  tags:
+  - model-quality
+  - confirmatory
+  - live-research
+  notes: 'Remaining evidence task: run the held-out confirmatory set when capacity permits while keeping the reserved pilot rows exploratory. Collect two blinded expert-rater labels and independent blinded expert adjudication for every confirmatory condition/output, including injection/no-answer cases and confidence responses. A local LLM-judge run is not promotable.'
+
+- id: thalia-quality-analysis
+  title: Analyze adjudicated quality, calibration, safety, agreement, and paired contrasts
+  status: todo
+  start: '2026-08-24'
+  end: '2026-08-28'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-confirmatory
+  tags:
+  - model-quality
+  - statistics
+  notes: 'Remaining evidence task after confirmatory collection: use adjudicated correctness as primary; report completeness, faithfulness, atomic-claim support, usefulness, abstention, critical safety failures, Brier/ECE, reliability curves, selective accuracy, latency, and failures secondarily. Include difficult-case and label-distribution summaries, question-cluster-level descriptive bootstrap intervals, exact paired binary tests, type-stratified results, weighted inter-rater agreement, and a fail-closed certificate. Below-threshold complete runs remain complete_not_promoted.'
+
+- id: thalia-quality-release
+  title: Explicitly promote an accepted quality certificate and regenerate publication artifacts
+  status: todo
+  start: '2026-08-29'
+  end: '2026-09-02'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-analysis
+  tags:
+  - model-quality
+  - release
+  - manuscript
+  - pdf
+  notes: 'Remaining release task: only an explicitly accepted, complete, untampered, threshold-passing certificate may create data/quality_results.json. Then update claim/domain/experiment registries, manuscript variables, figures, README/docs, dashboard, manuscript, PDF, supplementary PDFs, and artifact manifests. Do not promote exploratory local-judge output.'
+
+- id: thalia-production-readiness
+  title: Evaluate production readiness as a separate operational acceptance gate
+  status: todo
+  start: '2026-09-03'
+  end: '2026-09-10'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-quality-schema
+  - thalia-quality-matrix
+  tags:
+  - production-readiness
+  - operations
+  notes: 'Remaining evidence task: assess p95/p99 latency, cost and throughput, retries/failures, privacy and data handling, model pinning, rollback, monitoring, drift detection, and expanded red-team coverage. This gate is independent: a model-quality certificate never implies production readiness.'
+
+- id: thalia-publication-red-team
+  title: Close the manuscript scholarship and claim-boundary red-team
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-v2-generalization
+  tags:
+  - manuscript
+  - scholarship
+  - red-team
+  notes: 'Source-reported foundation results, local deterministic evidence, operational campaign evidence, and unexecuted quality/readiness protocols are explicitly separated. Source hydration, rendered review, browser review, and release-manifest confirmation passed; no finite local probe is presented as a general model-quality ranking or universal ceiling.'
+
+- id: thalia-integrity-advantage-screen
+  title: Screen and scope high-integrity advantage experiments
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-publication-red-team
+  tags:
+  - red-team
+  - integrity
+  - statistics
+  - figures
+  - handoff
+  notes: 'Completed the source-bound endpoint report, native-unit statistics, figure, manuscript interpretation, notation anchors, and experiment handoff. Future P0/P1/P2 confirmation remains explicitly scoped in docs/integrity_advantage_handoff.md; no unexecuted experiment is promoted by this task.'
+
+- id: thalia-p0-provenance-confirmation
+  title: Execute the frozen adjudicated provenance and poisoning confirmation tier
+  status: todo
+  start: '2026-08-01'
+  end: '2026-09-30'
+  progress: 0
+  milestone: false
+  deps:
+  - thalia-integrity-advantage-screen
+  tags:
+  - integrity
+  - provenance
+  - adjudication
+  - p0
+  notes: 'Implementation now provides the isolated P0 protocol, frozen rubric, immutable four-condition raw-row and run-receipt contract, delivered-context claim-linked blinded packets, factorial strata-aware analysis, evidence-rebuilt promotion verification, and explicit acceptance gate. Execution remains unstarted: owner must review/freeze 120 attacked plus 20 clean probes, safety margins, scorer rubric, held-out-family plan, and independent-rerun admission before collecting external evidence. No fixture-only or local-LLM result is promotable.'
+
+- id: thalia-notation-statistics
+  title: Enforce supplemental notation and statistical-method contracts
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-publication-red-team
+  tags:
+  - formalism
+  - statistics
+  - provenance
+  notes: 'Supplemental notation, formalism crosswalks, statistical estimands, interval interpretations, assumptions, implementation anchors, and golden-value tests are in place. Full strict coverage, artifact regeneration, and final traceability validation passed.'
+
+- id: thalia-figure-caption-repair
+  title: Repair figure semantics, captions, labels, and alternate-text metadata
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: false
+  deps:
+  - thalia-notation-statistics
+  tags:
+  - figures
+  - captions
+  - accessibility
+  notes: 'Statistical-audit axes are zoomed to observed effects, Holm-adjusted p-values and exact McNemar p-values are named correctly, captions preserve evidence boundaries, and figure registry entries carry alt metadata. Fresh PNGs, dashboard/HTML, and PDF were regenerated and visually/browser inspected.'
+
+- id: thalia-tagged-pdf-accessibility
+  title: Produce and validate an accessible tagged publication PDF
+  status: done
+  start: '2026-08-01'
+  end: '2026-08-01'
+  progress: 100
+  milestone: true
+  deps:
+  - thalia-figure-caption-repair
+  tags:
+  - pdf
+  - accessibility
+  - release
+  notes: 'Fresh source-bound PDF passed structural/renderer checks and page-level inspection. pdfinfo reports Tagged: yes, pypdf finds a StructTreeRoot and MarkInfo/Marked, qpdf reports no syntax errors, veraPDF PDF/UA-2 validation passes, and the external validation report passes; full model-quality and production-readiness evidence remain separate.'

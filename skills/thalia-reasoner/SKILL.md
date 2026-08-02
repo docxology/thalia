@@ -3,7 +3,7 @@
 ## Purpose
 Typed declarative reasoner (Stage 2). Classifies the task, routes multi-hop / code
 / knowledge-update tasks through a ReAct read→integrate loop and others through
-chain-of-thought, and returns a typed answer with raw-window citations. The
+one model completion, and returns a typed answer with raw-window citations. The
 language model is swappable; the default is a deterministic extractive responder.
 
 ## Inputs
@@ -13,7 +13,8 @@ language model is swappable; the default is a deterministic extractive responder
 - `memory_context: MemorySnapshot` — frozen, read-only MEMORY/USER snapshot
 
 ## Outputs
-- `reasoning_trace: str` — chain of thought grounded in evidence
+- `reasoning_trace: str` — auditable routing and evidence-use trace; not hidden
+  chain-of-thought
 - `answer: str` — final answer or action
 - `evidence_citations: list[EvidenceCitation]` — raw windows cited (enables audit)
 - `requires_consolidation: bool` — true only on knowledge-update / explicit cues

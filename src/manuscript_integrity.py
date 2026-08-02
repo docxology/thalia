@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
 from pathlib import Path
+from typing import Mapping
 
 _TOKEN_RE = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
 _REF_RE = re.compile(r"@((?:fig|sec|tbl|eq):[A-Za-z0-9_-]+)")
@@ -19,9 +21,10 @@ _CITATION_KEY_RE = re.compile(r"@([A-Za-z][A-Za-z0-9_:-]*)")
 _NUMERIC_RE = re.compile(r"(?<![A-Za-z@])(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?:%|[×x])?")
 _RESULT_CONTEXT_RE = re.compile(
     r"(?:accuracy|token[- ]?f1|coverage|tests?|examples?|probes?|questions?|passes?|composite|"
-    r"grounding|efficiency|budget|top[_ -]?k|max[_ -]?evidence|temperature|max[_ -]?tokens|"
+    r"grounding|support|reachability|efficiency|budget|top[_ -]?k|max[_ -]?evidence|temperature|max[_ -]?tokens|"
     r"bootstrap|confidence|interval|p[- ]?value|recall|seeds?|strata|categories?|method rows|"
-    r"sample|distractor|bytes?|digest|poison|audit|weight)",
+    r"sample|distractor|bytes?|digest|poison|audit|weight|quality|faithful|safety|"
+    r"adjudicat|judge|pilot|confirmatory)",
     re.IGNORECASE,
 )
 
@@ -40,6 +43,28 @@ def _strip_inline_math(text: str) -> str:
 _INJECTION_MARKER = Path("infrastructure") / "rendering" / "manuscript_injection.py"
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CLAIM_REQUIRED_FIELDS = {"claim_id", "kind", "value", "source", "source_tier", "freshness", "artifact_path"}
+_INTEGRITY_ADVANTAGE_PATH = Path("data") / "integrity_advantage.json"
+_INTEGRITY_ADVANTAGE_CURRENT_IDS = {
+    "orchestration_composite",
+    "provenance_auditability",
+    "poisoning_rate",
+    "learned_retrieval_recall",
+    "compiler_mipro_holdout",
+    "local_neural_answer_f1",
+    "adaptive_context_policy",
+}
+_INTEGRITY_ADVANTAGE_SOURCE_INPUTS = {
+    "data/injection_eval.json",
+    "data/learned_retrieval.json",
+    "data/longmemeval_bottleneck.json",
+    "data/neural_eval.json",
+    "output/data/compiler_generalization.json",
+}
+_INTEGRITY_ADVANTAGE_ANALYSIS_CODE = {
+    "src/evaluation/ablation.py",
+    "src/evaluation/integrity_advantage.py",
+    "src/evaluation/statistics.py",
+}
 
 
 def find_template_root(starts: tuple[Path, ...] | None = None) -> Path | None:
@@ -103,6 +128,34 @@ def bibliography_keys(path: str | Path) -> set[str]:
         raise ValueError(f"bibliography unreadable: {exc}") from exc
 
 
+def _validate_bibliography_records(path: str | Path) -> None:
+    """Check duplicate keys and the minimum scholarly metadata contract."""
+    source = Path(path)
+    try:
+        text = source.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValueError(f"bibliography unreadable: {exc}") from exc
+    entries = list(re.finditer(r"^@(?P<kind>[A-Za-z][A-Za-z0-9_]*)\{(?P<key>[^,\s]+),", text, re.MULTILINE))
+    seen: set[str] = set()
+    allowed = {"article", "inproceedings", "misc", "book", "incollection", "techreport", "phdthesis", "online"}
+    for index, match in enumerate(entries):
+        kind = match.group("kind").lower()
+        key = match.group("key")
+        if key in seen:
+            raise ValueError(f"bibliography has duplicate citation key: {key}")
+        seen.add(key)
+        end = entries[index + 1].start() if index + 1 < len(entries) else len(text)
+        body = text[match.end() : end]
+        if kind not in allowed:
+            continue
+        fields = {field.lower() for field in re.findall(r"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*=", body, re.MULTILINE)}
+        missing = sorted(field for field in ("title", "author") if field not in fields)
+        if "year" not in fields and not ({"doi", "url", "howpublished"} & fields):
+            missing.append("year-or-identifier")
+        if missing:
+            raise ValueError(f"bibliography entry {key} missing scholarly metadata: {missing}")
+
+
 def citation_keys_in_manuscript(manuscript_dir: Path) -> set[str]:
     """Return bibliographic keys used in numbered manuscript sections.
 
@@ -131,6 +184,7 @@ def check_bibliography_integrity(
     missing = used - declared
     if missing:
         raise ValueError(f"manuscript has {len(missing)} citation(s) missing from bibliography: {sorted(missing)}")
+    _validate_bibliography_records(bibliography_path)
     return used, declared
 
 
@@ -142,6 +196,66 @@ def verify_token_coverage(
     used = tokens_used_in_manuscript(manuscript_dir)
     missing = sorted(used - set(variables))
     return used, missing
+
+
+def verify_injected_manuscript(
+    source_dir: str | Path,
+    injected_dir: str | Path,
+    variables: Mapping[str, str],
+) -> tuple[Path, ...]:
+    """Verify that the rendered manuscript is an exact token substitution.
+
+    The external template injector is deliberately treated as a producer
+    boundary: this gate independently reconstructs the expected contents from
+    the numbered source sections and compares them with output/manuscript.
+    It therefore catches missing sections, stale sections, unresolved tokens,
+    and silent injector changes rather than merely checking that the output
+    directory exists.
+    """
+    source = Path(source_dir)
+    injected = Path(injected_dir)
+    if not source.is_dir():
+        raise ValueError(f"manuscript source directory is missing: {source}")
+    if not injected.is_dir():
+        raise ValueError(f"injected manuscript directory is missing: {injected}")
+
+    source_files = numbered_sections(source)
+    injected_files = numbered_sections(injected)
+    source_names = {path.name for path in source_files}
+    injected_names = {path.name for path in injected_files}
+    missing = sorted(source_names - injected_names)
+    extra = sorted(injected_names - source_names)
+    if missing or extra:
+        raise ValueError(
+            "injected manuscript file set drift: "
+            f"missing={missing or []}, extra={extra or []}"
+        )
+
+    for source_path in source_files:
+        try:
+            source_text = source_path.read_text(encoding="utf-8")
+            injected_text = (injected / source_path.name).read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise ValueError(f"could not read manuscript injection pair {source_path.name}: {exc}") from exc
+        used = set(_TOKEN_RE.findall(source_text))
+        missing_tokens = sorted(used - set(variables))
+        if missing_tokens:
+            raise ValueError(
+                f"source section {source_path.name} uses tokens absent from variables: {missing_tokens}"
+            )
+        expected = source_text
+        for token in sorted(used):
+            expected = expected.replace("{{" + token + "}}", variables[token])
+        unresolved = sorted(set(_TOKEN_RE.findall(injected_text)))
+        if unresolved:
+            raise ValueError(
+                f"injected section {source_path.name} contains unresolved tokens: {unresolved}"
+            )
+        if injected_text != expected:
+            raise ValueError(
+                f"injected section {source_path.name} differs from exact source token substitution"
+            )
+    return tuple(injected / name for name in sorted(source_names))
 
 
 def find_hardcoded_numeric_claims(manuscript_dir: Path) -> list[tuple[str, int, str]]:
@@ -177,6 +291,7 @@ def find_hardcoded_numeric_claims(manuscript_dir: Path) -> list[tuple[str, int, 
             candidate = _TOKEN_RE.sub("", raw_line)
             candidate = re.sub(r"\[@[^\]]+\]", "", candidate)
             candidate = re.sub(r"@\d+", "", candidate)
+            candidate = re.sub(r"^\s*\d+\.\s+", "", candidate)  # ordered-list marker
             candidate = re.sub(r"\b[A-Za-z][A-Za-z0-9_-]*\d[A-Za-z0-9_-]*\b", "", candidate)
             candidate = re.sub(r"width\s*=\s*\d+%", "", candidate, flags=re.IGNORECASE)
             candidate = re.sub(r"\b20\d{2}\b", "", candidate)  # citation/publication years
@@ -222,7 +337,7 @@ def load_claim_ledger(path: str | Path | None = None) -> dict[str, object]:
 
 
 def validate_claim_ledger(
-    payload: dict[str, object],
+    payload: Mapping[str, object],
     *,
     project_root: str | Path = _PROJECT_ROOT,
     check_artifacts: bool = False,
@@ -310,7 +425,181 @@ def validate_claim_ledger(
         raise ValueError("claim ledger validation failed: " + "; ".join(issues))
 
 
-def validate_paper_audit(payload: dict[str, object]) -> None:
+def _sha256(path: Path) -> str:
+    """Return a file digest without relying on a mutable manifest entry."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_integrity_fingerprints(
+    value: object,
+    *,
+    root: Path,
+    field: str,
+    issues: list[str],
+) -> set[str]:
+    """Refuse a screen whose declared source or analysis fingerprints drifted."""
+    if not isinstance(value, list) or not value:
+        issues.append(f"integrity advantage {field} must be a non-empty list")
+        return set()
+    seen: set[str] = set()
+    for index, entry in enumerate(value):
+        prefix = f"integrity advantage {field}[{index}]"
+        if not isinstance(entry, dict):
+            issues.append(f"{prefix} must be a mapping")
+            continue
+        path_text = entry.get("path")
+        digest = entry.get("sha256")
+        size = entry.get("size_bytes")
+        if not isinstance(path_text, str) or not path_text:
+            issues.append(f"{prefix}.path must be non-empty text")
+            continue
+        relative_path = Path(path_text)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            issues.append(f"{prefix}.path is unsafe: {path_text}")
+            continue
+        if path_text in seen:
+            issues.append(f"{prefix}.path is duplicated: {path_text}")
+            continue
+        seen.add(path_text)
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            issues.append(f"{prefix}.sha256 must be a lowercase SHA-256 digest")
+            continue
+        if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+            issues.append(f"{prefix}.size_bytes must be a non-negative integer")
+            continue
+        path = root / relative_path
+        if not path.is_file() or path.is_symlink():
+            issues.append(f"{prefix}.path is missing or symlinked: {path_text}")
+            continue
+        if path.stat().st_size != size:
+            issues.append(f"{prefix}.size_bytes does not match current file: {path_text}")
+        if _sha256(path) != digest:
+            issues.append(f"{prefix}.sha256 does not match current file: {path_text}")
+    return seen
+
+
+def validate_integrity_advantage_report(
+    *,
+    project_root: str | Path = _PROJECT_ROOT,
+    report_path: str | Path | None = None,
+) -> None:
+    """Validate the source-bound, explicitly unpromoted integrity screen.
+
+    This is a release-time check, not a P0 evaluator.  It verifies that the
+    committed endpoint screen still names the exact input and analysis files it
+    was derived from, and that an unexecuted P0 cannot be represented as a
+    promoted integrity result.
+    """
+    root = Path(project_root).resolve()
+    source = Path(report_path) if report_path is not None else root / _INTEGRITY_ADVANTAGE_PATH
+    if not source.is_absolute():
+        source = root / source
+    issues: list[str] = []
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"integrity advantage report unreadable: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("integrity advantage report must contain a mapping")
+
+    if payload.get("schema_version") != 3:
+        issues.append("integrity advantage report requires schema_version 3")
+    if payload.get("analysis") != "integrity_advantage_audit_v1":
+        issues.append("integrity advantage report has an unexpected analysis identifier")
+
+    comparisons = payload.get("comparisons")
+    if not isinstance(comparisons, list) or not comparisons:
+        issues.append("integrity advantage report comparisons must be a non-empty list")
+    else:
+        comparison_ids: list[str] = []
+        for index, row in enumerate(comparisons):
+            prefix = f"integrity advantage comparison {index}"
+            if not isinstance(row, dict):
+                issues.append(f"{prefix} must be a mapping")
+                continue
+            identifier = row.get("id")
+            if not isinstance(identifier, str) or not identifier:
+                issues.append(f"{prefix}.id must be non-empty text")
+                continue
+            comparison_ids.append(identifier)
+            if row.get("promotion_status") != "screen_only_unpromoted":
+                issues.append(f"{prefix} must remain screen_only_unpromoted")
+        duplicate_ids = sorted(identifier for identifier in set(comparison_ids) if comparison_ids.count(identifier) > 1)
+        if duplicate_ids:
+            issues.append(f"integrity advantage report has duplicate comparisons: {duplicate_ids}")
+        missing_ids = sorted(_INTEGRITY_ADVANTAGE_CURRENT_IDS - set(comparison_ids))
+        if missing_ids:
+            issues.append(f"integrity advantage report is missing current comparisons: {missing_ids}")
+
+    promotion = payload.get("promotion")
+    if not isinstance(promotion, dict):
+        issues.append("integrity advantage report requires promotion metadata")
+    else:
+        required_flags = (
+            "promoted",
+            "p0_provenance_confirmation_executed",
+            "p0_provenance_poisoning_separation_executed",
+            "promotion_gate_passed",
+        )
+        for field in required_flags:
+            if not isinstance(promotion.get(field), bool):
+                issues.append(f"integrity advantage promotion.{field} must be boolean")
+        status = promotion.get("status")
+        reason = promotion.get("reason")
+        if status not in {"screen_only_unpromoted", "complete_not_promoted", "promoted"}:
+            issues.append("integrity advantage promotion.status is invalid")
+        if not isinstance(reason, str) or not reason.strip():
+            issues.append("integrity advantage promotion.reason must be non-empty text")
+        p0_executed = (
+            promotion.get("p0_provenance_confirmation_executed") is True
+            and promotion.get("p0_provenance_poisoning_separation_executed") is True
+        )
+        gate_passed = promotion.get("promotion_gate_passed") is True
+        promoted = promotion.get("promoted") is True
+        if not p0_executed:
+            if status != "screen_only_unpromoted" or promoted or gate_passed:
+                issues.append("unexecuted P0 integrity evidence must remain screen_only_unpromoted")
+        elif promoted and (status != "promoted" or not gate_passed):
+            issues.append("a promoted integrity result requires a passed P0 promotion gate")
+        elif not promoted and status == "promoted":
+            issues.append("promotion.status cannot be promoted when promoted is false")
+
+    boundaries = payload.get("design_boundaries")
+    required_boundaries = {
+        "native_units_preserved": True,
+        "pooled_effect_size": False,
+        "population_inference": False,
+        "human_quality_labels": False,
+        "paired_rows_required_for_confirmation": True,
+    }
+    if not isinstance(boundaries, dict):
+        issues.append("integrity advantage report requires design_boundaries")
+    else:
+        for field, expected in required_boundaries.items():
+            if boundaries.get(field) is not expected:
+                issues.append(f"integrity advantage design_boundaries.{field} must be {expected!r}")
+
+    source_paths = _validate_integrity_fingerprints(
+        payload.get("source_provenance"), root=root, field="source_provenance", issues=issues
+    )
+    analysis_paths = _validate_integrity_fingerprints(
+        payload.get("analysis_code"), root=root, field="analysis_code", issues=issues
+    )
+    missing_source_inputs = sorted(_INTEGRITY_ADVANTAGE_SOURCE_INPUTS - source_paths)
+    if missing_source_inputs:
+        issues.append(f"integrity advantage report is missing source inputs: {missing_source_inputs}")
+    missing_analysis_code = sorted(_INTEGRITY_ADVANTAGE_ANALYSIS_CODE - analysis_paths)
+    if missing_analysis_code:
+        issues.append(f"integrity advantage report is missing analysis code: {missing_analysis_code}")
+    if issues:
+        raise ValueError("integrity advantage validation failed: " + "; ".join(issues))
+
+
+def validate_paper_audit(payload: Mapping[str, object]) -> None:
     """Validate required fields and unique identifiers in the audit ledger.
 
     The ledger is deliberately stricter than a bibliography: a formal object must
@@ -319,9 +608,72 @@ def validate_paper_audit(payload: dict[str, object]) -> None:
     This keeps prose, equations, implementation, and evidence auditable as one
     contract.
     """
-    for key in ("schema_version", "scope", "evidence_boundary", "interpretation_policy", "formalisms", "connections", "claims"):
+    for key in (
+        "schema_version",
+        "scope",
+        "evidence_boundary",
+        "interpretation_policy",
+        "notation",
+        "statistical_contracts",
+        "formalisms",
+        "connections",
+        "claims",
+    ):
         if key not in payload:
             raise ValueError(f"paper audit ledger missing {key!r}")
+    notation = payload["notation"]
+    if not isinstance(notation, dict):
+        raise ValueError("paper audit notation must be a mapping")
+    supplemental_section = notation.get("supplemental_section")
+    if not isinstance(supplemental_section, str) or not supplemental_section.strip():
+        raise ValueError("paper audit notation requires supplemental_section")
+    symbols = notation.get("symbols")
+    if not isinstance(symbols, list) or not symbols:
+        raise ValueError("paper audit notation symbols must be a non-empty list")
+    symbol_ids: set[str] = set()
+    for symbol_entry in symbols:
+        if not isinstance(symbol_entry, dict):
+            raise ValueError("paper audit notation symbols must be mappings")
+        symbol = symbol_entry.get("symbol")
+        meaning = symbol_entry.get("meaning")
+        if not isinstance(symbol, str) or not symbol.strip() or not isinstance(meaning, str) or not meaning.strip():
+            raise ValueError("paper audit notation symbols require non-empty symbol and meaning")
+        if symbol in symbol_ids:
+            raise ValueError(f"duplicate notation symbol: {symbol}")
+        symbol_ids.add(symbol)
+    crosswalk = notation.get("crosswalk")
+    if not isinstance(crosswalk, list) or not crosswalk:
+        raise ValueError("paper audit notation crosswalk must be a non-empty list")
+    for entry in crosswalk:
+        if not isinstance(entry, dict):
+            raise ValueError("paper audit notation crosswalk entries must be mappings")
+        if not isinstance(entry.get("formalism"), str) or not entry["formalism"].strip():
+            raise ValueError("paper audit notation crosswalk entries require a formalism")
+        names = entry.get("symbols")
+        if not isinstance(names, list) or not names or not all(isinstance(name, str) for name in names):
+            raise ValueError("paper audit notation crosswalk symbols must be a non-empty list of strings")
+        unknown = sorted(set(names) - symbol_ids)
+        if unknown:
+            raise ValueError(f"paper audit notation crosswalk has unknown symbols: {unknown}")
+    statistical_contracts = payload["statistical_contracts"]
+    if not isinstance(statistical_contracts, list) or not statistical_contracts:
+        raise ValueError("paper audit statistical_contracts must be a non-empty list")
+    statistical_ids: set[str] = set()
+    statistical_required = {"id", "implementation", "tests", "method", "estimand", "interval_interpretation", "assumption"}
+    for entry in statistical_contracts:
+        if not isinstance(entry, dict):
+            raise ValueError("paper audit statistical_contracts entries must be mappings")
+        missing = sorted(statistical_required - set(entry))
+        if missing:
+            raise ValueError(f"paper audit statistical contract missing fields: {missing}")
+        identifier = entry["id"]
+        if not isinstance(identifier, str) or not identifier.strip() or identifier in statistical_ids:
+            raise ValueError(f"paper audit statistical contract requires a unique id: {identifier!r}")
+        statistical_ids.add(identifier)
+        for field in ("method", "estimand", "interval_interpretation", "assumption"):
+            if not isinstance(entry[field], str) or not entry[field].strip():
+                raise ValueError(f"paper audit statistical contract {identifier}.{field} must be non-empty text")
+    formalism_ids: set[str] = set()
     for section in ("formalisms", "claims"):
         entries = payload[section]
         if not isinstance(entries, list) or not entries:
@@ -332,7 +684,8 @@ def validate_paper_audit(payload: dict[str, object]) -> None:
             if section == "claims"
             else {
                 "id", "equation", "implementation", "tests", "evidence_tier", "limitation",
-                "unit", "estimand", "inputs", "outputs", "dependencies", "invariants", "manuscript_sections",
+                "unit", "estimand", "inputs", "outputs", "dependencies", "invariants", "invariant_anchors",
+                "manuscript_sections",
             }
         )
         for entry in entries:
@@ -344,6 +697,8 @@ def validate_paper_audit(payload: dict[str, object]) -> None:
             if identifier in ids:
                 raise ValueError(f"duplicate paper audit id: {identifier}")
             ids.add(identifier)
+            if section == "formalisms":
+                formalism_ids.add(identifier)
             missing = sorted(required - set(entry))
             if missing:
                 raise ValueError(f"paper audit {identifier} missing fields: {missing}")
@@ -363,6 +718,39 @@ def validate_paper_audit(payload: dict[str, object]) -> None:
                     continue
                 if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                     raise ValueError(f"paper audit {identifier}.{field} must be a string or list of strings")
+            if section == "formalisms":
+                invariant_names = [entry["invariants"]] if isinstance(entry["invariants"], str) else entry["invariants"]
+                anchors = entry["invariant_anchors"]
+                if not isinstance(anchors, dict):
+                    raise ValueError(f"paper audit {identifier}.invariant_anchors must be a mapping")
+                if not all(isinstance(key, str) and key for key in anchors):
+                    raise ValueError(f"paper audit {identifier}.invariant_anchors keys must be non-empty text")
+                missing_anchors = sorted(set(invariant_names) - set(anchors))
+                extra_anchors = sorted(set(anchors) - set(invariant_names))
+                if missing_anchors or extra_anchors:
+                    detail = []
+                    if missing_anchors:
+                        detail.append(f"missing {missing_anchors}")
+                    if extra_anchors:
+                        detail.append(f"unknown {extra_anchors}")
+                    raise ValueError(f"paper audit {identifier}.invariant_anchors: {', '.join(detail)}")
+                for invariant_name in invariant_names:
+                    anchor = anchors[invariant_name]
+                    if isinstance(anchor, str) and anchor.strip():
+                        continue
+                    if isinstance(anchor, list) and anchor and all(isinstance(item, str) and item.strip() for item in anchor):
+                        continue
+                    raise ValueError(
+                        f"paper audit {identifier}.invariant_anchors[{invariant_name}] "
+                        "must be non-empty text or a list of non-empty text"
+                    )
+    crosswalk_ids = {entry["formalism"] for entry in crosswalk if isinstance(entry, dict)}
+    missing_crosswalk = sorted(formalism_ids - crosswalk_ids)
+    if missing_crosswalk:
+        detail = []
+        if missing_crosswalk:
+            detail.append(f"missing {missing_crosswalk}")
+        raise ValueError("paper audit notation crosswalk formalism ids: " + "; ".join(detail))
 
     connections = payload["connections"]
     if not isinstance(connections, list):
@@ -414,6 +802,7 @@ __all__ = [
     "find_hardcoded_numeric_claims",
     "load_claim_ledger",
     "validate_claim_ledger",
+    "validate_integrity_advantage_report",
     "load_paper_audit",
     "validate_paper_audit",
     "write_paper_audit_json",

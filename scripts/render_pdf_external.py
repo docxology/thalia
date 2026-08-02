@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     if str(template_root) not in sys.path:
         sys.path.insert(0, str(template_root))
 
-    from infrastructure.rendering.pipeline import execute_render_pipeline
+    from infrastructure.rendering.pipeline import execute_render_pipeline  # type: ignore[import-not-found]
 
     with _template_project_link(template_root) as project_name:
         status = execute_render_pipeline(
@@ -95,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.validate:
             return status
 
-        from infrastructure.validation.output.pipeline import execute_validation_pipeline
+        from infrastructure.validation.output.pipeline import execute_validation_pipeline  # type: ignore[import-not-found]
 
         return execute_validation_pipeline(project_name, repo_root=template_root)
 

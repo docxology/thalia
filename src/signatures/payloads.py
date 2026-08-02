@@ -113,7 +113,7 @@ class HarnessOutput:
 
     Attributes:
         answer: The produced answer string.
-        reasoning_trace: Human-readable trace of the reasoning strategy.
+        reasoning_trace: Readable trace of the reasoning strategy.
         evidence_citations: Source windows cited by the Reasoner.
         ranked_evidence: Evidence ranked by the Retriever.
         task_category: Detected task category for the query.

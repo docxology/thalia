@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import json
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +18,8 @@ from src.manuscript_integrity import (  # noqa: E402
     check_bibliography_integrity,
     load_claim_ledger,
     validate_claim_ledger,
+    validate_integrity_advantage_report,
+    verify_injected_manuscript,
 )
 from src.provenance import validate_artifact_manifest  # noqa: E402
 
@@ -41,6 +44,27 @@ def main() -> int:
     except ValueError as exc:
         claims_ok = False
         print(f"[error] claim ledger validation failed: {exc}")
+    integrity_screen_ok = True
+    try:
+        validate_integrity_advantage_report(project_root=PROJECT_ROOT)
+    except ValueError as exc:
+        integrity_screen_ok = False
+        print(f"[error] integrity advantage validation failed: {exc}")
+    injection_ok = True
+    try:
+        variables_path = PROJECT_ROOT / "output" / "data" / "manuscript_variables.json"
+        variables = json.loads(variables_path.read_text(encoding="utf-8"))
+        if not isinstance(variables, dict) or not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in variables.items()
+        ):
+            raise ValueError("manuscript variables must be a string-to-string mapping")
+        injected = PROJECT_ROOT / "output" / "manuscript"
+        files = verify_injected_manuscript(PROJECT_ROOT / "manuscript", injected, variables)
+        print(f"injection_checked={len(files)} exact=True")
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        injection_ok = False
+        print(f"[error] manuscript injection validation failed: {exc}")
     bibliography_ok = True
     try:
         check_bibliography_integrity(
@@ -50,7 +74,11 @@ def main() -> int:
     except ValueError as exc:
         bibliography_ok = False
         print(f"[error] bibliography validation failed: {exc}")
-    return 0 if report.ok and traceability["status"] == "pass" and claims_ok and bibliography_ok else 1
+    return (
+        0
+        if report.ok and traceability["status"] == "pass" and claims_ok and integrity_screen_ok and injection_ok and bibliography_ok
+        else 1
+    )
 
 
 if __name__ == "__main__":

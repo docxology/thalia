@@ -50,10 +50,20 @@ SQLite connection is always closed, even on exception.
 ## Regenerate artifacts
 
 ```bash
+# Quick smoke grid (used by isolated script tests)
 uv run --project . --extra dev python scripts/run_harness_eval.py
+# Publication-size deterministic audit
+uv run --project . --extra dev python scripts/run_harness_eval.py \
+  --per-category-values 25 50 100 250 \
+  --seeds 0 1 2 3 4 5 6 7 8 9 \
+  --n-boot 2000
 uv run --project . --extra dev python scripts/run_compiler.py
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
-uv run --project . --extra dev python scripts/run_compiler_generalization.py
+uv run --project . --extra dev python scripts/run_compiler_generalization.py \
+  --per-category 10 \
+  --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 \
+  --gepa-iterations 4
+uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/run_pipeline.py
 uv run --project . --extra dev python scripts/generate_figures.py
 uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
@@ -80,8 +90,8 @@ example/method to `output/reports/evaluation_ledger.jsonl`. The precision and
 stratified effect figures are `output/figures/sample_size_precision.png` and
 `output/figures/statistical_audit.png`. The full audit's unique-example and
 method-evaluation counts are generated in `output/data/eval_results.json`; inspect
-that accounting bundle rather than copying counts into prose. Pass a smaller grid explicitly when
-smoke-testing an isolated temporary output directory.
+that accounting bundle rather than copying counts into prose. Pass a smaller
+grid explicitly when smoke-testing an isolated temporary output directory.
 
 LongMemEval loading validates every record, aligned session array, and turn. The
 neural recorder accepts `--neural-limit 100|250|500` and a resumable
@@ -111,3 +121,34 @@ The deterministic extensions remain repository-local and regenerable:
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
 uv run --project . --extra dev python scripts/run_compiler_generalization.py
 ```
+
+## Model-quality evidence lane
+
+The operational campaign above is not a model-quality pass: it retains answer
+hashes and automated diagnostics, not answer-level labels. The publication path
+requires two independent expert raters and blinded adjudication. The local-LLM
+runner is an exploratory diagnostic for packet, rubric, and provenance mechanics;
+its labels cannot be promoted. Raw answers and annotation packets stay outside
+the repository at `/Volumes/blue/data/thalia_quality`.
+
+Run the exploratory pilot first:
+
+```bash
+uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
+```
+
+After the engineering pilot has diagnosed packet and rubric mechanics, obtain
+the two independent blinded expert-rater ledgers and expert adjudication. Analyze
+the pilot, review the rubric, and freeze the protocol with the pilot report digest.
+The threshold values are deliberately chosen only after that review:
+
+```bash
+uv run --project . --extra dev python scripts/analyze_quality.py --help
+uv run --project . --extra dev python scripts/freeze_quality_protocol.py --help
+uv run --project . --extra neural python scripts/run_quality_campaign.py \
+  --phase confirmatory --protocol /path/to/frozen-quality-protocol.json
+```
+
+`promote_quality_report.py` refuses incomplete, below-threshold, or tampered
+reports. Production readiness is assessed separately and is never implied by the
+quality certificate.

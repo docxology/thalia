@@ -2,13 +2,18 @@
 
 import pytest
 from src.compiler.metrics import (
+    ACCURACY_WEIGHT,
+    citation_precision,
+    EFFICIENCY_WEIGHT,
     EvalExample,
     EvalReport,
+    GROUNDING_WEIGHT,
     answer_score,
     efficiency_score,
     evaluate,
     grounding_score,
     harness_metric,
+    source_recall,
     token_f1,
 )
 from src.signatures import (
@@ -87,6 +92,24 @@ class TestComponentScores:
         ex = EvalExample("s", "q", "Lisbon")
         assert grounding_score(out, ex) == 0.0
 
+    def test_citation_precision_and_source_recall(self):
+        out = _output(
+            "Lisbon",
+            cited=((2, "Lisbon"), (9, "extra context")),
+        )
+        ex = EvalExample("s", "q", "Lisbon", expected_source_indices=(2, 4))
+        assert citation_precision(out, ex) == pytest.approx(0.5)
+        assert source_recall(out, ex) == pytest.approx(0.5)
+
+    def test_citation_auxiliaries_have_fail_closed_empty_behavior(self):
+        empty = _output("Lisbon", cited=())
+        with_no_gold = EvalExample("s", "q", "Lisbon")
+        assert citation_precision(empty, with_no_gold) == 0.0
+        assert source_recall(empty, with_no_gold) == 0.0
+        cited = _output("Lisbon", cited=((0, "Lisbon"),))
+        assert citation_precision(cited, with_no_gold) == 1.0
+        assert source_recall(cited, with_no_gold) == 1.0
+
     def test_efficiency_decreases_with_more_evidence(self):
         few = _output("a", n_ranked=2)
         many = _output("a", n_ranked=12)
@@ -102,6 +125,9 @@ class TestHarnessMetric:
         ex = EvalExample("s", "q", "Lisbon", expected_source_indices=(0,))
         score = harness_metric(out, ex)
         assert 0.0 <= score <= 1.0
+
+    def test_fixed_weights_sum_to_one(self):
+        assert ACCURACY_WEIGHT + GROUNDING_WEIGHT + EFFICIENCY_WEIGHT == pytest.approx(1.0)
 
 
 class TestEvaluate:

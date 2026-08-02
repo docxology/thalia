@@ -1,13 +1,14 @@
 """Pre-registered deterministic sensitivity evaluations.
 
-These evaluations extend the existing five-seed headline without replacing it.
+These evaluations are a distinct ten-seed sensitivity lane alongside the
+publication-size sample audit; neither replaces the other.
 They deliberately report finite generated-task dispersion and retain the seed as
 the cluster unit; the output is machinery evidence, not a population estimate.
 """
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Any, Iterable
 
 from ..compiler.metrics import EvalExample, answer_score, grounding_score, harness_metric
 from ..config import HarnessConfig, default_config
@@ -39,12 +40,12 @@ def seed_sensitivity_eval(
     per_category: int = 10,
     seeds: tuple[int, ...] = DEFAULT_SEED_SENSITIVITY_SEEDS,
     n_boot: int = 2000,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Evaluate three retrieval policies over the pre-registered ten seeds.
 
     Each policy sees exactly the same generated examples for a seed.  Aggregates
-    include per-seed cluster means and paired comparisons so the original
-    five-seed headline remains a distinct, auditable analysis.
+    include per-seed cluster means and paired comparisons so the sensitivity
+    design remains a distinct, auditable analysis.
     """
     if isinstance(per_category, bool) or not isinstance(per_category, int) or per_category <= 0:
         raise ValueError("per_category must be a positive integer")

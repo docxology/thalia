@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Thin orchestrator: run the real LongMemEval_S benchmark and record aggregates.
 
-Writes ``data/longmemeval_results.json`` (a few KB of aggregate metrics — accuracy,
-session-level grounding, composite with bootstrap CIs for the extractive and neural
-backends). The 277 MB benchmark itself stays gitignored; the committed aggregates let
+Writes ``data/longmemeval_results.json`` (a few KB of aggregate metrics — answer
+token-F1, citation-support proxy, session reachability, and composite with bootstrap
+CIs for the extractive and neural backends). The 277 MB benchmark itself stays gitignored; the committed aggregates let
 the figure and §evaluation tokens regenerate without re-running. Logic is in
 :func:`src.evaluation.longmemeval.longmemeval_eval`.
 
@@ -53,14 +53,16 @@ def main(neural_limit: int = 50, output_path: str | Path | None = None, checkpoi
     ea = result["extractive_accuracy"][0]
     na = result["neural_accuracy"][0]
     eg = result["extractive_grounding"][0]
+    er = result["extractive_session_reachability"][0]
     print(f"LongMemEval_S (n_ext={result['n_extractive']}, n_neural={result['n_neural']}): "
-          f"extractive acc {ea:.3f} | neural acc {na:.3f} | session-grounding {eg:.3f}")
+          f"extractive token-F1 {ea:.3f} | neural token-F1 {na:.3f} | "
+          f"citation-support {eg:.3f} | session-reachability {er:.3f}")
     print(str(out_path))
     return str(out_path)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Record LongMemEval_S accuracy and grounding aggregates.")
+    parser = argparse.ArgumentParser(description="Record LongMemEval_S answer-quality proxies and evidence-exposure aggregates.")
     parser.add_argument(
         "--neural-limit",
         type=int,

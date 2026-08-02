@@ -39,7 +39,7 @@ class SkillConstraintReport:
         size_bytes: UTF-8 byte length of the artifact.
         within_size: Whether the artifact is within the size budget.
         non_empty: Whether the artifact has non-whitespace content.
-        reasons: Human-readable failure reasons (empty when ``ok``).
+        reasons: Readable failure reasons (empty when ``ok``).
     """
 
     ok: bool
@@ -203,18 +203,21 @@ def to_dspy_signature(signature: type[Signature]) -> Any:
             "The DSPy signature bridge requires the optional 'neural' extra; "
             "install with `uv sync --extra neural`."
         )
+    dspy = _dspy
+    if dspy is None:  # pragma: no cover - guarded by DSPY_AVAILABLE
+        raise ImportError("DSPy is unavailable")
 
     fields: dict[str, Any] = {}
     annotations: dict[str, Any] = {}
     for name, fld in signature.inputs().items():
-        fields[name] = _dspy.InputField(desc=fld.desc)
+        fields[name] = dspy.InputField(desc=fld.desc)
         annotations[name] = fld.annotation
     for name, fld in signature.outputs().items():
-        fields[name] = _dspy.OutputField(desc=fld.desc)
+        fields[name] = dspy.OutputField(desc=fld.desc)
         annotations[name] = fld.annotation
     fields["__doc__"] = signature.instructions()
     fields["__annotations__"] = annotations
-    return type(signature.__name__, (_dspy.Signature,), fields)
+    return type(signature.__name__, (dspy.Signature,), fields)
 
 
 __all__ = [

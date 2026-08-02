@@ -24,10 +24,36 @@
 - **Hashing embedding** — deterministic character-n-gram surrogate for the
   semantic lane (not a learned dense retriever).
 - **Evidence window** — a compact, query-anchored slice of session history.
+- **Model-quality protocol** — the separate answer-level evaluation contract in
+  `experiment_plan.yaml:model_quality` and `src/evaluation/quality.py`; its
+  promotable mode uses two blinded expert raters and expert adjudication. The
+  optional local-LLM mode is an engineering diagnostic and is non-promotable.
+- **Quality certificate** — the typed aggregate report produced after paired
+  observations, independent annotations, and adjudication; only a digest-valid
+  threshold-passing certificate may be explicitly promoted.
+- **`complete_not_promoted`** — a deliberate quality-report state meaning that
+  execution and accounting may be complete while thresholds, acceptance, or
+  promotion are not satisfied.
+- **Oracle-evidence baseline** — a comparison condition that exposes the gold
+  evidence session to the model without supplying a separate gold answer field;
+  evidence exposure and answer quality remain distinct measurements.
+- **Production readiness** — an independent operational acceptance gate for
+  latency, throughput/cost, privacy, model pinning, rollback, monitoring, drift,
+  and red-team coverage; it is never implied by a quality certificate.
 - **Episodic store** — append-only SQLite (+FTS5) record of raw turns; never overwritten.
 - **Consolidation** — deriving a MEMORY.md delta from raw episodes, explicitly gated.
 - **Delivery mode** — `inline` vs `file_based` (sparse context budgeting).
-- **Composite metric** — `0.6·accuracy + 0.3·grounding + 0.1·efficiency`.
+- **Composite metric** — `0.6·answer token-F1 + 0.3·citation-support proxy + 0.1·efficiency`.
+- **Citation precision** — the fraction of cited source indices that belong to
+  the declared expected-source set. This source-index diagnostic does not test
+  statement-level entailment, citation necessity, or factuality.
+- **Source recall** — the fraction of declared expected source indices present
+  in the citation set. It measures source exposure at the adapter's granularity
+  and does not establish answer completeness or correctness.
+- **Metric construct audit** — a finite, deterministic decomposition of the
+  support proxy into adjacent source-index precision/recall, session
+  reachability, answer token-F1, and evidence efficiency. It is an audit
+  surface, not a new quality estimand.
 - **Invariant** — an executable structural property in `src/invariants.py`.
 - **Generated token** — a `{{NAME}}` manuscript placeholder emitted by
   `src/manuscript_variables.py`.
@@ -37,8 +63,9 @@
   exposes the same four runtime stages as an ordered chain of `PipelineStep`
   objects. Callers choose which stages to include, insert custom steps anywhere in
   the chain, and read per-step intermediates via `pipeline.intermediates` after
-  `run()`. Built with the same stage classes and config defaults as `AutoHarness`,
-  so outputs are identical given identical inputs.
+  `run()`. Built with the same stage classes and config defaults as `AutoHarness`;
+  outputs are identical given identical inputs when the default deterministic LM
+  is used. A custom `LMClient` is model-dependent.
 - **PipelineContext** — mutable state bag threaded through a `Pipeline` run; carries
   the query, session history, and all stage outputs (windows, ranked evidence,
   answer, citations, memory delta, etc.). Custom steps read and write this bag.

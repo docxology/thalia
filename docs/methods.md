@@ -26,11 +26,12 @@ logic.
 ## Formalism-to-code contract
 
 `src/formalism_traceability.py` validates every registered formal object against
-the Python AST, its test files, and its manuscript equation/section anchors. The
-generated `output/reports/formalism_traceability.json` is required by the artifact
-manifest, and the manuscript injects the same registry as a table. This gives each
-equation a resolvable code symbol and each composition edge an explicit relation;
-it does not elevate a finite synthetic result into a population claim.
+the Python AST, its test files, its invariant-to-code/test anchors, and its
+manuscript equation/section anchors. The generated
+`output/reports/formalism_traceability.json` is required by the artifact manifest,
+and the manuscript injects the same registry as a table. This gives each equation
+and invariant a resolvable executable anchor and each composition edge an explicit
+relation; it does not elevate a finite synthetic result into a population claim.
 
 ## Visual evidence contract
 
@@ -201,19 +202,59 @@ generation options, embedding prefixes, benchmark SHA-256/size, Python, and
 platform are recorded as non-deterministic provenance metadata and are never used
 as byte-identical neural regressions.
 
+### Model-quality evidence lane
+
+The v2 campaign's complete execution and provenance do not establish answer
+quality. THALIA therefore keeps a separate quality protocol in
+`experiment_plan.yaml:model_quality` and a separate schema in
+`src/evaluation/quality.py`. A deterministic, question-type-stratified pilot is
+used to review the rubric; only after that review are the primary correctness
+estimand, thresholds, missing-data rules, safety criteria, and held-out
+confirmatory IDs frozen. The matrix compares the default harness with full-context
+and oracle-evidence baselines for each configured model.
+
+The quality runner stores raw answers, cited excerpts, evidence indices,
+atomic claims, confidence, latency, failures, model digests, generation options,
+configuration fingerprints, and code fingerprints outside the repository.
+Annotation packets omit model and condition identifiers and use the same complete
+source packet for every condition of a question, with deterministic randomized
+presentation order. Publication analysis requires two independent expert raters
+and separate blinded expert adjudication for every paired presentation, then reports ordinal quality
+dimensions, atomic support labels, binary safety/abstention outcomes, Brier score,
+ECE, reliability curves, selective accuracy, question-clustered paired intervals,
+exact paired tests, and type-stratified results. The report state is intentionally fail closed:
+a complete run that does not pass frozen thresholds
+is `complete_not_promoted`, and only an explicitly accepted digest-valid `passed`
+certificate can enter committed data.
+
+The optional local-LLM implementation is restricted to engineering diagnostics
+and is rejected by the promotion boundary. This lane follows the atomic-claim
+distinction of FActScore and keeps evidence exposure separate from answer quality
+in the sense of Lost in the Middle. A quality certificate still does not imply production readiness; latency, cost,
+privacy, rollback, monitoring, drift, and red-team acceptance are a separate gate.
+
 ## Evaluation protocol (`src/evaluation/`)
 
 `build_demo_dataset` defines a fixed LongMemEval-style dataset with one example
 per task category. Each example includes session history, a query, a gold answer,
-and expected source indices. `harness_metric` scores accuracy (token-F1),
-grounding (expected source cited and answer supported by citations), and
-efficiency (fewer evidence windows for the same answer). The evaluation bundle
+and expected source indices. `harness_metric` scores answer token-F1,
+a citation-support proxy (expected source cited and answer overlapping the cited excerpts), and
+efficiency (fewer evidence windows for the same answer). The shared metric module
+also exposes source-index citation precision and source recall for construct
+audits; these diagnostics follow the campaign's existing fields and remain below
+sentence-level entailment. The evaluation bundle
 then reports:
 
 - default headline metrics;
 - lexical / semantic / hybrid comparison under the slack default budget;
 - tight-budget RRF, MMR, noise, and method-ablation diagnostics; and
 - compiler search trace plus compiled configuration.
+
+`metric_construct_audit` runs the deterministic demo through the default harness
+and returns category means for answer token-F1, the blended citation-support
+proxy, citation precision, source recall, session reachability, and evidence
+efficiency. `plot_metric_construct_audit` renders those values as a labelled
+heatmap, making the proxy's components inspectable in the manuscript.
 
 The six-example diagnostic remains intentionally small and deterministic. The
 separate seeded scaling audit increases sample size while preserving reproducible
@@ -242,7 +283,7 @@ zero-discordance case. The named Holm step-down family [@holm1979simple] is
 assembled before adjustment and includes the overall and stratum-level paired
 comparisons for every audited sample-size row. This protects the interpretation
 of exploratory slices without pretending that a generated benchmark samples a
-human population. The sample-size planner is a transparent precision heuristic,
+target population. The sample-size planner is a transparent precision heuristic,
 not a prospective power calculation; the synthetic, external-benchmark, and
 model-dependent evidence tiers remain separate.
 

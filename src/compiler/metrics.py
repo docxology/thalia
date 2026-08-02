@@ -6,7 +6,7 @@ combination of three components:
 * **accuracy** — token-F1 of the answer against the gold answer (weight 0.6);
 * **citation support** — did the answer cite the expected source(s), and does
   token overlap support it in the cited excerpts (weight 0.3). This is an
-  operational provenance proxy, not entailment, factuality, or human judgment;
+  operational provenance proxy, not entailment, factuality, or answer-quality judgment;
 * **evidence-count efficiency** — a bounded reward based on the number of ranked
   evidence windows, not a token-cost or latency measurement (weight 0.1).
 
@@ -86,7 +86,7 @@ def answer_score(output: HarnessOutput, example: EvalExample) -> float:
     return token_f1(output.answer, example.expected_answer)
 
 
-def grounding_score(output: HarnessOutput, example: EvalExample) -> float:
+def citation_support_proxy(output: HarnessOutput, example: EvalExample) -> float:
     """Citation-support proxy in [0, 1], not a semantic grounding judgment.
 
     If expected source indices are provided, half the score rewards citing at
@@ -105,6 +105,63 @@ def grounding_score(output: HarnessOutput, example: EvalExample) -> float:
     return support
 
 
+def citation_precision(output: HarnessOutput, example: EvalExample) -> float:
+    """Return the fraction of cited source indices that are expected.
+
+    This is a source-index diagnostic, not citation entailment.  It is kept
+    separate from :func:`citation_support_proxy`: the proxy gives a half-credit
+    hit for any expected source and lexical overlap with the joined excerpts,
+    while precision exposes the cost of adding extra cited sources.  When an
+    example has no expected source set, the construct is unscored; a non-empty
+    citation set receives the neutral value ``1.0`` and an empty set receives
+    ``0.0`` for fail-closed accounting.
+    """
+    cited = {citation.source_index for citation in output.evidence_citations}
+    if not cited:
+        return 0.0
+    expected = set(example.expected_source_indices)
+    if not expected:
+        return 1.0
+    return len(cited & expected) / len(cited)
+
+
+def source_recall(output: HarnessOutput, example: EvalExample) -> float:
+    """Return the fraction of expected source indices that were cited.
+
+    The denominator is the example's declared source-index set.  On benchmark
+    adapters whose labels identify a whole session, this is a line-index proxy
+    and must be interpreted with that adapter's session-level boundary.
+    """
+    expected = set(example.expected_source_indices)
+    cited = {citation.source_index for citation in output.evidence_citations}
+    if not expected:
+        return 1.0 if cited else 0.0
+    return len(cited & expected) / len(expected)
+
+
+def session_reachability_score(output: HarnessOutput, example: EvalExample) -> float:
+    """Binary evidence-exposure diagnostic at the benchmark's session unit.
+
+    This asks only whether the harness surfaced at least one expected source
+    index. It does not evaluate answer correctness, line-level attribution, or
+    entailment, and it is intentionally separate from ``citation_support_proxy``.
+    """
+    if not example.expected_source_indices:
+        return 0.0
+    surfaced = {item.window.source_index for item in output.ranked_evidence}
+    return float(bool(surfaced & set(example.expected_source_indices)))
+
+
+def grounding_score(output: HarnessOutput, example: EvalExample) -> float:
+    """Compatibility alias for the serialized ``grounding`` field.
+
+    The construct is explicitly a citation-support proxy; callers adding new
+    analyses should use :func:`citation_support_proxy` so the name cannot be
+    mistaken for entailment, factuality, or adjudicated grounding.
+    """
+    return citation_support_proxy(output, example)
+
+
 def efficiency_score(output: HarnessOutput) -> float:
     """Evidence-count component: reward fewer ranked windows (1..0).
 
@@ -116,10 +173,10 @@ def efficiency_score(output: HarnessOutput) -> float:
 
 
 def harness_metric(output: HarnessOutput, example: EvalExample) -> float:
-    """Composite metric in [0, 1] combining accuracy, grounding, efficiency."""
+    """Composite metric in [0, 1] combining token-F1, citation support, efficiency."""
     return (
         ACCURACY_WEIGHT * answer_score(output, example)
-        + GROUNDING_WEIGHT * grounding_score(output, example)
+        + GROUNDING_WEIGHT * citation_support_proxy(output, example)
         + EFFICIENCY_WEIGHT * efficiency_score(output)
     )
 
@@ -168,7 +225,7 @@ def evaluate(
     for example in dataset:
         output = run_fn(example)
         a = answer_score(output, example)
-        g = grounding_score(output, example)
+        g = citation_support_proxy(output, example)
         e = efficiency_score(output)
         composites.append(ACCURACY_WEIGHT * a + GROUNDING_WEIGHT * g + EFFICIENCY_WEIGHT * e)
         acc += a
@@ -190,6 +247,10 @@ __all__ = [
     "EvalReport",
     "token_f1",
     "answer_score",
+    "citation_support_proxy",
+    "citation_precision",
+    "source_recall",
+    "session_reachability_score",
     "grounding_score",
     "efficiency_score",
     "harness_metric",

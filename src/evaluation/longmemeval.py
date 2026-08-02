@@ -10,11 +10,12 @@ the HuggingFace ``xiaowu0162/longmemeval-cleaned`` repo), so results over it are
 reproducible from *code + the downloaded benchmark*, not code alone — an honest
 relaxation of the self-contained determinism thesis, disclosed in the manuscript.
 
-Grounding is **session-level**: ``expected_source_indices`` is set to every line that
-belongs to an evidence session (``answer_session_ids``), so the existing grounding
-metric measures "did the citation come from the right session?" with no metric change.
-Because any line of the gold session counts, this is an *upper bound* on stricter
-line-level grounding — read it as "retrieval reached the right session", not the line.
+The benchmark labels evidence at the session level: ``expected_source_indices`` is
+set to every line belonging to an evidence session (``answer_session_ids``). The
+adapter therefore records two separate diagnostics: a citation-support proxy for
+the cited excerpts and a binary session-reachability rate for evidence exposure.
+Neither is entailment, factuality, or an answer-quality judgment; session
+reachability is an upper bound on stricter line-level attribution.
 """
 
 from __future__ import annotations
@@ -154,7 +155,7 @@ def _item_to_example(item: dict) -> EvalExample:
 
 
 def load_longmemeval(path: str | Path = DEFAULT_PATH, limit: int | None = None) -> list[EvalExample]:
-    """Load LongMemEval_S as ``EvalExample``s (session-level grounding indices).
+    """Load LongMemEval_S as ``EvalExample``s with session evidence indices.
 
     Raises a clear error when the benchmark is not downloaded.
     """
@@ -206,16 +207,20 @@ def _load_neural_checkpoint(
             example_id = row.get("example_id")
             accuracy = row.get("accuracy")
             grounding = row.get("grounding")
+            reachability = row.get("session_reachability")
             if (
                 not isinstance(example_id, str)
                 or not example_id
                 or example_id in candidate_rows
                 or not isinstance(accuracy, (int, float))
                 or not isinstance(grounding, (int, float))
+                or not isinstance(reachability, (int, float))
                 or not math.isfinite(float(accuracy))
                 or not math.isfinite(float(grounding))
+                or not math.isfinite(float(reachability))
                 or not 0.0 <= float(accuracy) <= 1.0
                 or not 0.0 <= float(grounding) <= 1.0
+                or not 0.0 <= float(reachability) <= 1.0
             ):
                 return {}
             candidate_rows[example_id] = row
@@ -261,30 +266,32 @@ def longmemeval_eval(
 
     Extractive backend over ``extractive_limit`` examples (fast), and the neural
     backend (real LM in the Reasoner, Inspector windows first) over ``neural_limit``
-    examples (slow). Returns accuracy, session-level grounding, and composite means
-    with bootstrap CIs — the real-data counterpart to the synthetic headline.
+    examples (slow). Returns token-F1, citation-support, session-reachability, and
+    composite means with descriptive bootstrap intervals — the real-data counterpart to the synthetic
+    headline.
     """
     if extractive_limit is not None and (isinstance(extractive_limit, bool) or extractive_limit <= 0):
         raise ValueError(f"extractive_limit must be positive when provided, got {extractive_limit!r}")
     if isinstance(neural_limit, bool) or neural_limit <= 0:
         raise ValueError(f"neural_limit must be positive, got {neural_limit!r}")
-    from ..compiler.metrics import answer_score, grounding_score, harness_metric
+    from ..compiler.metrics import answer_score, citation_support_proxy, harness_metric, session_reachability_score
     from ..config import default_config
     from ..harness import AutoHarness, build_run_fn
     from ..llm import OllamaLM
     from ..dspy_runtime import ollama_model_metadata
     from .scaling import bootstrap_ci
-    from .statistics import binary_rate, bootstrap_mean
+    from .statistics import bootstrap_mean
 
     full = load_longmemeval(limit=extractive_limit)
     run = build_run_fn(default_config())
-    ext_acc, ext_grnd, ext_comp = [], [], []
+    ext_acc, ext_grnd, ext_reach, ext_comp = [], [], [], []
     cat_acc: dict[str, list[float]] = {}
     for ex in full:
         out = run(ex)
         a = answer_score(out, ex)
         ext_acc.append(a)
-        ext_grnd.append(grounding_score(out, ex))
+        ext_grnd.append(citation_support_proxy(out, ex))
+        ext_reach.append(session_reachability_score(out, ex))
         ext_comp.append(harness_metric(out, ex))
         category = ex.task_category or TaskCategory.SINGLE_SESSION
         cat_acc.setdefault(category.name.lower(), []).append(a)
@@ -294,7 +301,7 @@ def longmemeval_eval(
     # allow a slow local model to finish without weakening the normal adapter
     # timeout used by interactive queries.
     nlm = OllamaLM(model=neural_model, timeout=120.0)
-    neu_acc, neu_grnd = [], []
+    neu_acc, neu_grnd, neu_reach = [], [], []
     checkpoint = Path(checkpoint_path) if checkpoint_path else None
     benchmark_meta = file_provenance(DEFAULT_PATH)
     requested_ids = {example.example_id for example in neural}
@@ -316,17 +323,21 @@ def longmemeval_eval(
                 row = checkpoint_rows[ex.example_id]
                 neu_acc.append(float(row["accuracy"]))
                 neu_grnd.append(float(row["grounding"]))
+                neu_reach.append(float(row["session_reachability"]))
                 continue
             out = nh.forward(ex.query, ex.session_history)
             accuracy = answer_score(out, ex)
-            grounding = grounding_score(out, ex)
+            grounding = citation_support_proxy(out, ex)
+            reachability = session_reachability_score(out, ex)
             neu_acc.append(accuracy)
             neu_grnd.append(grounding)
+            neu_reach.append(reachability)
             if checkpoint:
                 checkpoint_rows[ex.example_id] = {
                     "example_id": ex.example_id,
                     "accuracy": accuracy,
                     "grounding": grounding,
+                    "session_reachability": reachability,
                 }
                 _write_neural_checkpoint(
                     checkpoint,
@@ -340,6 +351,8 @@ def longmemeval_eval(
     eg_m, eg_lo, eg_hi = bootstrap_ci(ext_grnd)
     na_m, na_lo, na_hi = bootstrap_ci(neu_acc)
     ng_m, ng_lo, ng_hi = bootstrap_ci(neu_grnd)
+    er_m, er_lo, er_hi = bootstrap_ci(ext_reach)
+    nr_m, nr_lo, nr_hi = bootstrap_ci(neu_reach)
     ext_acc_stats = bootstrap_mean(ext_acc, resamples=2000, seed=0)
     neural_acc_stats = bootstrap_mean(neu_acc, resamples=2000, seed=1)
     neural_metadata = ollama_model_metadata(neural_model)
@@ -353,12 +366,12 @@ def longmemeval_eval(
         "extractive_accuracy": (ea_m, ea_lo, ea_hi),
         "extractive_accuracy_statistics": ext_acc_stats.to_dict(),
         "extractive_grounding": (eg_m, eg_lo, eg_hi),
+        "extractive_session_reachability": (er_m, er_lo, er_hi),
         "extractive_composite": bootstrap_ci(ext_comp),
         "neural_accuracy": (na_m, na_lo, na_hi),
         "neural_accuracy_statistics": neural_acc_stats.to_dict(),
-        "extractive_accuracy_rate": binary_rate(sum(value >= 1.0 for value in ext_acc), len(ext_acc)).to_dict(),
-        "neural_accuracy_rate": binary_rate(sum(value >= 1.0 for value in neu_acc), len(neu_acc)).to_dict(),
         "neural_grounding": (ng_m, ng_lo, ng_hi),
+        "neural_session_reachability": (nr_m, nr_lo, nr_hi),
         "category_accuracy": {c: bootstrap_ci(v) for c, v in cat_acc.items()},
         "sample_accounting": {
             "unit": "longmemeval_question",
@@ -466,7 +479,7 @@ def bottleneck_analysis(ranking_limit: int = 40, sweep_values=(15, 30, 50, 100),
     if not sweep_values or any(value <= 0 for value in sweep_values):
         raise ValueError("sweep_values must contain positive window counts")
 
-    from ..compiler.metrics import answer_score, grounding_score
+    from ..compiler.metrics import answer_score, citation_support_proxy, session_reachability_score
     from ..config import default_config
     from ..harness import AutoHarness, build_run_fn
     from ..llm import OllamaLM
@@ -505,10 +518,14 @@ def bottleneck_analysis(ranking_limit: int = 40, sweep_values=(15, 30, 50, 100),
     if not sweep_examples:
         raise ValueError("LongMemEval sweep retained no records with gold evidence")
     extractive_sweep = {}
+    extractive_reachability = {}
     for mw in sweep_values:
         run = build_run_fn(cfg.with_(max_windows=mw))
-        grs = [grounding_score(run(e), e) for e in sweep_examples]
+        outputs = [run(e) for e in sweep_examples]
+        grs = [citation_support_proxy(output, e) for output, e in zip(outputs, sweep_examples)]
+        reaches = [session_reachability_score(output, e) for output, e in zip(outputs, sweep_examples)]
         extractive_sweep[mw] = sum(grs) / len(grs)
+        extractive_reachability[mw] = sum(reaches) / len(reaches)
 
     neural_loaded = load_longmemeval(limit=neural_limit)
     neural_examples = [e for e in neural_loaded if _gold_lines(e)]
@@ -518,13 +535,18 @@ def bottleneck_analysis(ranking_limit: int = 40, sweep_values=(15, 30, 50, 100),
     lm = OllamaLM(model=neural_model, timeout=120.0)
 
     def _neural_run(config):
-        accs, grs = [], []
+        accs, grs, reaches = [], [], []
         with AutoHarness(config=config, lm=lm) as harness:
             for ex in neural_examples:
                 out = harness.forward(ex.query, ex.session_history)
                 accs.append(answer_score(out, ex))
-                grs.append(grounding_score(out, ex))
-        return {"accuracy": sum(accs) / len(accs), "grounding": sum(grs) / len(grs)}
+                grs.append(citation_support_proxy(out, ex))
+                reaches.append(session_reachability_score(out, ex))
+        return {
+            "accuracy": sum(accs) / len(accs),
+            "grounding": sum(grs) / len(grs),
+            "session_reachability": sum(reaches) / len(reaches),
+        }
 
     neural = {mw: _neural_run(cfg.with_(max_windows=mw)) for mw in (min(sweep_values), max(sweep_values))}
     # The shipped fix: the adaptive Inspector recovers accuracy with no manual tuning.
@@ -541,6 +563,7 @@ def bottleneck_analysis(ranking_limit: int = 40, sweep_values=(15, 30, 50, 100),
         "default_max_windows": cfg.max_windows,
         "sweep_values": list(sweep_values),
         "extractive_grounding_by_maxwindows": extractive_sweep,
+        "extractive_session_reachability_by_maxwindows": extractive_reachability,
         "n_neural": len(neural_examples),
         "neural_model": neural_model,
         "neural_model_metadata": neural_metadata,

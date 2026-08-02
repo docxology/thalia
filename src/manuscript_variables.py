@@ -42,6 +42,7 @@ from .evaluation.budget import TIGHT_MAX_EVIDENCE, TIGHT_TOP_K
 from .harness import build_run_fn
 from .formalism_traceability import load_and_validate_traceability, traceability_markdown
 from .manuscript_integrity import load_paper_audit
+from .project_config import load_thalia_overlay_section
 from .signatures import TaskCategory
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -54,11 +55,26 @@ _OPENROUTER_EVAL_PATH = _DATA_DIR / "openrouter_eval.json"
 _EVAL_RESULTS_PATH = _DATA_DIR.parent / "output" / "data" / "eval_results.json"
 _SEED_SENSITIVITY_PATH = _DATA_DIR.parent / "output" / "data" / "seed_sensitivity.json"
 _COMPILER_GENERALIZATION_PATH = _DATA_DIR.parent / "output" / "data" / "compiler_generalization.json"
+_INTEGRITY_ADVANTAGE_PATH = _DATA_DIR / "integrity_advantage.json"
 
 
 def _fmt(value: float, places: int = 3) -> str:
     """Format a float to a fixed number of decimal places."""
     return f"{value:.{places}f}"
+
+
+def _fmt_signed(value: float, places: int = 3) -> str:
+    """Format an effect with an explicit sign."""
+    return f"{value:+.{places}f}"
+
+
+def _fmt_p(value: float) -> str:
+    """Format a p-value without collapsing small values to zero."""
+    if value < 0.001:
+        return f"{value:.2e}"
+    if value < 0.1:
+        return f"{value:.4f}"
+    return f"{value:.3f}"
 
 
 def _coverage_gate() -> int:
@@ -111,6 +127,11 @@ def _load_generated_eval(path: Path, command: str) -> dict:
     return payload
 
 
+def _load_quality_plan() -> dict[str, object]:
+    """Load the planned quality-study scope from the THALIA-owned overlay."""
+    return load_thalia_overlay_section("model_quality")
+
+
 def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
     """Generate the full ``{{TOKEN}} -> value`` map for the manuscript.
 
@@ -137,6 +158,27 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         _COMPILER_GENERALIZATION_PATH,
         "uv run --project . --extra dev python scripts/run_compiler_generalization.py",
     )
+    integrity_advantage = _load_generated_eval(
+        _INTEGRITY_ADVANTAGE_PATH,
+        "uv run --project . --extra dev python scripts/analyze_integrity_advantage.py",
+    )
+    integrity_rows = {
+        str(row["id"]): row
+        for row in integrity_advantage.get("comparisons", [])
+        if isinstance(row, dict) and "id" in row
+    }
+    required_integrity_ids = {
+        "orchestration_composite",
+        "provenance_auditability",
+        "poisoning_rate",
+        "learned_retrieval_recall",
+        "compiler_mipro_holdout",
+        "local_neural_answer_f1",
+        "adaptive_context_policy",
+    }
+    if not required_integrity_ids <= integrity_rows.keys():
+        missing = sorted(required_integrity_ids - integrity_rows.keys())
+        raise ValueError(f"integrity advantage aggregate is missing comparisons: {missing}")
 
     # Noise-regime endpoint: at the highest distractor level the lexical and the
     # hashing-surrogate "semantic" lanes diverge. Exposing these as tokens binds
@@ -148,6 +190,34 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
 
     dataset = build_demo_dataset()
     compiled = MIPROCompiler(auto="heavy").compile(lambda cfg: build_run_fn(cfg), dataset)
+    quality_plan = _load_quality_plan()
+    quality_pilot = quality_plan.get("pilot")
+    quality_confirmatory = quality_plan.get("confirmatory")
+    quality_models = quality_plan.get("models")
+    quality_conditions = quality_plan.get("conditions")
+    if not isinstance(quality_pilot, dict) or not isinstance(quality_confirmatory, dict):
+        raise ValueError("model_quality pilot and confirmatory plans must be mappings")
+    if not isinstance(quality_models, list) or not quality_models:
+        raise ValueError("model_quality models must be a non-empty list")
+    if not isinstance(quality_conditions, list) or not quality_conditions:
+        raise ValueError("model_quality conditions must be a non-empty list")
+    quality_total_raw = quality_plan.get("total_questions", 0)
+    quality_pilot_raw = quality_pilot.get("total_questions", 0)
+    quality_confirmatory_raw = quality_confirmatory.get("total_questions", 0)
+    if not all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in (quality_total_raw, quality_pilot_raw, quality_confirmatory_raw)
+    ):
+        raise ValueError("model_quality question counts must be integers")
+    quality_total = quality_total_raw
+    quality_pilot_total = quality_pilot_raw
+    quality_confirmatory_total = quality_confirmatory_raw
+    if quality_total != quality_pilot_total + quality_confirmatory_total:
+        raise ValueError("model_quality pilot and confirmatory counts must sum to total_questions")
+    quality_annotation = quality_plan.get("annotation")
+    quality_primary = quality_plan.get("primary_outcome")
+    if not isinstance(quality_annotation, dict) or not isinstance(quality_primary, dict):
+        raise ValueError("model_quality annotation and primary_outcome must be mappings")
 
     variables: dict[str, str] = {
         # Configuration
@@ -174,6 +244,15 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "CONFIG_CI_LEVEL": str(round(DEFAULT_CONFIDENCE_LEVEL * 100)),
         "CONFIG_BACKEND_FIGURE_WIDTH": str(BACKEND_FIGURE_WIDTH_PERCENT),
         "CONFIG_COV_GATE": str(_coverage_gate()),
+        # Planned quality-study scope. These are protocol metadata, not observed
+        # results; keeping them tokenised prevents the manuscript plan from drifting
+        # away from experiment_plan.yaml.
+        "RESULT_QUALITY_TOTAL_N": str(quality_total),
+        "RESULT_QUALITY_PILOT_N": str(quality_pilot_total),
+        "RESULT_QUALITY_CONFIRMATORY_N": str(quality_confirmatory_total),
+        "RESULT_QUALITY_CONDITIONS": str(len(quality_models) * len(quality_conditions)),
+        "RESULT_QUALITY_RATERS": str(quality_annotation.get("raters", "pending")),
+        "RESULT_QUALITY_PRIMARY": str(quality_primary.get("name", "pending")),
         # The formalism graph is a generated manuscript input, not a hand-maintained
         # claim.  The table itself is injected below so code/test anchors stay in
         # lock-step with the validated registry.
@@ -204,6 +283,56 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "RESULT_NUM_CANDIDATES": str(compiled.n_candidates),
     }
 
+    # Current integrity-advantage screen. These tokens bind the manuscript to the
+    # same endpoint-level report used by the audit figure and handoff document.
+    audit_row = integrity_rows["provenance_auditability"]
+    poison_row = integrity_rows["poisoning_rate"]
+    learned_row = integrity_rows["learned_retrieval_recall"]
+    compiler_row = integrity_rows["compiler_mipro_holdout"]
+    neural_row = integrity_rows["local_neural_answer_f1"]
+    adaptive_row = integrity_rows["adaptive_context_policy"]
+    variables.update(
+        {
+            "RESULT_INTEGRITY_COMPOSITE_LIFT": _fmt_signed(
+                float(integrity_rows["orchestration_composite"]["advantage_delta"])
+            ),
+            "RESULT_INTEGRITY_AUDIT_N": str(audit_row["n"]),
+            "RESULT_INTEGRITY_AUDIT_DELTA": _fmt_signed(float(audit_row["advantage_delta"])),
+            "RESULT_INTEGRITY_AUDIT_CI": (
+                f"[{_fmt(float(audit_row['low']))}, {_fmt(float(audit_row['high']))}]"
+            ),
+            "RESULT_INTEGRITY_AUDIT_RATE": _fmt(float(audit_row["left_rate"]["rate"])),
+            "RESULT_INTEGRITY_AUDIT_P": _fmt_p(float(audit_row["p_value"])),
+            "RESULT_INTEGRITY_AUDIT_ADJ_P": _fmt_p(float(audit_row["adjusted_p_value"])),
+            "RESULT_INTEGRITY_POISON_DELTA": _fmt_signed(float(poison_row["advantage_delta"])),
+            "RESULT_INTEGRITY_POISON_CI": (
+                f"[{_fmt(float(poison_row['low']))}, {_fmt(float(poison_row['high']))}]"
+            ),
+            "RESULT_INTEGRITY_POISON_P": _fmt_p(float(poison_row["p_value"])),
+            "RESULT_INTEGRITY_POISON_ADJ_P": _fmt_p(float(poison_row["adjusted_p_value"])),
+            "RESULT_INTEGRITY_LEARNED_DELTA": _fmt_signed(float(learned_row["advantage_delta"])),
+            "RESULT_INTEGRITY_LEARNED_CI": (
+                f"[{_fmt(float(learned_row['low']))}, {_fmt(float(learned_row['high']))}]"
+            ),
+            "RESULT_INTEGRITY_LEARNED_P": _fmt_p(float(learned_row["p_value"])),
+            "RESULT_INTEGRITY_LEARNED_ADJ_P": _fmt_p(float(learned_row["adjusted_p_value"])),
+            "RESULT_INTEGRITY_COMPILER_DELTA": _fmt_signed(float(compiler_row["advantage_delta"]), 4),
+            "RESULT_INTEGRITY_COMPILER_CI": (
+                f"[{_fmt(float(compiler_row['low']), 4)}, {_fmt(float(compiler_row['high']), 4)}]"
+            ),
+            "RESULT_INTEGRITY_COMPILER_P": _fmt_p(float(compiler_row["p_value"])),
+            "RESULT_INTEGRITY_COMPILER_ADJ_P": _fmt_p(float(compiler_row["adjusted_p_value"])),
+            "RESULT_INTEGRITY_NEURAL_DELTA": _fmt_signed(float(neural_row["advantage_delta"])),
+            "RESULT_INTEGRITY_NEURAL_CI": (
+                f"[{_fmt(float(neural_row['low']))}, {_fmt(float(neural_row['high']))}]"
+            ),
+            "RESULT_INTEGRITY_NEURAL_P": _fmt_p(float(neural_row["p_value"])),
+            "RESULT_INTEGRITY_NEURAL_ADJ_P": _fmt_p(float(neural_row["adjusted_p_value"])),
+            "RESULT_INTEGRITY_ADAPTIVE_DELTA": _fmt_signed(float(adaptive_row["advantage_delta"])),
+            "RESULT_INTEGRITY_ADAPTIVE_N": str(adaptive_row["n"]),
+        }
+    )
+
     # No-harness baseline + composite-weight sensitivity (deterministic ablations).
     baseline = no_harness_baseline(dataset)
     sweep = composite_weight_sensitivity(dataset)
@@ -229,7 +358,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         }
     )
 
-    # Scaling and variance: the seeded large dataset with bootstrap CIs.
+    # Scaling and variance: the seeded large dataset with descriptive bootstrap intervals.
     large = large_dataset_eval()
     variables.update(
         {
@@ -242,45 +371,41 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         }
     )
 
-    # Research-audit accounting comes from the generated bundle when available;
-    # the formula fallback keeps token generation useful before the first run.
-    audit: dict = {}
-    if _EVAL_RESULTS_PATH.exists():
-        bundle = json.loads(_EVAL_RESULTS_PATH.read_text())
-        audit = bundle.get("statistical_scaling", {})
-    audit_accounting = audit.get("accounting", {})
-    audit_contract = audit.get("analysis_contract", {})
-    audit_sizes = audit.get("per_category_values", [10, 25, 50, 100])
-    audit_seeds = audit.get("seed_values", [0, 1, 2, 3, 4])
-    audit_strata = audit_accounting.get("strata", [])
-    audit_unique = audit_accounting.get("n_unique_examples", sum(audit_sizes) * 6 * len(audit_seeds))
-    audit_methods = audit_accounting.get("n_method_evaluations", audit_unique * 3)
+    if not _EVAL_RESULTS_PATH.is_file():
+        raise FileNotFoundError("run_harness_eval.py must generate output/data/eval_results.json before manuscript hydration")
+    bundle = json.loads(_EVAL_RESULTS_PATH.read_text())
+    audit = bundle["statistical_scaling"]
+    audit_accounting = audit["accounting"]
+    audit_contract = audit["analysis_contract"]
+    audit_sizes = audit["per_category_values"]
+    audit_seeds = audit["seed_values"]
+    audit_strata = audit_accounting["strata"]
+    audit_unique = audit_accounting["n_unique_examples"]
+    audit_methods = audit_accounting["n_method_evaluations"]
     variables.update(
         {
             "RESULT_AUDIT_UNIQUE_N": str(audit_unique),
             "RESULT_AUDIT_METHOD_N": str(audit_methods),
-            "RESULT_AUDIT_CONFIDENCE": str(round(float(audit.get("confidence", DEFAULT_CONFIDENCE_LEVEL)) * 100)),
-            "RESULT_AUDIT_FAMILY_SIZE": str(audit.get("comparison_family", {}).get("size", len(audit_sizes) * 2)),
-            "RESULT_AUDIT_DATASET_FINGERPRINT": str(audit.get("dataset_fingerprint", "pending")),
-            "RESULT_AUDIT_SOURCE_FINGERPRINT": str(audit.get("source_fingerprint", "pending")),
+            "RESULT_AUDIT_CONFIDENCE": str(round(float(audit["confidence"]) * 100)),
+            "RESULT_AUDIT_FAMILY_SIZE": str(audit["comparison_family"]["size"]),
+            "RESULT_AUDIT_DATASET_FINGERPRINT": str(audit["dataset_fingerprint"]),
+            "RESULT_AUDIT_SOURCE_FINGERPRINT": str(audit["source_fingerprint"]),
             "RESULT_AUDIT_SIZES": "(" + ", ".join(str(value) for value in audit_sizes) + ")",
             "RESULT_AUDIT_SEED_COUNT": str(len(audit_seeds)),
-            "RESULT_AUDIT_CATEGORY_COUNT": str(audit.get("categories", audit_accounting.get("categories", len(TaskCategory)))),
-            "RESULT_AUDIT_STRATA_COUNT": str(len(audit_strata) or 4),
-            "RESULT_AUDIT_FAILURES": str(audit_accounting.get("n_failed", 0)),
-            "RESULT_AUDIT_INTERVAL_LABEL": str(
-                audit_contract.get("interval_interpretation", "descriptive resampling interval")
-            ),
+            "RESULT_AUDIT_CATEGORY_COUNT": str(audit["categories"]),
+            "RESULT_AUDIT_STRATA_COUNT": str(len(audit_strata)),
+            "RESULT_AUDIT_FAILURES": str(audit_accounting["n_failed"]),
+            "RESULT_AUDIT_INTERVAL_LABEL": str(audit_contract["interval_interpretation"]),
             "RESULT_AUDIT_CLUSTER_WARNING": (
                 "small-cluster warning applies"
-                if audit_contract.get("small_cluster_warning", len(audit_seeds) < 10)
-                else "cluster count is above the diagnostic warning threshold"
+                if audit_contract["small_cluster_warning"]
+                else "diagnostic small-cluster threshold not triggered; intervals remain descriptive"
             ),
         }
     )
 
-    # Pre-registered extensions remain separate from the five-seed headline and
-    # are read from validated generated aggregates rather than recomputed prose.
+    # Pre-registered extensions remain separate from the publication-size audit
+    # and are read from validated generated aggregates rather than recomputed prose.
     seed_accounting = seed_sensitivity.get("sample_accounting") or {}
     seed_pairs = seed_sensitivity.get("paired_comparisons") or {}
     compiler_rows = compiler_generalization.get("rows") or []
@@ -336,6 +461,12 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
     # Real LongMemEval_S benchmark (committed aggregates; external data not committed).
     lme = json.loads(_LME_PATH.read_text())
     ci = lambda t: f"[{_fmt(t[1])}, {_fmt(t[2])}]"  # noqa: E731
+    def optional_triple(value: object) -> tuple[str, str]:
+        if not isinstance(value, (list, tuple)) or len(value) != 3:
+            return "not recorded", ""
+        return _fmt(value[0]), ci(value)
+
+    lme_reach, lme_reach_ci = optional_triple(lme.get("extractive_session_reachability"))
     variables.update(
         {
             "RESULT_LME_N_EXT": str(lme["n_extractive"]),
@@ -348,6 +479,8 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_LME_NEURAL_ACC_CI": ci(lme["neural_accuracy"]),
             "RESULT_LME_GROUNDING": _fmt(lme["extractive_grounding"][0]),
             "RESULT_LME_GROUNDING_CI": ci(lme["extractive_grounding"]),
+            "RESULT_LME_SESSION_REACHABILITY": lme_reach,
+            "RESULT_LME_SESSION_REACHABILITY_CI": lme_reach_ci,
             # Derived neural/extractive accuracy ratio, so the "~Nx" prose tracks the data.
             "RESULT_LME_NEURAL_RATIO": _fmt(lme["neural_accuracy"][0] / lme["extractive_accuracy"][0], 1),
             "RESULT_LME_BENCHMARK_SHA256": str((lme.get("benchmark_provenance") or {}).get("sha256", "pending")),
@@ -381,13 +514,9 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_BN_NEURAL_RATIO": _fmt(bn_neural[hi]["accuracy"] / bn_neural[lo]["accuracy"], 1),
         }
     )
-    # Optional learned-embedder per-mode probe. Older committed bottleneck
-    # aggregates only carry the full-haystack ranking recall; keep that truthful
-    # instead of raising or fabricating dense/hybrid rows when the local embedder
-    # is unavailable.
-    modes = bn.get("ranking_recall_by_mode") or {}
-    variables["RESULT_BN_RECALL_MODE_N"] = str(modes.get("n", bn["n_ranking"]))
-    variables["RESULT_BN_RECALL_LEXICAL"] = _fmt(modes.get("lexical", bn["ranking_recall_at_10"]), 2)
+    modes = bn["ranking_recall_by_mode"]
+    variables["RESULT_BN_RECALL_MODE_N"] = str(modes["n"])
+    variables["RESULT_BN_RECALL_LEXICAL"] = _fmt(modes["lexical"], 2)
     if modes.get("available"):
         variables["RESULT_BN_RECALL_DENSE"] = _fmt(modes["dense"], 2)
         variables["RESULT_BN_RECALL_HYBRID"] = _fmt(modes["hybrid"], 2)

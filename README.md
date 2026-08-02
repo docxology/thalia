@@ -70,12 +70,19 @@ The evaluation makes two honest scope boundaries explicit:
   reproduced locally — only the *direction* is).
 
 Recorded measurements include: a held-out before/after optimizer
-comparison, context-poisoning resistance with citation auditability, an external
-LongMemEval_S benchmark run with bootstrap CIs, and a bottleneck localisation
+comparison, a finite context-poisoning probe with equal recorded poisoning rates
+and a lexical cited-excerpt/source-exposure proxy, an external
+LongMemEval_S benchmark run with descriptive bootstrap intervals, and a bottleneck localisation
 showing that, in the retained long-context slice, Inspector context-narrowing —
 not full-haystack retrieval ranking — is the observed recall bottleneck. The
 adaptive Inspector is evaluated as a fixed policy intervention on that slice;
 it is evidence for a composable diagnostic, not a causal or universal guarantee.
+The evaluation also includes a finite metric-construct audit that reports the
+support proxy beside source-index citation precision and recall, session
+reachability, answer token-F1, and evidence efficiency. These measures make
+the proxy's observable components explicit while preserving the boundary that
+source-index overlap is not sentence-level entailment or answer-quality
+assessment.
 
 The v2 research campaign extends this evidence with nested, question-type-balanced
 Gemma cohorts at 100/250/500 questions, a matched Hermes sensitivity cohort, a
@@ -85,6 +92,22 @@ compiler validation. Live rows and atomic checkpoints are stored on
 `/Volumes/blue/data/thalia_campaigns`; an incomplete tier cannot replace a
 retained aggregate, and all model-dependent values remain finite local
 observations rather than deterministic or population-level claims.
+
+The separate model-quality lane is deliberately not inferred from that campaign.
+It defines a blinded LongMemEval_S protocol with a stratified exploratory pilot
+followed by a held-out confirmatory set, two model families, and three
+answer/evidence conditions per model. The publication path requires two
+independent expert raters and blinded adjudication. A local-LLM-judge runner is
+available for reproducible packet, rubric, and parser diagnostics only; its
+labels are non-promotable. The study measures answer-level correctness,
+completeness, evidence faithfulness, usefulness, abstention, safety, and
+calibration, then issues a certificate that is either explicitly promoted or
+remains `complete_not_promoted`. Raw answers, evidence packets, annotations, and
+adjudications stay on `/Volumes/blue/data/thalia_quality`; no quality aggregate
+is committed until the expert-rater certificate passes its frozen thresholds and
+digest check.
+Production readiness is a separate operational gate covering latency, cost,
+privacy, rollback, monitoring, drift, and red-team evidence.
 
 ## Quick start
 
@@ -99,10 +122,19 @@ uv run --project . --extra dev mypy src
 uv run --project . --extra dev ruff check src tests scripts
 
 # Regenerate evaluation artifacts and figures.
-uv run --project . --extra dev python scripts/run_harness_eval.py
+uv run --project . --extra dev python scripts/run_harness_eval.py  # quick smoke grid
+# Publication-size deterministic audit:
+uv run --project . --extra dev python scripts/run_harness_eval.py \
+  --per-category-values 25 50 100 250 \
+  --seeds 0 1 2 3 4 5 6 7 8 9 \
+  --n-boot 2000
 uv run --project . --extra dev python scripts/run_compiler.py
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
-uv run --project . --extra dev python scripts/run_compiler_generalization.py
+uv run --project . --extra dev python scripts/run_compiler_generalization.py \
+  --per-category 10 \
+  --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 \
+  --gepa-iterations 4
+uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/run_pipeline.py
 uv run --project . --extra dev python scripts/generate_figures.py
 uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
@@ -113,6 +145,14 @@ uv run --project . --extra dev python scripts/validate_artifacts.py
 # v2 live research (raw evidence stays on /Volumes/blue; no promotion by default)
 uv run --project . --extra neural python scripts/run_research_campaign.py
 uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
+
+# model-quality lane (raw answers/annotations stay external; thresholds freeze after pilot)
+uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
+uv run --project . --extra dev python scripts/analyze_quality.py --help
+uv run --project . --extra dev python scripts/freeze_quality_protocol.py --help
+uv run --project . --extra dev python scripts/promote_quality_report.py --help
+uv run --project . --extra dev python scripts/analyze_production_readiness.py --help
+uv run --project . --extra dev python scripts/promote_production_readiness.py --help
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
 uv run --project . --extra dev python scripts/run_compiler_generalization.py
 
@@ -279,10 +319,11 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
   lambda=1 reducing to relevance, episode append-only, consolidation gate strictness,
   harness determinism, answer grounding, query-expansion superset, recall read-only,
   recency-zero noop, static determinism guard, and more.
-- **26 registered figures** — all generated deterministically from `src/evaluation`
-  and `src/figures`, including the title-page cover visual abstract and the
-  per-category component breakdown, pipeline evidence-flow, GEPA component
-  trajectory, and multi-seed sample-size precision audit.
+- **29 registered figures** — all generated deterministically from `src/evaluation`
+  and `src/figures`, including the title-page cover visual abstract, the
+  per-category component breakdown, the metric-construct-audit heatmap,
+  pipeline evidence-flow, GEPA component trajectory, and multi-seed
+  sample-size precision audit.
 - **Research-grade uncertainty accounting** — fixed-stratum bootstrap intervals,
   whole-seed-cluster paired deltas, Wilson score intervals, exact McNemar tests,
   and a complete named Holm family are serialized into the ledger and surfaced in

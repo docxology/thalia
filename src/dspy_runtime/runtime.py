@@ -30,7 +30,12 @@ class ExtractiveDSPyLM(_dspy.BaseLM):
         super().__init__(model=model)
         self.lm: LMClient = lm or ExtractiveLM()
 
-    def __call__(self, prompt: str | None = None, messages: list[dict] | None = None, **kwargs: Any) -> list[str]:
+    def __call__(
+        self,
+        prompt: str | None = None,
+        messages: list[dict] | None = None,
+        **kwargs: Any,
+    ) -> list[dict[str, Any] | str]:
         messages = messages or ([{"role": "user", "content": prompt}] if prompt else [])
         system = next((m["content"] for m in messages if m.get("role") == "system"), "")
         user = "".join(m["content"] for m in messages if m.get("role") == "user")

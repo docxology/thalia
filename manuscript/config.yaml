@@ -43,6 +43,9 @@ keywords:
 metadata:
   license: "MIT"
   language: "en"
+  # Request the template's LuaLaTeX PDF/UA-2 path; the release gate verifies
+  # the resulting structure instead of assuming the declaration succeeded.
+  tagged_pdf: true
   # Keep the renderer-level declaration aligned with manuscript/preamble.md.
   # The final PDF geometry is inspected after every publication render.
   geometry: "top=0.42in,bottom=0.45in,left=0.38in,right=0.38in,includeheadfoot"

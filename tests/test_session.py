@@ -35,6 +35,7 @@ class TestFilePersistence:
 
         session = Session(db_path=db)
         out = session.ask("fourth")
+        assert out.memory_written is not None
         assert out.memory_written.turn_id == 3
         assert session.turn_count == 3
         session.close()
@@ -58,6 +59,7 @@ class TestFilePersistence:
         assert "4321" in s2.harness.memory_gate.memory_md
         out = s2.ask("what is the door code")
         assert s2.turn_count == 2
+        assert out.memory_written is not None
         assert out.memory_written.turn_id == 1  # resumed turn id, no collision
 
     def test_transcript_reconstructed_on_reopen(self, tmp_path):

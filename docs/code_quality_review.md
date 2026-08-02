@@ -1,14 +1,33 @@
 # Thermo-Nuclear Code Quality Review — THALIA
 
-**Date:** 2026-06-02 (initial) · **2026-07-05** (follow-up pass)
+**Date:** 2026-06-02 (initial) · **2026-07-05** (follow-up pass) ·
+**2026-08-02** (full manuscript and release red-team)
 **Scope:** Full standalone THALIA tree (`src/`, `tests/`, `scripts/`)
 **Rubric:** [thermo-nuclear-code-quality-review](https://github.com/cursor/cursor-team-kit) (cursor-team-kit plugin)
 
-## Executive verdict: **PASS**
+## Executive verdict: **PASS WITH RELEASE CONDITIONS**
 
 **2026-06-02:** Pre-remediation **PASS WITH BLOCKERS**; structural fixes applied in the same pass.
 
 **2026-07-05:** Pre-remediation **PASS WITH BLOCKERS** (unwired architectural figures, oversized figure module, harness/pipeline duplication). The ranked blockers and moderate findings were remediated; run the current standalone gate for live evidence.
+
+**2026-08-02:** The full strict suite, source-bound artifact chain, enlarged
+finite-set audit, manuscript injection, visual figure review, external PDF
+validation, and correctly rooted browser check passed. The release boundary is
+still conditional: the deterministic package and methods evidence are ready for
+review, while P0 integrity confirmation, expert-rater quality, production
+acceptance, and any broad neural/generalization claim remain separate gates.
+
+### 2026-08-02 red-team improvements
+
+| Area | Improvement and evidence |
+|------|---------------------------|
+| Manuscript injection | Added an independent source-to-injected tree verifier that checks numbered-file parity, exact substitution, unresolved tokens, and content drift; regression tests cover each failure class. |
+| Experiment controls | Added explicit CLI grids and seed arguments for the enlarged publication audit and held-out compiler run while preserving fast smoke defaults. The generated JSON records requested/completed/failure accounting and finite-cluster interpretation. |
+| Statistical communication | Corrected the small-cluster wording so a non-triggered diagnostic is not presented as population validation; retained descriptive interval language and Holm-family metadata. |
+| Visual evidence | Improved sample-size tick labels and figure margins; changed zero-rounded p-value labels to inequality notation; regenerated and visually inspected the affected figures. |
+| Rendered outputs | Regenerated variables, figures, dashboard, PDF, HTML, and slides in dependency order. External validation and a real browser load from the artifact root confirmed the sibling figure paths, image completeness, and viewport fit. |
+| Evidence boundary | Kept the MIPRO-style finite-cluster signal and lexical injection result screen-only/unpromoted; no local metric was upgraded into answer quality, true-source recovery, or production evidence. |
 
 ## 2026-07-05 remediation summary
 
@@ -116,7 +135,8 @@ machine-written coverage snapshot as its numeric SSOT (see `.gitignore`'s note
 on `coverage_project.json`, removed 2026-07-15 as a stale, gitignored-but-still
 tracked artifact).
 
-**Status:** The current generated record is a passing 2026-07-21 run; the
+**Status:** The latest generated record is a passing local run; exact counts and
+coverage remain in `output/reports/verification_summary.json`. The
 manuscript-integrity test `test_count_bearing_docs_use_generated_verification_summary`
 also prevents count-bearing prose from drifting to frozen pass/skip/coverage
 literals.
@@ -137,4 +157,4 @@ retained as prior evidence and is not cited as a new measurement.
 
 ## Follow-up completed (evaluation package)
 
-Split the former `evaluation.py` into [`src/evaluation/`](../src/evaluation/) (`dataset.py`, `budget.py`, `experiments.py`, `bundle.py`) with stable barrel exports.
+The evaluation package is organized under [`src/evaluation/`](../src/evaluation/) (`dataset.py`, `budget.py`, `experiments.py`, `bundle.py`) with stable barrel exports.

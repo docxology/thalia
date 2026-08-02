@@ -73,6 +73,9 @@ def main() -> Path:
         provenance["benchmark_bytes"] = (payload.get("benchmark_provenance") or {}).get("size_bytes")
     metrics["provenance"] = provenance
     invariants = all_invariants()
+    # Refresh the manifest before the summary so the embedded verification panel
+    # observes the complete pre-dashboard artifact set.
+    write_artifact_manifest(PROJECT_ROOT)
     verification_path = write_verification_summary(PROJECT_ROOT / "output" / "reports" / "verification_summary.json")
     verification = load_verification_summary(verification_path).to_dict()
     demo_path = PROJECT_ROOT / "output" / "data" / "demo_result.json"
@@ -80,8 +83,43 @@ def main() -> Path:
     if demo_path.exists():
         demo = json.loads(demo_path.read_text(encoding="utf-8"))
 
+    quality_status = None
+    quality_path = PROJECT_ROOT / "data" / "quality_results.json"
+    if quality_path.exists():
+        quality_status = json.loads(quality_path.read_text(encoding="utf-8"))
+    production_status = None
+    for candidate in (PROJECT_ROOT / "data" / "production_readiness.json", PROJECT_ROOT / "data" / "production_readiness_results.json"):
+        if candidate.exists():
+            production_status = json.loads(candidate.read_text(encoding="utf-8"))
+            break
+
     output_path = PROJECT_ROOT / "output" / "dashboard.html"
-    write_dashboard(output_path, metrics, invariants, figure_names, verification=verification, demo=demo)
+    write_dashboard(
+        output_path,
+        metrics,
+        invariants,
+        figure_names,
+        verification=verification,
+        demo=demo,
+        quality_status=quality_status,
+        production_status=production_status,
+    )
+    write_artifact_manifest(PROJECT_ROOT)
+    # The dashboard itself is an artifact, so refresh the summary once more and
+    # re-embed it if the manifest count changed when dashboard.html appeared.
+    refreshed_path = write_verification_summary(PROJECT_ROOT / "output" / "reports" / "verification_summary.json")
+    refreshed_verification = load_verification_summary(refreshed_path).to_dict()
+    if refreshed_verification != verification:
+        write_dashboard(
+            output_path,
+            metrics,
+            invariants,
+            figure_names,
+            verification=refreshed_verification,
+            demo=demo,
+            quality_status=quality_status,
+            production_status=production_status,
+        )
     write_artifact_manifest(PROJECT_ROOT)
     print(str(output_path))
     return output_path

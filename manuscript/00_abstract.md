@@ -11,70 +11,53 @@ a,
 }
 </style>
 
-**THALIA** — Typed Harness with Analytical Lexical-Integrated Architecture — is a
-typed, declaratively-specified agentic harness that fuses four research
-threads with a reproducible-research substrate. From DSPy [@khattab2023dspy] it
-takes the principle that prompts are parameterized code: every stage is a typed
-*signature* specifying *what* to produce, not *how*. From Recursive Language
-Models [@zhang2025rlm] it takes context-as-external-state: an Inspector loads
-session history into a small REPL, greps for query-anchored evidence, and
-forwards only compact windows rather than the full transcript. From the agentic-search
-study [@sen2026grep] it takes lexical-first hybrid retrieval: a BM25/grep lane,
-a semantic lane, and weighted Reciprocal Rank Fusion [@cormack2009rrf]. From the
-memory-consolidation-fault study [@zhang2026memory] it takes episodic-first
-memory: raw episodes are never overwritten, and consolidation into a MEMORY.md
-snapshot is explicitly gated. The fifth stage is a Compiler that treats the
-harness itself as an optimizable program, searching parameter settings and
-recording trace-reflective mutations rather than relying on ad-hoc prompt
-tweaking [@nous2026selfevolution].
+**THALIA** — Typed Harness with Analytical Lexical-Integrated Architecture — is an
+executable research harness for long-context memory systems. We implement a
+{{CONFIG_NUM_STAGES}}-stage pipeline that makes retrieval, context narrowing,
+answer generation, memory mutation, and configuration search explicit. Every
+stage has a typed input/output contract, a runnable implementation, an evidence
+trace, and a declared scope. The Inspector selects line-addressed context; the
+Retriever ranks and fuses lexical and surrogate-semantic evidence; the Reasoner
+produces a cited answer; the Memory Gate appends raw episodes before gated
+consolidation; and the Compiler searches a bounded configuration surface.
 
-The contribution is **architectural and reproducible**, not a new model. THALIA is
-implemented as {{CONFIG_NUM_STAGES}} composable stages, each a first-class
-signature backed by a machine-readable `SKILL.md`, with the language-model layer
-abstracted behind a protocol whose default is a deterministic extractive
-responder. This makes the entire harness runnable and testable offline with zero
-mocks: the suite exercises every stage on generated examples and real SQLite, pins published
-numbers through generated tokens, and validates source-to-render path hygiene. The
-method is not a single heuristic but a contract stack: typed signatures constrain
-interfaces; deterministic routing chooses reasoning style; retrieval lanes expose
-ranked evidence and delivery mode; the Memory Gate records raw episodes before it
-can summarize; and the Compiler emits an auditable optimization trace.
+The core is deterministic and offline: BM25/grep, hashing-based retrieval,
+weighted reciprocal-rank fusion, real SQLite state, and bounded MIPRO/GEPA-style
+search run without network calls or mocks. A one-method LM protocol and a stable
+embedding interface provide explicit replacement lanes for genuine DSPy/neural
+backends and learned retrieval. Source-bound variables, a claim ledger, formal
+anchors, figure registries, and rendering checks connect implementation evidence
+to the manuscript.
 
-On a {{RESULT_NUM_EXAMPLES}}-example LongMemEval-style dataset the default
-configuration reports composite {{RESULT_COMPOSITE}} (accuracy
-{{RESULT_ACCURACY}}, grounding {{RESULT_GROUNDING}}, efficiency
-{{RESULT_EFFICIENCY}}); the MIPRO-style search evaluates
-{{RESULT_NUM_CANDIDATES}} candidate configurations and ties to full precision on
-this easy set — an auditable trace, not a measured win. The genuinely adaptive step
-is exercised separately by a real `dspy.BootstrapFewShot` optimiser over a real
-`dspy.Predict` program; and dropping a real neural model ({{RESULT_NEURAL_MODEL}},
-served locally through Ollama) into the Reasoner slot — every other stage held
-fixed — changes mean
-token-F1 from {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}} on
-the expanded local comparison; the paired result is mixed rather than a guaranteed
-lift, with gains concentrated on categories extraction cannot synthesise. (A second, harder
-cloud validation against `{{RESULT_OPENROUTER_MODEL}}` via OpenRouter is reported in
-[@sec:eval-openrouter]: there the neural model *underperforms* on token-F1 because
-concise answers can be penalised by the metric, while receiving higher token-F1 on
-the synthesis and multi-hop cases in this finite probe — the same LM-dependent
-story, not a second measured lift.) Beyond the synthetic set we run the **external
-{{RESULT_LME_BENCHMARK}} benchmark** [@wu2025longmemeval] ({{RESULT_LME_N_EXT}} questions over
-long multi-session haystacks): accuracy falls sharply (extractive {{RESULT_LME_EXT_ACC}}, neural
-{{RESULT_LME_NEURAL_ACC}}; {{CONFIG_CI_LEVEL}}% bootstrap CIs), and — localising the failure rather than
-assuming it — the retained diagnostic localises a larger observed loss to the
-Inspector's context-narrowing than to retrieval ranking (the committed
-full-haystack aggregate reaches the evidence in the measured slice; per-mode
-learned-embedder rows remain gated on a working local embedder). An opt-in **adaptive Inspector**
-that scales the narrowing budget with context size then reduces part of that observed gap
-under the fixed adaptive policy on the neural subset — up to the manually-tuned best
-({{RESULT_BN_NEURAL_ACC_LO}} → {{RESULT_BN_ADAPTIVE_ACC}}) — while remaining a bit-for-bit
-no-op on compact contexts. We are explicit about two scope boundaries: the
-default extractive responder bounds span-level accuracy, and the local semantic
-lane is a deterministic hashing surrogate, so the lexical-vs-dense *magnitude* of
-[@sen2026grep] is not reproduced here — that requires a learned embedder, which
-drops into the same interface. THALIA thus operationalises the design principles of
-all four works inside one enforced, provenance-tracked pipeline built on
-`docxology/template` [@aii2026template].
+We evaluate the harness in separate evidence tiers. On the fixed
+{{RESULT_NUM_EXAMPLES}}-example LongMemEval-style diagnostic set, the default
+configuration reaches composite {{RESULT_COMPOSITE}} (answer token-F1
+{{RESULT_ACCURACY}}, citation-support proxy {{RESULT_GROUNDING}}, efficiency
+{{RESULT_EFFICIENCY}}). The {{RESULT_NUM_CANDIDATES}}-candidate MIPRO-style search
+ties on this easy set, so its primary result is a complete, auditable trace and
+tie rule. A genuine `dspy.Predict`/`dspy.BootstrapFewShot` path is exercised. In
+the retained {{RESULT_NEURAL_N}}-example local comparison, replacing the
+extractive Reasoner with {{RESULT_NEURAL_MODEL}} changes mean token-F1 from
+{{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}} (paired difference
+{{RESULT_NEURAL_PAIRED_DELTA}}, {{CONFIG_CI_LEVEL}}% descriptive interval
+{{RESULT_NEURAL_PAIRED_CI}}). On the external {{RESULT_LME_BENCHMARK}} transfer
+slice, extractive and neural answer token-F1 are {{RESULT_LME_EXT_ACC}} and
+{{RESULT_LME_NEURAL_ACC}}, respectively, with {{CONFIG_CI_LEVEL}}% descriptive
+bootstrap intervals. In the {{RESULT_BN_N}}-question bottleneck slice, ranking
+recall is {{RESULT_BN_RANKING_RECALL}} while Inspector recall is
+{{RESULT_BN_INSPECTOR_RECALL}}; an adaptive context policy changes neural answer
+token-F1 from {{RESULT_BN_NEURAL_ACC_LO}} to {{RESULT_BN_ADAPTIVE_ACC}} while
+compact-context outputs remain unchanged.
+
+The findings establish three contributions: a typed and inspectable contract
+graph; an evidence-preserving runtime that localizes retrieval, narrowing, and
+memory failures; and a source-bound evaluation layer that can be regenerated and
+extended across models, embeddings, and context policies. The results support
+method integrity and diagnostic localization within the declared tiers. Token-F1,
+citation-support overlap, source-index alignment, and reachability remain
+operational diagnostics. Sentence-level factuality, usefulness, calibration,
+causal robustness, general model competence, and production reliability require
+the separate expert-rating and operational protocols specified in the repository.
 
 **Keywords:** declarative pipelines, recursive language models, agentic search,
 reciprocal rank fusion, episodic memory, gated consolidation, compiler

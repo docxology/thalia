@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from matplotlib.patches import Circle
+
 from ..figure_style import EXPORT_DPI, PALETTE, plt, prepare as _prepare
 
 
@@ -14,7 +16,19 @@ _COVER_CHARCOAL = "#2D2D2D"
 _COVER_TEAL = "#00796B"
 
 
-def _box(ax, x, y, w, h, text, color="#0072B2", edge="#222222", alpha=0.9, fontsize=9, bold=False):
+def _box(
+    ax,
+    x,
+    y,
+    w,
+    h,
+    text,
+    color="#0072B2",
+    edge="#222222",
+    alpha=0.9,
+    fontsize: float = 9.0,
+    bold=False,
+):
     """Draw a labelled rounded box with optional bold."""
     from matplotlib.patches import FancyBboxPatch
 
@@ -116,7 +130,7 @@ def plot_thalia_overview(output_path: str | Path) -> Path:
     ax.text(
         5,
         3.82,
-        "THALIA / evidence > action > memory",
+        "THALIA / inspect · retrieve · reason · gate",
         ha="center",
         va="top",
         fontsize=17,
@@ -126,7 +140,7 @@ def plot_thalia_overview(output_path: str | Path) -> Path:
     ax.text(
         5,
         3.52,
-        "A typed, inspectable path from a query to a cited answer",
+        "Typed evidence flow from query and history to answer and citations",
         ha="center",
         va="top",
         fontsize=8.5,
@@ -265,7 +279,7 @@ def plot_thalia_cover(output_path: str | Path) -> Path:
             line_width = 0.78 - row * 0.14
             yy = card_y + 0.90 + row * 0.16
             ax.plot([x + 2.35, x + 2.35 + line_width], [yy, yy], color=color, linewidth=1.6, zorder=5)
-            ax.add_patch(plt.Circle((x + 2.18, yy), 0.035, facecolor=color, edgecolor="none", zorder=5))
+            ax.add_patch(Circle((x + 2.18, yy), 0.035, facecolor=color, edgecolor="none", zorder=5))
         if index < len(card_xs) - 1:
             next_x = card_xs[index + 1]
             ax.annotate(
@@ -279,7 +293,7 @@ def plot_thalia_cover(output_path: str | Path) -> Path:
     ax.text(15.45, 5.55, "AUDITABLE OUTPUT", ha="right", va="center", fontsize=7.2, fontweight="bold", color=_COVER_CHARCOAL)
     ax.plot([0.78, 15.22], [5.38, 5.38], color=_COVER_TEAL, linewidth=1.2, alpha=0.75)
     for x in (1.05, 4.85, 8.65, 12.45, 15.0):
-        ax.add_patch(plt.Circle((x, 5.38), 0.07, facecolor=_COVER_TEAL, edgecolor=_COVER_PAPER, linewidth=1.0, zorder=5))
+        ax.add_patch(Circle((x, 5.38), 0.07, facecolor=_COVER_TEAL, edgecolor=_COVER_PAPER, linewidth=1.0, zorder=5))
 
     compiler = FancyBboxPatch(
         (2.15, 1.34), 11.7, 0.92, boxstyle="round,pad=0.10", facecolor=_COMPILER_PURPLE, edgecolor=_COVER_CHARCOAL, linewidth=1.0, zorder=3
@@ -310,22 +324,27 @@ def plot_thalia_cover(output_path: str | Path) -> Path:
 
 
 def plot_foundations_map(output_path: str | Path) -> Path:
-    """2x2 grid mapping the four foundation works to THALIA stages."""
+    """2x2 grid mapping the four foundation works to THALIA stages.
+
+    This is a conceptual provenance map. Keep the title and synthesis label
+    outside the cards so the diagram remains legible after manuscript scaling.
+    """
     path = _prepare(output_path)
     fig, ax = plt.subplots(figsize=(6.5, 4.5))
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 5)
     ax.axis("off")
 
+    ax.text(5, 4.92, "Conceptual foundations to THALIA contracts", ha="center", va="top", fontsize=13.5, fontweight="bold", color=PALETTE["ink"])
     ax.text(
         5,
-        4.85,
-        "Foundations to THALIA Stage Map",
+        4.56,
+        "THALIA synthesises these lenses into inspect · retrieve · reason · gate · compile",
         ha="center",
         va="top",
-        fontsize=14,
-        fontweight="bold",
-        color=PALETTE["ink"],
+        fontsize=7.2,
+        color=PALETTE["muted"],
+        fontstyle="italic",
     )
 
     foundations = [
@@ -334,14 +353,26 @@ def plot_foundations_map(output_path: str | Path) -> Path:
         ("Memory\nConsolidation Faults", "Append-only episodes\nGated consolidation", "Memory Gate", PALETTE["accent"]),
         ("Agentic Search\n(Grep All You Need)", "Lexical-first hybrid\nRRF fusion", "Retriever", PALETTE["hybrid"]),
     ]
-    positions = [(0.5, 2.6), (5.2, 2.6), (0.5, 0.3), (5.2, 0.3)]
-    bw, bh = 4.2, 2.0
+    positions = [(0.5, 2.35), (5.2, 2.35), (0.5, 0.25), (5.2, 0.25)]
+    bw, bh = 4.2, 1.78
     for (fx, fy), (title, desc, maps_to, color) in zip(positions, foundations):
-        _box(ax, fx, fy, bw, bh, title, color=color, fontsize=10)
-        ax.text(fx + bw / 2, fy + bh / 2 - 0.2, desc, ha="center", va="center", fontsize=7, color="white", zorder=5)
+        _box(ax, fx, fy, bw, bh, "", color=color)
         ax.text(
             fx + bw / 2,
-            fy + 0.2,
+            fy + 1.34,
+            title,
+            ha="center",
+            va="center",
+            fontsize=9.2,
+            fontweight="bold",
+            linespacing=1.05,
+            color="white",
+            zorder=5,
+        )
+        ax.text(fx + bw / 2, fy + 0.82, desc, ha="center", va="center", fontsize=7, color="white", zorder=5)
+        ax.text(
+            fx + bw / 2,
+            fy + 0.20,
             f"Links to: {maps_to}",
             ha="center",
             va="center",
@@ -350,9 +381,85 @@ def plot_foundations_map(output_path: str | Path) -> Path:
             color="white",
             zorder=5,
         )
-    ax.text(5, 4.3, "THALIA", ha="center", va="center", fontsize=16, fontweight="bold", color=PALETTE["ink"])
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.98, bottom=0.03)
     fig.savefig(path, dpi=EXPORT_DPI)
+    plt.close(fig)
+    return path
+
+
+def plot_quality_protocol(output_path: str | Path) -> Path:
+    """Schematic of the planned model-quality matrix and promotion boundary.
+
+    The quality lane is visualised as a protocol. Two models cross three
+    conditions, then move through a pilot/rubric-freeze step and a held-out
+    adjudication/certificate step.
+    """
+    from matplotlib.patches import FancyBboxPatch
+
+    path = _prepare(output_path)
+    fig, ax = plt.subplots(figsize=(8.4, 4.6))
+    fig.patch.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 8)
+    ax.axis("off")
+
+    ax.text(8, 7.68, "Model-quality protocol: expose | judge | accept", ha="center", va="top", fontsize=15, fontweight="bold", color=PALETTE["ink"])
+    ax.text(
+        8,
+        7.30,
+        "A planned expert-rater lane kept separate from operational campaign evidence",
+        ha="center",
+        va="top",
+        fontsize=8,
+        color=PALETTE["muted"],
+        fontstyle="italic",
+    )
+
+    def panel(x: float, y: float, w: float, h: float, title: str, color: str) -> None:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.08", facecolor="#FFFDF8", edgecolor=PALETTE["ink"], linewidth=1.0, zorder=1))
+        ax.add_patch(FancyBboxPatch((x, y + h - 0.42), w, 0.42, boxstyle="round,pad=0.04", facecolor=color, edgecolor=color, linewidth=0, zorder=2))
+        ax.text(x + 0.18, y + h - 0.21, title, ha="left", va="center", fontsize=8.2, fontweight="bold", color="white", zorder=3)
+
+    panel(0.35, 2.05, 5.55, 4.55, "1 / SIX-CONDITION RUN MATRIX", PALETTE["lexical"])
+    condition_headers = ["default\nharness", "full-context\nbaseline", "oracle\nevidence"]
+    centers = [2.30, 3.78, 5.26]
+    for center, header in zip(centers, condition_headers):
+        ax.text(center, 5.72, header, ha="center", va="center", fontsize=6.4, color=PALETTE["ink"], fontweight="bold", linespacing=1.0)
+    for y, model in ((4.72, "Gemma"), (3.55, "Hermes")):
+        ax.text(0.72, y, model, ha="left", va="center", fontsize=8, color=PALETTE["ink"], fontweight="bold")
+        for center, color in zip(centers, (PALETTE["hybrid"], PALETTE["muted"], PALETTE["semantic"])):
+            ax.add_patch(FancyBboxPatch((center - 0.52, y - 0.28), 1.04, 0.56, boxstyle="round,pad=0.04", facecolor=color, edgecolor="white", linewidth=0.8, alpha=0.92, zorder=2))
+            ax.text(center, y, "answer\n+ evidence", ha="center", va="center", fontsize=6.1, color="white", linespacing=0.9, zorder=3)
+    ax.text(3.12, 2.55, "raw answer · cited excerpts · confidence · latency\nmodel/config/code fingerprints retained with each row", ha="center", va="center", fontsize=6.8, color=PALETTE["muted"], linespacing=1.15)
+    ax.text(3.12, 2.20, "oracle condition: evidence provided; gold answer withheld", ha="center", va="bottom", fontsize=6.5, color=PALETTE["accent"], fontstyle="italic")
+
+    panel(6.35, 2.05, 3.25, 4.55, "2 / PILOT + FREEZE", PALETTE["semantic"])
+    ax.text(7.98, 5.55, "stratified pilot", ha="center", va="center", fontsize=8.5, fontweight="bold", color=PALETTE["ink"])
+    ax.text(7.98, 4.92, "exploratory pilot\nquestion-type balance", ha="center", va="center", fontsize=7.1, color=PALETTE["muted"], linespacing=1.15)
+    ax.annotate("", xy=(7.98, 4.33), xytext=(7.98, 4.60), arrowprops=dict(arrowstyle="->", color=PALETTE["semantic"], linewidth=1.2))
+    ax.text(7.98, 4.02, "two blinded expert raters", ha="center", va="center", fontsize=8, fontweight="bold", color=PALETTE["ink"])
+    ax.text(7.98, 3.48, "rubric review\n(disagreement + failure modes)", ha="center", va="center", fontsize=7.1, color=PALETTE["muted"], linespacing=1.15)
+    ax.annotate("", xy=(7.98, 2.80), xytext=(7.98, 3.15), arrowprops=dict(arrowstyle="->", color=PALETTE["semantic"], linewidth=1.2))
+    ax.text(7.98, 2.48, "freeze protocol", ha="center", va="center", fontsize=8.2, fontweight="bold", color=PALETTE["semantic"])
+
+    panel(10.05, 2.05, 5.55, 4.55, "3 / HELD-OUT ANALYSIS + CERTIFICATE", _COMPILER_PURPLE)
+    ax.text(12.82, 5.55, "confirmatory set", ha="center", va="center", fontsize=8.5, fontweight="bold", color=PALETTE["ink"])
+    ax.text(12.82, 4.94, "paired questions · two labels\nexpert adjudication", ha="center", va="center", fontsize=7.2, color=PALETTE["muted"], linespacing=1.15)
+    ax.annotate("", xy=(12.82, 4.28), xytext=(12.82, 4.62), arrowprops=dict(arrowstyle="->", color=_COMPILER_PURPLE, linewidth=1.2))
+    ax.text(12.82, 3.98, "correctness primary", ha="center", va="center", fontsize=8, fontweight="bold", color=PALETTE["ink"])
+    ax.text(12.82, 3.43, "faithfulness · usefulness · abstention\ncalibration · safety · latency", ha="center", va="center", fontsize=7.1, color=PALETTE["muted"], linespacing=1.15)
+    ax.annotate("", xy=(12.82, 2.76), xytext=(12.82, 3.10), arrowprops=dict(arrowstyle="->", color=_COMPILER_PURPLE, linewidth=1.2))
+    ax.text(12.82, 2.43, "certificate required for promotion", ha="center", va="center", fontsize=8.1, fontweight="bold", color=_COMPILER_PURPLE)
+
+    _arrow(ax, 5.98, 4.32, 6.30, 4.32, color=PALETTE["ink"], head=0.10)
+    _arrow(ax, 9.64, 4.32, 10.00, 4.32, color=PALETTE["ink"], head=0.10)
+    ax.text(8, 0.78, "Pilot labels remain outside the primary confirmatory estimate · production readiness has an independent gate", ha="center", va="center", fontsize=7.2, color=PALETTE["muted"], fontstyle="italic")
+    ax.plot([0.7, 15.3], [1.24, 1.24], color=PALETTE["muted"], linewidth=0.7, alpha=0.55)
+    ax.text(0.72, 0.98, "protocol schematic — no observed quality result", ha="left", va="center", fontsize=6.5, color=PALETTE["muted"])
+
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.98, bottom=0.04)
+    fig.savefig(path, dpi=EXPORT_DPI, facecolor=_DIAGRAM_PAPER)
     plt.close(fig)
     return path
 
@@ -413,7 +520,7 @@ def plot_memory_lifecycle(output_path: str | Path) -> Path:
         0.18,
         3.2,
         0.82,
-        "Consolidate to\nMEMORY.md\n(derived, never mutates)",
+        "Consolidate to\nMEMORY.md\n(derived; raw store preserved)",
         color=PALETTE["semantic"],
         alpha=0.7,
         fontsize=7.5,
@@ -449,7 +556,7 @@ def plot_gepa_evolution_loop(output_path: str | Path) -> Path:
     _box(ax, 3.0, 1.5, 1.8, 0.8, "Evaluate\n(composite score)", color=PALETTE["hybrid"])
     _arrow(ax, 4.8, 1.9, 5.7, 1.9)
     ax.text(5.25, 2.15, "trace", ha="center", va="bottom", fontsize=7, color=PALETTE["muted"], fontstyle="italic")
-    _box(ax, 5.7, 1.5, 1.8, 0.8, "Reflect\n(find weakest component)", color=PALETTE["semantic"])
+    _box(ax, 5.7, 1.5, 1.8, 0.8, "Reflect\n(weakest\ncomponent)", color=PALETTE["semantic"], fontsize=7)
     _arrow(ax, 7.5, 1.9, 8.4, 1.9)
     _box(ax, 8.4, 1.5, 1.4, 0.8, "Mutate", color=PALETTE["accent"])
     _arrow(ax, 9.8, 1.9, 9.8, 0.5, color=PALETTE["muted"])
@@ -475,6 +582,7 @@ __all__ = [
     "plot_thalia_cover",
     "plot_thalia_overview",
     "plot_foundations_map",
+    "plot_quality_protocol",
     "plot_memory_lifecycle",
     "plot_gepa_evolution_loop",
 ]

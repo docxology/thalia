@@ -15,6 +15,15 @@ _CORE_ALLOWLIST = {
     # The campaign runner measures live-model latency with perf_counter.  It is
     # an optional observational lane, not part of the deterministic harness.
     Path("src/evaluation/campaign.py"),
+    # The model-quality runner measures live answer latency.  Raw model outputs
+    # remain external and this lane is not part of the deterministic core.
+    Path("src/evaluation/quality_runner.py"),
+    # The local judge lane records live-model timing and raw judge evidence; it
+    # is an optional observational lane, not part of the deterministic core.
+    Path("src/evaluation/llm_judge.py"),
+    # Production probes measure live latency and operational controls; they are
+    # an external readiness lane, not deterministic harness business logic.
+    Path("src/evaluation/production_runner.py"),
 }
 _CORE_ALLOWLIST_PREFIXES = (
     "src/dspy_runtime/",

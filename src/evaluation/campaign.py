@@ -18,7 +18,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from ..compiler.metrics import EvalExample, answer_score, grounding_score, harness_metric, token_f1
+from ..compiler.metrics import (
+    EvalExample,
+    answer_score,
+    citation_precision,
+    grounding_score,
+    harness_metric,
+    source_recall,
+    token_f1,
+)
 from ..config import HarnessConfig, default_config
 from ..harness import AutoHarness
 from ..module import LMClient
@@ -500,23 +508,6 @@ def _checkpoint_scope_path(
     return root / "checkpoints" / f"{tier.tier_id}.scope-{scope}.json"
 
 
-def _citation_precision(output: HarnessOutput, example: EvalExample) -> float:
-    cited = {citation.source_index for citation in output.evidence_citations}
-    if not cited:
-        return 0.0
-    if not example.expected_source_indices:
-        return 1.0
-    return len(cited & set(example.expected_source_indices)) / len(cited)
-
-
-def _source_recall(output: HarnessOutput, example: EvalExample) -> float:
-    expected = set(example.expected_source_indices)
-    if not expected:
-        return 1.0 if output.evidence_citations else 0.0
-    cited = {citation.source_index for citation in output.evidence_citations}
-    return len(cited & expected) / len(expected)
-
-
 def _citation_token_f1(output: HarnessOutput) -> float:
     cited_text = " ".join(citation.excerpt for citation in output.evidence_citations)
     return token_f1(output.answer, cited_text) if cited_text else 0.0
@@ -539,8 +530,8 @@ def _make_complete_row(
         accuracy=answer_score(output, example),
         grounding_session=grounding_score(output, example),
         composite=harness_metric(output, example),
-        citation_precision=_citation_precision(output, example),
-        source_recall=_source_recall(output, example),
+        citation_precision=citation_precision(output, example),
+        source_recall=source_recall(output, example),
         citation_token_f1=_citation_token_f1(output),
         ranked_evidence_count=len(output.ranked_evidence),
         latency_seconds=latency_seconds,
@@ -597,6 +588,23 @@ class CampaignReport:
     code_fingerprint: str
     tiers: Mapping[str, Mapping[str, object]]
     rows: tuple[CampaignRow, ...]
+
+    def selected_ids_for_tier(self, tier_id: str) -> tuple[str, ...]:
+        """Return the validated selected example IDs for one report tier."""
+        tier = self.tiers.get(tier_id)
+        if tier is None:
+            raise KeyError(f"unknown campaign report tier: {tier_id}")
+        raw_selected_ids = tier.get("selected_ids")
+        if not isinstance(raw_selected_ids, list) or not raw_selected_ids:
+            raise ValueError(f"campaign report tier {tier_id} requires selected_ids")
+        selected_ids: list[str] = []
+        for value in raw_selected_ids:
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"campaign report tier {tier_id} selected_ids must be non-empty strings")
+            selected_ids.append(value)
+        if len(set(selected_ids)) != len(selected_ids):
+            raise ValueError(f"campaign report tier {tier_id} selected_ids must be unique")
+        return tuple(selected_ids)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -823,7 +831,7 @@ def run_campaign(
         if not scope_match_found and any(candidate.exists() for candidate in candidates):
             # Never overwrite a valid, corrupt, or scope-mismatched checkpoint.
             # A new scope gets an isolated file so a changed code/config/model
-            # cannot destroy the evidence needed for forensic recovery.
+            # cannot destroy the evidence needed for audit recovery.
             checkpoint_path = scoped_checkpoint_path
 
         lm = lm_factory(tier.model, spec.generation_options_dict) if lm_factory else _default_lm(tier.model, spec.generation_options_dict)

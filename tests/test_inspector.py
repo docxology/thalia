@@ -83,7 +83,7 @@ class TestInspectorForward:
     def test_missing_query_arg_raises_type_error(self):
         insp = Inspector()
         with pytest.raises(TypeError):
-            insp.forward(session_history=SESSION)
+            insp.forward(session_history=SESSION)  # pyright: ignore[reportCallIssue] - intentional invalid call
 
 
 class TestREPLPartition:

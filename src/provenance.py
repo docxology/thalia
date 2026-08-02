@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -126,44 +127,66 @@ def write_verification_summary(
 
 
 def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path) -> None:
-    """Refresh live test/coverage claims from machine-readable gate reports."""
+    """Refresh live test, coverage, and artifact claims from gate reports."""
     junit_path = reports_dir / "pytest.xml"
     coverage_path = reports_dir / "coverage.json"
-    if not junit_path.is_file() or not coverage_path.is_file():
-        return
-    try:
-        import xml.etree.ElementTree as ET
-
-        root = ET.parse(junit_path).getroot()
-        suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
-        tests = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
-        failures = sum(int(suite.attrib.get("failures", "0")) for suite in suites)
-        errors = sum(int(suite.attrib.get("errors", "0")) for suite in suites)
-        skipped = sum(int(suite.attrib.get("skipped", "0")) for suite in suites)
-        coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-        totals = coverage_payload.get("totals", {})
-        coverage = float(totals["percent_covered"])
-    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, ET.ParseError):
-        return
-    passed = tests - failures - errors - skipped
-    coverage_gate = payload.get("coverage_gate")
-    gate = coverage_gate if isinstance(coverage_gate, int) else _coverage_gate()
     results = payload.get("command_results")
     command_results = dict(results) if isinstance(results, dict) else {}
-    command_results["tests"] = {
-        "collected": tests,
-        "passed": passed,
-        "failed": failures + errors,
-        "skipped": skipped,
-        "coverage_percent": round(coverage, 2),
-        "coverage_gate": gate,
-        "resource_warnings_as_errors": True,
-        "status": "pass" if failures == 0 and errors == 0 and coverage >= gate else "fail",
-    }
-    payload["latest_observed_tests"] = f"{passed} passed; {tests} collected"
-    payload["latest_observed_coverage"] = f"{coverage:.2f}% (src; gate {gate}%)"
+
+    if junit_path.is_file() and coverage_path.is_file():
+        try:
+            root = ET.parse(junit_path).getroot()
+            suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+            tests = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
+            failures = sum(int(suite.attrib.get("failures", "0")) for suite in suites)
+            errors = sum(int(suite.attrib.get("errors", "0")) for suite in suites)
+            skipped = sum(int(suite.attrib.get("skipped", "0")) for suite in suites)
+            coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
+            totals = coverage_payload.get("totals", {})
+            coverage = float(totals["percent_covered"])
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, ET.ParseError):
+            tests = failures = errors = skipped = 0
+            coverage = None
+        if coverage is not None:
+            passed = tests - failures - errors - skipped
+            coverage_gate = payload.get("coverage_gate")
+            gate = coverage_gate if isinstance(coverage_gate, int) else _coverage_gate()
+            command_results["tests"] = {
+                "collected": tests,
+                "passed": passed,
+                "failed": failures + errors,
+                "skipped": skipped,
+                "coverage_percent": round(coverage, 2),
+                "coverage_gate": gate,
+                "resource_warnings_as_errors": True,
+                "status": "pass" if failures == 0 and errors == 0 and coverage >= gate else "fail",
+            }
+            payload["latest_observed_tests"] = f"{passed} passed; {tests} collected"
+            payload["latest_observed_coverage"] = f"{coverage:.2f}% (src; gate {gate}%)"
+
+    manifest_path = reports_dir / "artifact_manifest.json"
+    if manifest_path.is_file():
+        artifact_report = validate_artifact_manifest(
+            reports_dir.parent.parent,
+            manifest_path=manifest_path,
+        )
+        command_results["artifact_pipeline"] = {
+            "checked": artifact_report.checked,
+            "required": artifact_report.required,
+            "issues": list(artifact_report.issues),
+            "status": "pass" if artifact_report.ok else "fail",
+        }
+
+    if not command_results:
+        return
     payload["command_results"] = command_results
-    payload["status"] = "pass" if command_results["tests"]["status"] == "pass" else "fail"
+    statuses = [
+        value.get("status")
+        for value in command_results.values()
+        if isinstance(value, dict) and isinstance(value.get("status"), str)
+    ]
+    if statuses:
+        payload["status"] = "pass" if all(status == "pass" for status in statuses) else "fail"
 
 
 def load_verification_summary(
@@ -192,6 +215,7 @@ def write_figure_registry(
             "filename": figure_path.name,
             "label": label,
             "caption": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
+            "alt": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
             "generated_by": "scripts/generate_figures.py",
             "source": "src/figures/",
         }
@@ -328,6 +352,12 @@ def _profile_artifact_expectations(project_root: Path) -> tuple[str, ...]:
 def _stable_artifacts(project_root: Path) -> list[Path]:
     candidates: list[Path] = []
     output = project_root / "output"
+    # The integrity screen is a committed analysis aggregate, rather than a
+    # disposable output.  Keep its exact JSON alongside the rendered audit figure
+    # so the release manifest binds the visual claim to its source record.
+    integrity_screen = project_root / "data" / "integrity_advantage.json"
+    if integrity_screen.is_file() and not integrity_screen.is_symlink():
+        candidates.append(integrity_screen)
     for subdir in ("data", "figures"):
         folder = output / subdir
         if folder.exists():

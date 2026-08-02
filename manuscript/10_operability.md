@@ -1,13 +1,13 @@
-# Operability and Configuration {#sec:operability}
+# Operability: Configuration, Sessions, Adapters, and CLI {#sec:operability}
 
-THALIA is not only a design — it is operable. This section documents the
+THALIA is an operable design. This section documents the
 configuration system, the real language-model adapters, the persistent multi-turn
 session, and the command-line interface. Each has dedicated Zero-Mock coverage in
 the strict local suite, including a real in-process HTTP server for the network
-adapter; this is a tested-path statement, not an assertion that every deployment
-integration has been exercised.
+adapter. The suite covers the local tested path; deployment integrations require
+their own acceptance checks.
 
-## Configuration {#sec:op-config}
+## Configuration Precedence and Validation {#sec:op-config}
 
 The tunable parameter vector is :class:`HarnessConfig` ([@sec:stage-compiler]). It
 is loadable, overridable, and serialisable:
@@ -30,7 +30,7 @@ is loadable, overridable, and serialisable:
 - **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
   `save_config` make a config serialisable and reproducible; `from_dict` and
   `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
-  path — `save_config` delegates to it, so the YAML representation never drifts
+  path — `save_config` delegates to it, so the YAML representation stays identical
   from the dataclass.
 
 Precedence, lowest to highest: built-in defaults → file → environment → explicit
@@ -42,7 +42,7 @@ one field through `THALIA_*`; and a CLI run can still make an explicit one-off
 choice without mutating source files. The resulting configuration is serialisable,
 so a compiled or manually selected setting can be saved and compared later.
 
-## Composable Pipeline {#sec:op-pipeline}
+## Composable Pipeline and Stage Inspection {#sec:op-pipeline}
 
 `AutoHarness` bundles the {{CONFIG_NUM_RUNTIME_STAGES}} runtime stages into one `forward` call. For
 callers that need to inspect or modify the stage chain — insert a logging hook,
@@ -73,7 +73,7 @@ every step, so intermediate evidence counts, scores, and traces are inspectable
 without re-running the pipeline. `scripts/run_pipeline.py` exercises this path
 end-to-end and writes the intermediate-step trace to `output/data/`.
 
-## Resource safety {#sec:op-resource-safety}
+## Resource Safety and Context-Manager Cleanup {#sec:op-resource-safety}
 
 `Session` and `EpisodicStore` both implement the context-manager protocol
 (`__enter__` / `__exit__`), so resources are always cleaned up — even when an
@@ -87,22 +87,22 @@ with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
 ```
 
 The demo script (`src/demo.py`) uses this pattern, so the context-manager path
-is exercised by the default analysis pipeline, not only by tests.
+is exercised by the default analysis pipeline as well as the test suite.
 
 `AutoHarness` and `Pipeline` expose the same context-manager contract. They close
 only stores they created internally; a store supplied by the caller remains the
 caller’s responsibility. `EpisodicStore.close()` is idempotent, so cleanup is
 safe in both nested context managers and explicit `finally` blocks. The strict
 suite runs with `ResourceWarning` promoted to an error to make a leaked SQLite
-connection a failing contract rather than a diagnostic afterthought.
+connection fails the resource contract.
 
 The standalone preflight reports independent readiness states for the
 deterministic core, DSPy SDK, Ollama server, Gemma model, embedding model,
-LongMemEval payload, and template renderer. Optional neural/benchmark states do
-not block deterministic operation; the fail-closed artifact validator remains the
-local release boundary.
+LongMemEval payload, and template renderer. Optional neural/benchmark states remain
+independent of deterministic operation; the fail-closed artifact validator remains
+the local release boundary.
 
-## Package metadata {#sec:op-metadata}
+## Package Metadata and Type Distribution {#sec:op-metadata}
 
 The package exports `__version__` at the top level (`from src import __version__`)
 and ships a `py.typed` marker (PEP 561) so downstream type checkers see the full
@@ -110,7 +110,7 @@ type annotations. `HarnessOutput.to_dict()` provides JSON serialisation on the
 dataclass itself — the CLI delegates to it, so the field mapping has one source
 of truth.
 
-## Language-model adapters {#sec:op-lm}
+## Language-Model Protocol and Adapters {#sec:op-lm}
 
 The deterministic core uses the extractive responder, but a real model plugs in
 behind the one-method `LMClient` protocol:
@@ -119,16 +119,15 @@ behind the one-method `LMClient` protocol:
   function). The smallest possible real adapter.
 - **`OllamaLM(model, host)`** — call a local Ollama server's `/api/generate`
   endpoint using only the standard library (no third-party dependency). Failures
-  raise `OllamaError` rather than degrading into an empty answer, and
-  `is_available()` offers a best-effort liveness probe. It is opt-in and never
-  invoked by the default core.
+  raise `OllamaError`; the adapter emits no empty answer on error. The
+  `is_available()` method offers a best-effort liveness probe. The adapter is
+  opt-in and the default core leaves it unused.
 - **`configure_openrouter(model, api_key)`** — configure the harness to use an
   OpenRouter-hosted model via the OpenRouter chat completions API. The model is
- controlled by the `THALIA_OPENROUTER_MODEL` environment variable; the API key is
- read from `THALIA_OPENROUTER_API_KEY`. The current recorded aggregate uses
+  controlled by the `THALIA_OPENROUTER_MODEL` environment variable; the API key is
+  read from `THALIA_OPENROUTER_API_KEY`. The current recorded aggregate uses
  `{{RESULT_OPENROUTER_MODEL}}`.
-  Like `OllamaLM`, this adapter is opt-in and raises on failure rather than
-  silently degrading.
+  This adapter is opt-in and raises on failure, preserving the error state.
 
 Both are validated against a real HTTP server spun up in the test process — the
 adapter's request construction and response parsing are exercised for real, with
@@ -140,7 +139,7 @@ Everything else — evidence selection, citation construction, memory gating,
 configuration, and artifact generation — remains unchanged. This is what lets the
 deterministic manuscript distinguish method validation from model performance.
 
-## Persistent multi-turn session {#sec:op-session}
+## Persistent Multi-Turn Sessions {#sec:op-session}
 
 :class:`Session` wraps the harness with disk-backed state so a conversation
 survives process restarts: episodes persist to a SQLite file, the consolidated
@@ -155,7 +154,7 @@ reconstructed from raw episodes, while MEMORY.md remains a derived convenience
 layer. If a future answer depends on a remembered fact, the relevant raw turn can
 still be recovered and cited.
 
-## Command-line interface {#sec:op-cli}
+## Query CLI and Configuration Resolution {#sec:op-cli}
 
 `scripts/run_query.py` (logic in `src/cli.py`) runs a single query against the
 harness:
@@ -181,7 +180,7 @@ Flags cover the configuration knobs (`--top-k`, `--max-windows`, `--max-evidence
 answer, detected task category, delivery mode, and the cited source indices —
 making the harness's evidence-grounding inspectable from the shell.
 
-## Extension matrix {#sec:op-extension-matrix}
+## Extension Points and Replacement Lanes {#sec:op-extension-matrix}
 
 The intended extension points are stable and narrow:
 
@@ -193,6 +192,6 @@ The intended extension points are stable and narrow:
 | Search policy | `HarnessConfig` / compiler candidates | retrieval depth and weights | stage interfaces, metrics, manuscript tokens |
 
 This matrix is the operational version of the scope boundary. THALIA can be made
-stronger by replacing model and embedding components, but those replacements are
-experiments behind documented interfaces, not reasons to weaken the deterministic
-method contract.
+stronger by replacing model and embedding components. Those replacements are
+experiments behind documented interfaces, and the deterministic method contract
+remains fixed.

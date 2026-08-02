@@ -16,12 +16,19 @@ import platform
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, Protocol, cast
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _LEDGER_STATUSES = {"complete", "failed"}
 _EVENT_NAMES = {"run_started", "sample_evaluated", "run_finished", "run_failed"}
+
+
+class _ToDict(Protocol):
+    """Minimal serialization contract used for config fingerprints."""
+
+    def to_dict(self) -> object:
+        ...
 
 
 def _strict_int(value: object) -> bool:
@@ -66,7 +73,7 @@ def _example_fingerprint_payload(example: object, *, include_id: bool) -> dict[s
 
 def fingerprint_config(config: object) -> str:
     """Fingerprint a config object using its public ``to_dict`` contract."""
-    value = config.to_dict() if hasattr(config, "to_dict") else config
+    value = cast(_ToDict, config).to_dict() if hasattr(config, "to_dict") else config
     return fingerprint_json(value)
 
 
@@ -339,6 +346,16 @@ def write_jsonl(records: Iterable[Mapping[str, object]], path: str | Path) -> Pa
     return target
 
 
+def write_accounting_report(accounting: Mapping[str, object], path: str | Path) -> Path:
+    """Write the current schema-2 accounting report atomically."""
+    if accounting.get("schema_version") != 2:
+        raise ValueError("accounting reports must use schema_version 2")
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(target, json.dumps(dict(accounting), indent=2, sort_keys=True) + "\n")
+    return target
+
+
 def _atomic_write_text(target: Path, payload: str) -> None:
     """Replace a generated text artifact atomically within its parent directory."""
     temporary = target.with_name(f".{target.name}.tmp")
@@ -372,5 +389,6 @@ __all__ = [
     "validate_event_stream",
     "deterministic_events",
     "write_jsonl",
+    "write_accounting_report",
     "write_ledger_and_events",
 ]

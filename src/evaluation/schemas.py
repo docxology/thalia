@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from ..config import DEFAULT_CONFIDENCE_LEVEL
@@ -70,6 +70,7 @@ class NeuralEvalPayload:
 class BottleneckNeuralRow:
     accuracy: float | None
     grounding: float | None
+    session_reachability: float | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ class BottleneckRankingModes:
 class BottleneckAdaptive:
     accuracy: float
     grounding: float | None = None
+    session_reachability: float | None = None
 
 
 @dataclass(frozen=True)
@@ -99,6 +101,7 @@ class BottleneckPayload:
     ranking_recall_by_mode: BottleneckRankingModes | None
     neural_adaptive: BottleneckAdaptive | None
     n_neural: int | None
+    extractive_session_reachability_by_maxwindows: dict[int, float] | None = None
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> BottleneckPayload:
@@ -107,21 +110,26 @@ class BottleneckPayload:
             neural[int(key)] = BottleneckNeuralRow(
                 accuracy=row.get("accuracy"),
                 grounding=row.get("grounding"),
+                session_reachability=row.get("session_reachability"),
             )
-        mode_raw = data.get("ranking_recall_by_mode") or {}
+        mode_raw = data["ranking_recall_by_mode"]
         mode = None
         if mode_raw.get("available"):
             mode = BottleneckRankingModes(
                 available=True,
                 n=int(mode_raw["n"]),
-                k=int(mode_raw.get("k", 10)),
+                k=int(mode_raw["k"]),
                 lexical=float(mode_raw["lexical"]),
                 dense=float(mode_raw["dense"]),
                 hybrid=float(mode_raw["hybrid"]),
             )
         adaptive_raw = data.get("neural_adaptive")
         adaptive = (
-            BottleneckAdaptive(accuracy=float(adaptive_raw["accuracy"]), grounding=adaptive_raw.get("grounding"))
+            BottleneckAdaptive(
+                accuracy=float(adaptive_raw["accuracy"]),
+                grounding=adaptive_raw.get("grounding"),
+                session_reachability=adaptive_raw.get("session_reachability"),
+            )
             if adaptive_raw
             else None
         )
@@ -131,6 +139,11 @@ class BottleneckPayload:
             inspector_recall=float(data["inspector_recall"]),
             neural_model=str(data["neural_model"]),
             extractive_grounding_by_maxwindows=_int_keyed_floats(data["extractive_grounding_by_maxwindows"]),
+            extractive_session_reachability_by_maxwindows=(
+                _int_keyed_floats(data["extractive_session_reachability_by_maxwindows"])
+                if data.get("extractive_session_reachability_by_maxwindows") is not None
+                else None
+            ),
             neural_by_maxwindows=neural,
             ranking_recall_by_mode=mode,
             neural_adaptive=adaptive,
@@ -147,6 +160,8 @@ class LongMemEvalPayload:
     neural_accuracy: tuple[float, float, float]
     extractive_grounding: tuple[float, float, float]
     neural_grounding: tuple[float, float, float]
+    extractive_session_reachability: tuple[float, float, float] | None = None
+    neural_session_reachability: tuple[float, float, float] | None = None
     confidence: float = 0.95
 
     @classmethod
@@ -163,6 +178,12 @@ class LongMemEvalPayload:
             neural_accuracy=_triple("neural_accuracy"),
             extractive_grounding=_triple("extractive_grounding"),
             neural_grounding=_triple("neural_grounding"),
+            extractive_session_reachability=(
+                _triple("extractive_session_reachability") if data.get("extractive_session_reachability") is not None else None
+            ),
+            neural_session_reachability=(
+                _triple("neural_session_reachability") if data.get("neural_session_reachability") is not None else None
+            ),
             confidence=float(
                 (data.get("neural_accuracy_statistics") or {}).get(
                     "confidence", (data.get("extractive_accuracy_statistics") or {}).get("confidence", DEFAULT_CONFIDENCE_LEVEL)
@@ -241,7 +262,7 @@ class SampleSizePointPayload:
     paired_comparisons: dict[str, dict[str, float | int]]
     precision_plan: dict[str, float | int]
     stratum_statistics: dict[str, dict[str, dict[str, Any]]]
-    stratum_paired_comparisons: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)
+    stratum_paired_comparisons: dict[str, dict[str, dict[str, Any]]]
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> SampleSizePointPayload:
@@ -261,13 +282,13 @@ class SampleSizePointPayload:
             precision_plan={str(key): value for key, value in data["precision_plan"].items()},
             stratum_statistics={
                 str(method): {str(stratum): dict(summary) for stratum, summary in values.items()}
-                for method, values in data.get("stratum_statistics", {}).items()
+                for method, values in data["stratum_statistics"].items()
             },
             stratum_paired_comparisons={
                 str(comparison): {
                     str(stratum): dict(summary) for stratum, summary in values.items()
                 }
-                for comparison, values in data.get("stratum_paired_comparisons", {}).items()
+                for comparison, values in data["stratum_paired_comparisons"].items()
             },
         )
 
@@ -350,8 +371,16 @@ class InjectionEvalPayload:
                 harness_auditable=False,
                 naive_poisoned=False,
                 naive_auditable=False,
-                neural_poisoned=bool(row.get("neural_poisoned", False)),
-                neural_auditable=bool(row.get("neural_auditable", False)),
+                neural_poisoned=(
+                    bool(row["neural_poisoned"])
+                    if row.get("neural_poisoned") is not None
+                    else None
+                ),
+                neural_auditable=(
+                    bool(row["neural_auditable"])
+                    if row.get("neural_auditable") is not None
+                    else None
+                ),
             )
             for row in data.get("neural_rows", [])
         )
@@ -421,6 +450,37 @@ class LearnedRetrievalPayload:
         )
 
 
+@dataclass(frozen=True)
+class IntegrityAdvantagePayload:
+    """Source-bound endpoint comparison payload for the integrity screen."""
+
+    comparisons: tuple[dict[str, Any], ...]
+    confidence: float
+    multiple_comparison_family: dict[str, Any]
+    current_conclusions: dict[str, Any]
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> IntegrityAdvantagePayload:
+        raw_comparisons = data.get("comparisons")
+        if not isinstance(raw_comparisons, list) or not raw_comparisons:
+            raise ValueError("integrity advantage payload requires non-empty comparisons")
+        comparisons = tuple(dict(row) for row in raw_comparisons)
+        for row in comparisons:
+            for key in ("id", "label", "advantage_delta", "unit", "claim_status"):
+                if key not in row:
+                    raise KeyError(key)
+        family = data.get("multiple_comparison_family")
+        conclusions = data.get("current_conclusions")
+        if not isinstance(family, dict) or not isinstance(conclusions, dict):
+            raise ValueError("integrity advantage payload requires comparison metadata")
+        return cls(
+            comparisons=comparisons,
+            confidence=float(data["confidence"]),
+            multiple_comparison_family=dict(family),
+            current_conclusions=dict(conclusions),
+        )
+
+
 __all__ = [
     "NeuralEvalRow",
     "NeuralEvalPayload",
@@ -437,4 +497,5 @@ __all__ = [
     "InjectionEvalPayload",
     "OrchestrationBaseline",
     "LearnedRetrievalPayload",
+    "IntegrityAdvantagePayload",
 ]

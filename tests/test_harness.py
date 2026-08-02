@@ -17,6 +17,7 @@ class TestConstruction:
     def test_start_turn_applied(self):
         h = AutoHarness(start_turn=5)
         out = h.forward("q about wifi", "User: wifi password is x")
+        assert out.memory_written is not None
         assert out.memory_written.turn_id == 5
 
 
@@ -49,6 +50,7 @@ class TestForward:
         h = AutoHarness()
         h.forward("q1 wifi", SESSION)
         out2 = h.forward("q2 guest", SESSION)
+        assert out2.memory_written is not None
         assert out2.memory_written.turn_id == 1
 
 

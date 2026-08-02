@@ -1,4 +1,4 @@
-# Harness Architecture and Executable Contract {#sec:harness_design}
+# THALIA Harness: Architecture and Executable Contract {#sec:harness_design}
 
 THALIA is organised around {{CONFIG_NUM_STAGES}} functional stages. {{CONFIG_NUM_RUNTIME_STAGES}} are
 runtime stages composed by `AutoHarness` (`src/harness.py`); the fifth, the
@@ -18,24 +18,27 @@ session history + query
 
 The language model is abstracted behind a one-method protocol
 (`src.module.LMClient.complete`), and the default `ExtractiveLM` returns the
-evidence line with maximal lexical overlap with the question. Every stage below is
-therefore deterministic and testable without a network.
+evidence line with maximal lexical overlap with the question. The deterministic
+default path is therefore testable without a network; substituting a real model
+creates a separate model-dependent evidence tier without changing the stage
+contracts.
 
 The design is deliberately conservative about where judgment can enter. Stages
-0–1 are retrieval and filtering functions; Stage 2 is the only possible
-language-model boundary; Stage 3 is a storage and consolidation policy; Stage 4
-is an offline optimizer. This separation lets the evaluation attribute failures:
-an absent citation is a retrieval/Inspector problem, an unsupported answer is a
-Reasoner problem, a spurious MEMORY.md change is a Memory Gate problem, and a
-non-reproducible compiled configuration is a Compiler problem. The manuscript,
-tests, and dashboard all report these same typed objects rather than post-hoc
-natural-language summaries.
+zero and one are retrieval and filtering functions; Stage 2 is the language-model
+boundary; Stage 3 is a storage and consolidation policy; Stage 4 is an offline
+optimizer. This separation supports failure diagnosis: an absent citation points
+to retrieval or Inspector reachability, an unsupported answer points to the
+Reasoner or its metric, a spurious `MEMORY.md` change points to the Memory Gate,
+and a non-reproducible compiled configuration points to the Compiler. These are
+diagnostic attributions within the contract graph. Causal claims require a separate
+intervention design. The manuscript, tests, and dashboard report the same typed evidence objects generated
+from the contracts.
 
 This spine preserves the stable auto-harness design anchor. The detailed method contract, stage-by-stage design, formalism, added-method diagnostics, and implementation traceability now live in adjacent `04a_` through `04c_` modules.
 
-![Schematic memory lifecycle: the raw episode is always appended to the SQLite EpisodicStore. Consolidation into MEMORY.md only fires when the Reasoner requests it AND an explicit criterion holds — a dual-key gate that prevents the per-turn consolidation fault documented by [@zhang2026memory]. This is a contract diagram, not a measurement: it has no observation unit, sample size, uncertainty method, model dependence, or population interpretation.](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
+![Schematic lifecycle with no empirical unit, sample size, uncertainty interval, or model comparison. Every raw episode is appended to SQLite EpisodicStore; the dual-key gate controls whether a derived MEMORY.md delta is written, preserving the source turn.](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
 
-![Schematic GEPA-style evolution loop: the Compiler evaluates a config, reflects on the weakest metric component, mutates the config, and repeats, recording the full search trace. This mirrors the trace-reflective evolution loop described in [@sec:eval-compiler]. It is a process diagram, not an empirical estimate: no observation unit, sample size, uncertainty method, model dependence, or population interpretation applies.](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
+![Schematic GEPA-style audit loop with no empirical unit, sample size, uncertainty interval, or external model dependence. The Compiler evaluates a configuration, identifies the weakest metric component, applies a bounded mutation, and records the complete trace as described in [@sec:eval-compiler].](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
 
 Modular harness-design files:
 

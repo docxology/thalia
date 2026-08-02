@@ -4,11 +4,11 @@ The deterministic THALIA experiments are synthetic or locally replayable, but a
 point estimate alone is not evidence of precision.  This module keeps the
 statistical layer dependency-free and explicit:
 
-* percentile bootstrap intervals for continuous metrics;
+* descriptive percentile bootstrap intervals for continuous metrics;
 * fixed-size within-stratum and cluster-resampling bootstrap intervals;
 * Wilson intervals for binary/rate metrics;
 * exact paired binary (McNemar) comparisons;
-* paired bootstrap deltas and deterministic sign-flip permutation tests;
+* paired bootstrap deltas and deterministic sign-flip randomization diagnostics;
 * paired standardized effect sizes;
 * named complete-family Holm correction; and
 * iid and design-effect-adjusted sample-size planners for a requested half-width.
@@ -20,11 +20,9 @@ aggregate cannot lose its statistical provenance.
 
 from __future__ import annotations
 
-import json
 import math
 import random
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 
@@ -86,7 +84,13 @@ class StatisticalEstimate:
 
 @dataclass(frozen=True)
 class PairedComparison:
-    """Uncertainty-aware comparison of two methods on the same examples."""
+    """Descriptive paired comparison of two methods on the same examples.
+
+    ``p_value`` is a randomization-diagnostic tail probability, not a guarantee of
+    population inference.  The method and its exchangeability assumption are
+    serialized so a figure cannot silently present a sign-flip diagnostic as an
+    unspecified or universally exact test.
+    """
 
     n: int
     mean_delta: float
@@ -105,6 +109,9 @@ class PairedComparison:
     comparison_family: str = ""
     inferential_status: str = "paired_randomization_summary"
     small_cluster_warning: bool = False
+    p_value_method: str = "exhaustive_sign_flip"
+    p_value_assumption: str = "paired-difference sign exchangeability under the null"
+    interval_interpretation: str = "descriptive_resampling_interval"
 
     def to_dict(self) -> dict[str, object]:
         """Return a stable JSON-ready record."""
@@ -126,6 +133,9 @@ class PairedComparison:
             "comparison_family": self.comparison_family,
             "inferential_status": self.inferential_status,
             "small_cluster_warning": self.small_cluster_warning,
+            "p_value_method": self.p_value_method,
+            "p_value_assumption": self.p_value_assumption,
+            "interval_interpretation": self.interval_interpretation,
         }
 
 
@@ -264,7 +274,7 @@ def bootstrap_mean(
     seed: int = 0,
     confidence: float = 0.95,
 ) -> StatisticalEstimate:
-    """Estimate a mean and percentile bootstrap confidence interval."""
+    """Estimate a mean and descriptive percentile bootstrap interval."""
     sample = _values(values)
     if resamples <= 0:
         raise ValueError(f"resamples must be positive, got {resamples}")
@@ -298,6 +308,7 @@ def bootstrap_mean(
         standard_deviation=sd,
         standard_error=sd / math.sqrt(n),
         median=median,
+        interval_interpretation="descriptive_percentile_bootstrap_interval",
     )
 
 
@@ -352,6 +363,7 @@ def stratified_bootstrap_mean(
         unit=unit,
         strata=tuple(sorted(strata)),
         resample_provenance="within_stratum_resampling_fixed_stratum_sizes",
+        interval_interpretation="descriptive_stratified_resampling_interval",
     )
 
 
@@ -414,7 +426,11 @@ def wilson_interval(
     *,
     confidence: float = 0.95,
 ) -> tuple[float, float, float]:
-    """Return ``(rate, low, high)`` using the Wilson score interval."""
+    """Return ``(rate, low, high)`` using the Wilson score interval.
+
+    This is a binomial score interval for a binary rate; it is distinct from the
+    descriptive bootstrap intervals used for continuous composite scores.
+    """
     if isinstance(trials, bool) or not isinstance(trials, int):
         raise ValueError(f"trials must be an integer, got {trials!r}")
     if isinstance(successes, bool) or not isinstance(successes, int):
@@ -488,10 +504,13 @@ def paired_permutation_p_value(
     permutations: int = 5000,
     seed: int = 0,
 ) -> float:
-    """Return a two-sided paired sign-flip permutation p-value.
+    """Return a two-sided paired sign-flip randomization p-value.
 
-    For samples up to 12 pairs, enumerate every sign assignment exactly.  Larger
-    samples use seeded Monte Carlo sign flips with the conservative +1 correction.
+    For samples up to 12 pairs, enumerate every sign assignment exhaustively.
+    Larger samples use seeded Monte Carlo sign flips with the conservative +1
+    correction.  Both branches assume sign exchangeability of paired differences;
+    ``exact`` is reserved for the exhaustive enumeration, not for the general
+    paired-comparison API.
     """
     left_values = _values(left, name="left")
     right_values = _values(right, name="right")
@@ -518,6 +537,11 @@ def paired_permutation_p_value(
     return (at_least + 1) / (permutations + 1)
 
 
+def _sign_flip_method(n: int) -> str:
+    """Name the deterministic sign-flip branch used for ``n`` paired units."""
+    return "exhaustive_sign_flip" if n <= 12 else "monte_carlo_sign_flip_plus_one"
+
+
 def paired_comparison(
     left: Iterable[float],
     right: Iterable[float],
@@ -528,7 +552,7 @@ def paired_comparison(
     permutation_seed: int = 1,
     confidence: float = 0.95,
 ) -> PairedComparison:
-    """Return paired delta, CI, p-value, and standardized effect size."""
+    """Return paired delta, descriptive interval, and randomization diagnostic."""
     left_values = _values(left, name="left")
     right_values = _values(right, name="right")
     if len(left_values) != len(right_values):
@@ -562,6 +586,8 @@ def paired_comparison(
         permutation_seed=permutation_seed,
         resamples=resamples,
         permutations=permutations,
+        p_value_method=_sign_flip_method(len(deltas)),
+        interval_interpretation="descriptive_paired_resampling_interval",
     )
 
 
@@ -577,11 +603,11 @@ def clustered_paired_comparison(
 ) -> PairedComparison:
     """Compare paired methods while treating clusters as the resampling unit.
 
-    Observations remain paired within each cluster.  The confidence interval resamples
+    Observations remain paired within each cluster.  The descriptive interval resamples
     whole clusters, while the permutation test sign-flips cluster-level means.  The
-    reported point estimate is observation-weighted (matching the ordinary paired
-    estimand); the standardized effect size is computed from cluster-level deltas so
-    repeated observations in a single cluster cannot manufacture precision.
+    reported point estimate is the mean of cluster-level paired deltas, so the point
+    estimate and uncertainty target the same question-clustered estimand even when
+    cluster sizes differ.
     """
     left = _grouped_values(left_by_cluster, label="cluster")
     right = _grouped_values(right_by_cluster, label="cluster")
@@ -597,12 +623,13 @@ def clustered_paired_comparison(
         differences[key] = [a - b for a, b in zip(left[key], right[key])]
         cluster_left_means.append(sum(left[key]) / len(left[key]))
         cluster_right_means.append(sum(right[key]) / len(right[key]))
+    cluster_differences = {key: [sum(values) / len(values)] for key, values in differences.items()}
     estimate = clustered_bootstrap_mean(
-        differences,
+        cluster_differences,
         resamples=resamples,
         seed=bootstrap_seed,
         confidence=confidence,
-        unit="paired_observation",
+        unit="question_cluster",
     )
     cluster_deltas = [a - b for a, b in zip(cluster_left_means, cluster_right_means)]
     cluster_sd = _sample_sd(cluster_deltas)
@@ -624,12 +651,14 @@ def clustered_paired_comparison(
         permutation_seed=permutation_seed,
         resamples=estimate.resamples,
         permutations=permutations,
-        estimand="mean_paired_delta_observation_weighted",
-        unit="paired_observation",
+        estimand="mean_paired_delta_cluster_weighted",
+        unit="question_cluster",
         cluster_count=len(keys),
         comparison_family="clustered_paired_comparison",
         inferential_status="descriptive_cluster_randomization_summary",
         small_cluster_warning=len(keys) < _SMALL_CLUSTER_THRESHOLD,
+        p_value_method=_sign_flip_method(len(keys)),
+        interval_interpretation="descriptive_cluster_resampling_interval",
     )
 
 
@@ -660,7 +689,7 @@ def sample_size_for_precision(
     half_width: float = 0.03,
     confidence: float = 0.95,
 ) -> int:
-    """Plan the approximate iid sample size for a mean CI half-width."""
+    """Plan the approximate iid sample size for a descriptive interval half-width."""
     if not math.isfinite(standard_deviation) or standard_deviation < 0:
         raise ValueError("standard_deviation must be finite and non-negative")
     if not math.isfinite(half_width) or half_width <= 0:
@@ -679,31 +708,6 @@ def sample_size_for_cluster_precision(
     if not math.isfinite(design_effect) or design_effect < 1:
         raise ValueError("design_effect must be finite and at least one")
     return math.ceil(sample_size_for_precision(standard_deviation, half_width=half_width, confidence=confidence) * design_effect)
-
-
-def write_accounting_artifacts(
-    result: dict,
-    report_path: str | Path,
-    log_path: str | Path,
-) -> tuple[Path, Path]:
-    """Write deterministic accounting JSON and JSONL event records."""
-    report = Path(report_path)
-    log = Path(log_path)
-    report.parent.mkdir(parents=True, exist_ok=True)
-    log.parent.mkdir(parents=True, exist_ok=True)
-    accounting = result.get("accounting", {})
-    temporary_report = report.with_name(f".{report.name}.tmp")
-    temporary_report.write_text(json.dumps(accounting, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    temporary_report.replace(report)
-    # v2 callers provide a deterministic event stream.  Keep the v1 fallback so
-    # older report fixtures remain readable and migration is non-breaking.
-    records = result.get("events")
-    if records is None:
-        records = [{"event": "sample_evaluation", **row} for row in accounting.get("runs", [])]
-    temporary_log = log.with_name(f".{log.name}.tmp")
-    temporary_log.write_text("".join(json.dumps(record, sort_keys=True) + "\n" for record in records), encoding="utf-8")
-    temporary_log.replace(log)
-    return report, log
 
 
 __all__ = [
@@ -725,5 +729,4 @@ __all__ = [
     "holm_named",
     "sample_size_for_precision",
     "sample_size_for_cluster_precision",
-    "write_accounting_artifacts",
 ]

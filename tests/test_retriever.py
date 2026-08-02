@@ -23,6 +23,9 @@ class TestEstimateTokens:
     def test_counts_tokens(self):
         assert estimate_tokens(["a b c", "d e"]) == 5
 
+    def test_counts_shared_alphanumeric_tokens(self):
+        assert estimate_tokens(["Wi-Fi password: bluefish42."]) == 4
+
     def test_empty(self):
         assert estimate_tokens([]) == 0
 

@@ -35,7 +35,7 @@ class TestVersion:
         try:
             import tomllib  # Python >= 3.11
         except ModuleNotFoundError:  # Python 3.10
-            import tomli as tomllib
+            import tomli as tomllib  # type: ignore[import-not-found]
 
         pyproject = PROJECT_ROOT / "pyproject.toml"
         data = tomllib.loads(pyproject.read_text())
@@ -127,7 +127,9 @@ class TestOwnedLifecycle:
     def test_pipeline_context_closes_owned_store(self):
         with Pipeline().with_all_stages() as pipeline:
             pipeline.run(query="what is x", session_history="User: x is y")
-            owned = pipeline._memory_gate.store  # noqa: SLF001
+            memory_gate = pipeline._memory_gate  # noqa: SLF001
+            assert memory_gate is not None
+            owned = memory_gate.store
         assert owned._closed is True  # noqa: SLF001
 
     def test_pipeline_does_not_close_caller_store(self):

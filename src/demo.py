@@ -66,6 +66,9 @@ def build_demo_artifacts(output_dir: str | Path) -> dict[str, Path]:
 
     demo_path = data_dir / "demo_result.json"
     demo_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # Materialize the current artifact set before refreshing the summary so its
+    # artifact-pipeline observation includes this newly written demo result.
+    write_artifact_manifest(root.parent)
     verification_path = write_verification_summary(root / "reports" / "verification_summary.json")
     manifest_path = write_artifact_manifest(root.parent)
     return {

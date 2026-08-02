@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ..compiler.metrics import token_f1
 from .adapters import (
     DEFAULT_OLLAMA_BASE,
@@ -20,6 +22,20 @@ from .adapters import (
     qa_metric,
     render_extractive_prompt,
 )
+
+if TYPE_CHECKING:
+    from .live_eval import evaluate_backends, injection_resistance_neural
+    from .runtime import (
+        AnswerFromContext,
+        ExtractiveDSPyLM,
+        build_dataset,
+        build_program,
+        compile_program,
+        configure,
+        configure_ollama,
+        configure_openrouter,
+        held_out_optimizer_lift,
+    )
 __all__ = [
     "DEFAULT_OLLAMA_MODEL",
     "DEFAULT_OLLAMA_BASE",

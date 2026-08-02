@@ -48,7 +48,7 @@ def compiler_generalization_eval(
     seeds: tuple[int, ...] = DEFAULT_COMPILER_GENERALIZATION_SEEDS,
     holdout_fraction: float = 0.25,
     gepa_iterations: int = 4,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Compile on one stable split and evaluate every winner on held-out data."""
     if isinstance(per_category, bool) or not isinstance(per_category, int) or per_category < 2:
         raise ValueError("per_category must be an integer >= 2")

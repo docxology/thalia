@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping, cast
@@ -87,11 +88,40 @@ def _check_code_anchor(anchor: str, root: Path, identifier: str) -> Traceability
     return None
 
 
+def _check_test_anchor(anchor: str, root: Path, identifier: str) -> TraceabilityIssue | None:
+    """Resolve test files and optional ``::symbol`` selectors, not just paths."""
+    path_text, separator, symbol = anchor.partition("::")
+    relative_path = Path(path_text)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return TraceabilityIssue("unsafe_test_path", identifier, path_text)
+    path = root / relative_path
+    if not path.is_file():
+        return TraceabilityIssue("missing_test_path", identifier, path_text)
+    if not separator:
+        return None
+    if path.suffix != ".py":
+        return TraceabilityIssue("test_anchor_not_python_file", identifier, anchor)
+    try:
+        names = _source_names(path)
+    except (OSError, SyntaxError) as exc:
+        return TraceabilityIssue("unreadable_test_anchor", identifier, f"{anchor}: {exc}")
+    if symbol not in names:
+        return TraceabilityIssue("missing_test_symbol", identifier, anchor)
+    return None
+
+
 def _all_manuscript_text(root: Path) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted((root / "manuscript").glob("[0-9]*.md"))
     )
+
+
+def _has_manuscript_anchor(text: str, anchor: str) -> bool:
+    """Recognize Pandoc/LaTeX anchors, including attributes on figures."""
+    if f"{{{anchor}}}" in text or f"\\label{{{anchor}}}" in text:
+        return True
+    return re.search(r"\{#" + re.escape(anchor) + r"(?=[\s}])", text) is not None
 
 
 def _validate_entry_paths(
@@ -108,16 +138,37 @@ def _validate_entry_paths(
         if issue:
             issues.append(issue)
     for test_path in _as_list(entry.get("tests"), field="tests", identifier=identifier):
-        if not (root / test_path).is_file():
-            issues.append(TraceabilityIssue("missing_test_path", identifier, test_path))
+        issue = _check_test_anchor(test_path, root, identifier)
+        if issue:
+            issues.append(issue)
     for section in _as_list(entry.get("manuscript_sections"), field="manuscript_sections", identifier=identifier):
         if not (root / section).is_file():
             issues.append(TraceabilityIssue("missing_manuscript_section", identifier, section))
     equation = entry.get("equation")
     if equation != "none" and (not isinstance(equation, str) or not equation):
         issues.append(TraceabilityIssue("invalid_equation", identifier, repr(equation)))
-    if isinstance(equation, str) and equation != "none" and f"{{{equation}}}" not in manuscript_text and f"\\label{{{equation}}}" not in manuscript_text:
+    if isinstance(equation, str) and equation != "none" and not _has_manuscript_anchor(manuscript_text, equation):
         issues.append(TraceabilityIssue("missing_equation_label", identifier, equation))
+    invariant_names = _as_list(entry.get("invariants"), field="invariants", identifier=identifier)
+    raw_anchors = entry.get("invariant_anchors")
+    if not isinstance(raw_anchors, Mapping):
+        issues.append(TraceabilityIssue("invalid_invariant_anchors", identifier, repr(raw_anchors)))
+        return
+    anchor_names = {str(name) for name in raw_anchors}
+    for invariant_name in invariant_names:
+        if invariant_name not in raw_anchors:
+            issues.append(TraceabilityIssue("missing_invariant_anchor", identifier, invariant_name))
+            continue
+        for anchor in _as_list(
+            raw_anchors[invariant_name],
+            field=f"invariant_anchors[{invariant_name}]",
+            identifier=identifier,
+        ):
+            issue = _check_code_anchor(anchor, root, f"{identifier}.{invariant_name}")
+            if issue:
+                issues.append(issue)
+    for anchor_name in sorted(anchor_names - set(invariant_names)):
+        issues.append(TraceabilityIssue("unknown_invariant_anchor", identifier, anchor_name))
 
 
 def _validate_claim_code_and_tests(
@@ -133,8 +184,9 @@ def _validate_claim_code_and_tests(
         if issue:
             issues.append(issue)
     for test_path in _as_list(claim.get("tests"), field="tests", identifier=identifier):
-        if not (root / test_path).is_file():
-            issues.append(TraceabilityIssue("missing_test_path", identifier, test_path))
+        issue = _check_test_anchor(test_path, root, identifier)
+        if issue:
+            issues.append(issue)
 
 
 def _validate_claim_paths(
@@ -155,6 +207,33 @@ def _validate_claim_paths(
             issues.append(TraceabilityIssue("unsafe_artifact_path", identifier, artifact))
         elif not (root / artifact_path).is_file():
             issues.append(TraceabilityIssue("missing_artifact_path", identifier, artifact))
+
+
+def _validate_statistical_contracts(
+    payload: Mapping[str, object],
+    *,
+    root: Path,
+    issues: list[TraceabilityIssue],
+) -> None:
+    """Resolve the executable/test anchors for the declared statistics methods."""
+    contracts = _as_mapping_list(payload.get("statistical_contracts", []), field="statistical_contracts")
+    notation = payload.get("notation")
+    if not isinstance(notation, Mapping):
+        issues.append(TraceabilityIssue("missing_notation_contract", "notation", "notation must be a mapping"))
+    else:
+        section = notation.get("supplemental_section")
+        if not isinstance(section, str) or not (root / section).is_file():
+            issues.append(TraceabilityIssue("missing_notation_section", "notation", str(section)))
+    for contract in contracts:
+        identifier = str(contract.get("id", ""))
+        for anchor in _as_list(contract.get("implementation"), field="implementation", identifier=identifier):
+            issue = _check_code_anchor(anchor, root, identifier)
+            if issue:
+                issues.append(issue)
+        for test_path in _as_list(contract.get("tests"), field="tests", identifier=identifier):
+            issue = _check_test_anchor(test_path, root, identifier)
+            if issue:
+                issues.append(issue)
 
 
 def validate_traceability(
@@ -189,6 +268,8 @@ def validate_traceability(
             if dependency not in formalism_ids:
                 issues.append(TraceabilityIssue("unknown_dependency", identifier, dependency))
 
+    _validate_statistical_contracts(payload, root=root, issues=issues)
+
     connections = _as_mapping_list(payload.get("connections", []), field="connections")
     connection_records: list[dict[str, object]] = []
     for connection in connections:
@@ -203,15 +284,12 @@ def validate_traceability(
             if issue:
                 issues.append(issue)
         for test_path in _as_list(connection.get("tests"), field="tests", identifier=identifier):
-            if not (root / test_path).is_file():
-                issues.append(TraceabilityIssue("missing_test_path", identifier, test_path))
+            issue = _check_test_anchor(test_path, root, identifier)
+            if issue:
+                issues.append(issue)
         manuscript_anchor = connection.get("manuscript_anchor")
         if isinstance(manuscript_anchor, str) and manuscript_anchor != "none":
-            if (
-                f"{{{manuscript_anchor}}}" not in manuscript_text
-                and f"{{#{manuscript_anchor}}}" not in manuscript_text
-                and f"\\label{{{manuscript_anchor}}}" not in manuscript_text
-            ):
+            if not _has_manuscript_anchor(manuscript_text, manuscript_anchor):
                 issues.append(TraceabilityIssue("missing_manuscript_anchor", identifier, manuscript_anchor))
         connection_records.append(
             {
@@ -239,6 +317,10 @@ def validate_traceability(
         "status": "pass" if not issues else "fail",
         "n_formalisms": len(formalism_records),
         "n_connections": len(connection_records),
+        "n_statistical_contracts": len(_as_mapping_list(payload.get("statistical_contracts", []), field="statistical_contracts")),
+        "n_notation_symbols": len(
+            _as_mapping_list(cast(Mapping[str, object], payload["notation"]).get("symbols", []), field="notation.symbols")
+        ),
         "n_claims": len(claim_records),
         "formalisms": formalism_records,
         "connections": connection_records,
@@ -294,15 +376,22 @@ def traceability_markdown(
     if report["status"] != "pass":
         raise ValueError(f"cannot render failed traceability graph: {report['issues']}")
     rows = [
-        "| Formal object | Equation | Executable anchor | Test anchor | Unit / estimand |",
-        "|---|---|---|---|---|",
+        "| Formal object | Equation | Executable anchor | Test anchor | Invariant anchors | Unit / estimand |",
+        "|---|---|---|---|---|---|",
     ]
     for entry in _as_mapping_list(data.get("formalisms", []), field="formalisms"):
         implementation = ", ".join(_as_list(entry["implementation"], field="implementation", identifier=str(entry["id"])))
         tests = ", ".join(_as_list(entry["tests"], field="tests", identifier=str(entry["id"])))
+        invariant_anchors = entry["invariant_anchors"]
+        if not isinstance(invariant_anchors, Mapping):
+            raise ValueError(f"{entry['id']}.invariant_anchors must be a mapping")
+        # Keep the manuscript table readable: the machine-readable report carries
+        # the full code/test paths, while the table exposes the invariant names
+        # whose anchors the validator has resolved.
+        anchors = ", ".join(str(name).replace("_", " ") for name in invariant_anchors)
         rows.append(
             f"| `{entry['id']}` | `{entry['equation']}` | `{implementation}` | `{tests}` | "
-            f"{entry['unit']} / {entry['estimand']} |"
+            f"{anchors} | {entry['unit']} / {entry['estimand']} |"
         )
     return "\n".join(rows)
 

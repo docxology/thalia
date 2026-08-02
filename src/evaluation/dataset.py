@@ -172,7 +172,7 @@ def build_large_dataset(per_category: int = 10, seed: int = 0) -> list[EvalExamp
     """A seeded, balanced, deterministic dataset (``per_category`` per class).
 
     Realistic-but-synthetic: it is larger and varied enough for per-category means and
-    bootstrap CIs, while a fixed ``seed`` keeps it bit-reproducible. It is *not* human
+    descriptive bootstrap intervals, while a fixed ``seed`` keeps it bit-reproducible. It is *not* observational
     data, so it tests the machinery's scaling and variance, not real-world accuracy.
     """
     rng = random.Random(seed)

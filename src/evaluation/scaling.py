@@ -2,7 +2,7 @@
 
 The six-example demo set is a determinism showcase but supports no statistics. This
 module runs the harness over seeded, balanced datasets and reports per-category
-accuracy with **bootstrap confidence intervals** — real variance, still
+accuracy with **descriptive bootstrap intervals** — real variance, still
 deterministic. The data is realistic-but-synthetic, so this measures the
 machinery's scaling and dispersion, not real-world accuracy.
 """
@@ -35,14 +35,19 @@ from .statistics import (
     stratified_bootstrap_mean,
 )
 
+DEFAULT_SAMPLE_SIZE_VALUES = (10, 25, 50, 100)
+DEFAULT_SAMPLE_SIZE_SEEDS = (0, 1, 2, 3, 4)
+
 
 def bootstrap_ci(values: list[float], n_boot: int = 2000, seed: int = 0, alpha: float = 0.05) -> tuple[float, float, float]:
-    """Return (mean, lo, hi) with a percentile bootstrap CI. Deterministic via seed.
+    """Return (mean, lo, hi) with a descriptive percentile bootstrap interval.
+    Deterministic via seed.
 
     A single observation has no spread to resample, so its bootstrap interval is
     degenerate (zero width); we return the point for all three rather than implying
     precision. Callers report CIs only for samples well above this (n>=10 here), so
-    the degenerate branch never fires in practice — it just refuses to fake a CI.
+    the degenerate branch never fires in practice — it just refuses to fake an
+    uncertainty claim.
     """
     if not values:
         return 0.0, 0.0, 0.0
@@ -58,7 +63,7 @@ def bootstrap_ci(values: list[float], n_boot: int = 2000, seed: int = 0, alpha: 
 
 
 def large_dataset_eval(per_category: int = 50, seed: int = 0, n_boot: int = 2000) -> dict:
-    """Per-category accuracy and overall composite with bootstrap CIs on the large set."""
+    """Per-category accuracy and overall composite with bootstrap intervals on the large set."""
     dataset = build_large_dataset(per_category=per_category, seed=seed)
     run = build_run_fn(default_config())
     by_category: dict[str, list[float]] = {}
@@ -147,8 +152,8 @@ def _metric_vectors(
 
 
 def sample_size_scaling_eval(
-    per_category_values: tuple[int, ...] = (10, 25, 50, 100),
-    seeds: tuple[int, ...] = (0, 1, 2, 3, 4),
+    per_category_values: tuple[int, ...] = DEFAULT_SAMPLE_SIZE_VALUES,
+    seeds: tuple[int, ...] = DEFAULT_SAMPLE_SIZE_SEEDS,
     n_boot: int = 2000,
     *,
     include_ledger: bool = False,
@@ -157,8 +162,8 @@ def sample_size_scaling_eval(
 
     Each row evaluates lexical-only, surrogate-semantic-only, and hybrid retrieval
     on the *same examples*.  The row aggregates independent seeded datasets and
-    reports stratum- and seed-cluster-aware CIs, paired deltas, sign-flip
-    permutation p-values, Holm adjusted p-values for the complete comparison
+    reports stratum- and seed-cluster-aware descriptive intervals, paired deltas,
+    sign-flip randomization p-values, Holm-adjusted p-values for the complete comparison
     family, and complete sample accounting.
     ``per_category_values`` is per seed; total evaluated examples are multiplied
     by the number of categories and seeds.
@@ -480,4 +485,10 @@ def sample_size_scaling_eval(
     return result
 
 
-__all__ = ["bootstrap_ci", "large_dataset_eval", "sample_size_scaling_eval"]
+__all__ = [
+    "DEFAULT_SAMPLE_SIZE_SEEDS",
+    "DEFAULT_SAMPLE_SIZE_VALUES",
+    "bootstrap_ci",
+    "large_dataset_eval",
+    "sample_size_scaling_eval",
+]

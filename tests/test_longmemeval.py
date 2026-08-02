@@ -119,8 +119,8 @@ def test_neural_checkpoint_round_trip_is_atomic_and_scope_aware(tmp_path):
     checkpoint = tmp_path / "neural_checkpoint.json"
     benchmark = {"sha256": "abc123", "size_bytes": 3}
     rows = {
-        "q1": {"example_id": "q1", "accuracy": 1.0, "grounding": 0.5},
-        "q0": {"example_id": "q0", "accuracy": 0.0, "grounding": 1.0},
+        "q1": {"example_id": "q1", "accuracy": 1.0, "grounding": 0.5, "session_reachability": 1.0},
+        "q0": {"example_id": "q0", "accuracy": 0.0, "grounding": 1.0, "session_reachability": 0.0},
     }
     _write_neural_checkpoint(
         checkpoint,
@@ -166,8 +166,8 @@ def test_neural_checkpoint_rejects_duplicate_or_invalid_rows(tmp_path):
                 "benchmark_size_bytes": 3,
                 "model": "gemma-test",
                 "rows": [
-                    {"example_id": "q0", "accuracy": 0.5, "grounding": 0.5},
-                    {"example_id": "q0", "accuracy": 0.4, "grounding": 0.4},
+                    {"example_id": "q0", "accuracy": 0.5, "grounding": 0.5, "session_reachability": 1.0},
+                    {"example_id": "q0", "accuracy": 0.4, "grounding": 0.4, "session_reachability": 1.0},
                 ],
             }
         )
@@ -185,7 +185,7 @@ def test_neural_checkpoint_rejects_duplicate_or_invalid_rows(tmp_path):
                 "benchmark_sha256": "abc123",
                 "benchmark_size_bytes": 3,
                 "model": "gemma-test",
-                "rows": [{"example_id": "q0", "accuracy": 2.0, "grounding": 0.5}],
+                "rows": [{"example_id": "q0", "accuracy": 2.0, "grounding": 0.5, "session_reachability": 1.0}],
             }
         )
     )
@@ -198,7 +198,7 @@ def test_neural_checkpoint_rejects_duplicate_or_invalid_rows(tmp_path):
     ) == {}
 
 
-def test_ranking_recall_by_mode_has_backward_compatible_shape_without_embedder():
+def test_ranking_recall_by_mode_reports_optional_embedder_unavailability():
     from src.evaluation.longmemeval import _ranking_recall_by_mode
 
     example = EvalExample(

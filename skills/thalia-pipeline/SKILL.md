@@ -7,8 +7,9 @@ explicit, inspectable chain so callers can insert custom steps, swap a single
 stage, inspect intermediate outputs after each step, or build variants
 (lexical-only, no-memory, etc.) without touching `AutoHarness`.
 
-The pipeline is fully deterministic: it reuses the same stage classes and
+With the default deterministic LM, the pipeline reuses the same stage classes and
 config defaults as `AutoHarness`, so identical inputs yield identical outputs.
+Supplying a custom `LMClient` makes the answer depend on that adapter's behavior.
 
 ## Inputs
 - `config: HarnessConfig | None` — tunable parameters (defaults to `default_config()`)

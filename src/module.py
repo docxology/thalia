@@ -1,12 +1,12 @@
 """Module and language-model abstractions for the THALIA harness.
 
-Mirrors the DSPy ``Module`` / ``Predict`` shape and the Recursive Language Model
-drop-in ``completion(messages)`` interface, while keeping a fully deterministic
-default so the pipeline runs and is tested without any network call.
+Mirrors the DSPy ``Module`` / ``Predict`` shape and exposes a small
+``complete(prompt: str) -> str`` language-model protocol, while keeping a fully
+deterministic default so the pipeline runs and is tested without any network call.
 
 * :class:`Module` — composable stage with ``forward`` / ``__call__``.
 * :class:`Prediction` — attribute bag returned by a module (DSPy ``Prediction``).
-* :class:`LMClient` — protocol matching ``rlm.completion(messages)``.
+* :class:`LMClient` — protocol matching ``complete(prompt: str) -> str``.
 * :class:`ExtractiveLM` — deterministic default LM: returns the evidence span with
   maximum lexical overlap with the question. A real LLM adapter implements the same
   ``complete`` method.
@@ -55,7 +55,7 @@ class Prediction:
 
 @runtime_checkable
 class LMClient(Protocol):
-    """Drop-in language-model interface (mirrors ``rlm.completion``)."""
+    """One-method language-model interface used by the Reasoner."""
 
     def complete(self, prompt: str) -> str:
         """Return a completion for ``prompt``."""

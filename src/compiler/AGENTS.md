@@ -12,7 +12,7 @@ evaluation. Provides the composite metric, two complementary optimizers
 
 | Module | Contents |
 |--------|----------|
-| [`metrics.py`](metrics.py) | `harness_metric`, `evaluate`, component scorers, `EvalExample`, `EvalReport` |
+| [`metrics.py`](metrics.py) | `harness_metric`, `evaluate`, token-F1/citation-support/citation-precision/source-recall/efficiency scorers, `EvalExample`, `EvalReport` |
 | [`mipro.py`](mipro.py) | `MIPROCompiler` — exhaustive config search; `CompileResult`, `default_search_space` |
 | [`gepa.py`](gepa.py) | `GEPAOptimizer` — trace-reflective evolution; `check_skill_constraints`, `to_dspy_signature`, `DSPY_AVAILABLE` |
 | [`__init__.py`](__init__.py) | Barrel re-export of all three modules |
@@ -21,13 +21,17 @@ evaluation. Provides the composite metric, two complementary optimizers
 
 ```
 harness_metric(output: HarnessOutput, example: EvalExample) -> float  # in [0, 1]
-  = 0.6 * token_F1(answer, gold)           # accuracy
-  + 0.3 * grounding_score(output, example) # citation hit + lexical support
+  = 0.6 * token_F1(answer, gold)                  # answer token-F1
+  + 0.3 * citation_support_proxy(output, example) # citation hit + lexical support
   + 0.1 * efficiency_score(output)         # fewer evidence windows = higher reward
 ```
 
-`grounding_score`: if `expected_source_indices` are provided, 0.5 × citation-hit
+`citation_support_proxy`: if `expected_source_indices` are provided, 0.5 × citation-hit
 + 0.5 × lexical-support; otherwise full score is citation-support only.
+
+`citation_precision` and `source_recall` are source-index diagnostics used by the
+live campaign and construct audit. They share the declared expected-source set,
+and they do not evaluate sentence-level entailment or factuality.
 
 `efficiency_score`: `max(0, 1 − n_evidence / 16)` — reward for sparse retrieval.
 
@@ -114,7 +118,7 @@ mirroring its `InputField` / `OutputField` annotations and instructions.
 ## `__all__` exports (barrel)
 
 `EvalExample`, `EvalReport`, `harness_metric`, `evaluate`, `token_f1`,
-`answer_score`, `grounding_score`, `efficiency_score`,
+`answer_score`, `citation_support_proxy`, `citation_precision`, `source_recall`, `session_reachability_score`, `efficiency_score`,
 `MIPROCompiler`, `CompileResult`, `default_search_space`,
 `GEPAOptimizer`, `SkillConstraintReport`, `check_skill_constraints`,
 `to_dspy_signature`

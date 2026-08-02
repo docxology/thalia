@@ -1,13 +1,22 @@
-# Evaluation {#sec:evaluation}
+# Evaluation: Evidence Tiers, Estimands, and Scope {#sec:evaluation}
 
-The evaluation is deterministic and offline: a fixed LongMemEval-style dataset, a
-deterministic extractive language model, and a composite metric computed in pure
-Python. The goal is to validate the *machinery* and to be explicit about what a
-deterministic local harness can and cannot demonstrate.
+The evaluation uses distinct evidence tiers. A fixed
+LongMemEval-style dataset, a deterministic extractive language model, and a
+composite metric computed in pure Python provide the reproducible contract tier.
+Recorded Ollama/OpenRouter rows and the external LongMemEval slice provide
+model-dependent transfer diagnostics. The goal is to validate the *machinery* and
+state the estimand and evidence boundary for each tier.
 
-This spine preserves the stable evaluation anchor and the two scope boundaries called out by the project guide. Detailed evidence now lives in adjacent `07a_` through `07e_` files.
+This spine preserves the stable evaluation anchor and the two scope boundaries called out by the project guide. The renderer places the adjacent `07a_` through `07e_` files beneath this heading as evaluation subsections, so the table of contents presents one coherent evaluation branch.
 
-The context-poisoning module reports exact cases, not population rates; the required phrasing that the answer keeps the true source in its cited evidence remains part of the evaluation contract. The optional neural rows appear only when a real local model is available.
+The context-poisoning module reports exact cases and finite-set rates; these are
+exact cases, not population rates. Its legacy `harness_auditable` outcome only
+records whether a cited excerpt lexically contains the supplied gold value; it is
+a cited-excerpt/source-exposure proxy, not a recoverable source record or
+claim-level auditability test. The optional neural rows appear only when
+a real model is available. Model-quality status requires a dedicated quality
+protocol. Usefulness, factuality, calibration, and preference remain distinct
+constructs from execution integrity and lexical overlap [@min2023factscore].
 
 Modular evaluation files:
 

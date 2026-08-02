@@ -1,4 +1,4 @@
-# References {#sec:references}
+# References and Source Records {#sec:references}
 
 ::: {#refs}
 :::

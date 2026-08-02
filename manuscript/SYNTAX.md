@@ -4,12 +4,15 @@ Pandoc/crossref conventions used across the THALIA manuscript sections.
 
 ## Sections
 
-Each section heading carries a label: `# Title {#sec:slug}`. Cross-reference with
-`[@sec:slug]` (renders "Section N"). Section slugs in use: `abstract`,
+Top-level section headings use `# Title {#sec:slug}`; nested headings use `##`,
+`###`, or `####` as needed. Cross-reference any labelled section with
+`[@sec:slug]` (renders "Section N"). The five files `07a_` through `07e_` are
+rendered as nested subsections of `07_evaluation.md`, preserving one evaluation
+branch in the table of contents. Section slugs in use: `abstract`,
 `introduction`, `foundations`, `hermes`, `harness_design`, `formalism`,
 `added_methods`, `integration`, `active_inference`, `evaluation`,
 `reference_architecture`, `reproducibility`, `operability`, `validation`,
-`references`.
+`supplemental_notation`, `references`.
 
 ## Figures
 
@@ -23,7 +26,7 @@ image caption -> ../output/figures/name.png with label fig-label and width 70%
 Figure slugs: `thalia_cover`, `thalia_overview`, `foundations_map`, `memory_lifecycle`,
 `gepa_evolution_loop`, `retriever_comparison`, `rrf_sensitivity`,
 `compiler_convergence`, `consolidation`, `evidence_funnel`, `category_breakdown`,
-`category_components`, `pipeline_flow`, `noise_scaling`, `mmr_tradeoff`,
+`category_components`, `metric_construct_audit`, `pipeline_flow`, `noise_scaling`, `mmr_tradeoff`,
 `method_ablation`, `orchestration_value`, `scaling_ci`, `gepa_trajectory`,
 `backend_comparison`, `paraphrase_retrieval`, `injection_resistance`,
 `longmemeval`, `bottleneck`.

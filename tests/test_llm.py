@@ -3,6 +3,7 @@
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any, cast
 
 import pytest
 from src.llm import CallableLM, OllamaError, OllamaLM, OpenRouterError, OpenRouterLM
@@ -13,7 +14,7 @@ CLOSED_URL = "http://127.0.0.1:1"
 
 def _make_handler(state):
     class _Handler(BaseHTTPRequestHandler):
-        def log_message(self, *args):  # silence test server logging
+        def log_message(self, format: str, *args: object) -> None:  # silence test server logging
             pass
 
         def _send(self, code, obj):
@@ -56,12 +57,12 @@ class TestCallableLM:
         assert lm.complete("hi") == "HI"
 
     def test_coerces_non_string(self):
-        lm = CallableLM(lambda p: 42)
+        lm = CallableLM(cast(Any, lambda p: 42))
         assert lm.complete("x") == "42"
 
     def test_non_callable_raises(self):
         with pytest.raises(TypeError, match="requires a callable"):
-            CallableLM("not callable")
+            CallableLM(cast(Any, "not callable"))
 
 
 class TestOllamaLM:

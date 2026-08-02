@@ -30,6 +30,23 @@ EXPECTED_TOKENS = {
     "RESULT_NEURAL_MODEL",
     "RESULT_NEURAL_MEAN_F1",
     "RESULT_EXTRACTIVE_MEAN_F1",
+    "RESULT_QUALITY_TOTAL_N",
+    "RESULT_QUALITY_PILOT_N",
+    "RESULT_QUALITY_CONFIRMATORY_N",
+    "RESULT_QUALITY_CONDITIONS",
+    "RESULT_QUALITY_RATERS",
+    "RESULT_QUALITY_PRIMARY",
+    "RESULT_INTEGRITY_AUDIT_N",
+    "RESULT_INTEGRITY_AUDIT_DELTA",
+    "RESULT_INTEGRITY_AUDIT_P",
+    "RESULT_INTEGRITY_AUDIT_ADJ_P",
+    "RESULT_INTEGRITY_COMPOSITE_LIFT",
+    "RESULT_INTEGRITY_POISON_P",
+    "RESULT_INTEGRITY_POISON_ADJ_P",
+    "RESULT_INTEGRITY_LEARNED_ADJ_P",
+    "RESULT_INTEGRITY_COMPILER_ADJ_P",
+    "RESULT_INTEGRITY_NEURAL_DELTA",
+    "RESULT_INTEGRITY_NEURAL_ADJ_P",
 }
 
 
@@ -73,8 +90,18 @@ class TestGenerateVariables:
         variables = generate_variables()
         assert variables["RESULT_SEED_SENSITIVITY_SEEDS"] == "10"
         assert variables["RESULT_SEED_SENSITIVITY_EVALUATIONS"] == "1800"
-        assert variables["RESULT_COMPILER_ACCOUNTED_N"] == "1350"
-        assert variables["RESULT_COMPILER_CANDIDATE_N"] == "65"
+        assert variables["RESULT_COMPILER_SEEDS"] == "20"
+        assert variables["RESULT_COMPILER_ACCOUNTED_N"] == "13720"
+        assert variables["RESULT_COMPILER_CANDIDATE_N"] == "260"
+
+    def test_quality_scope_tokens_bind_to_thalia_overlay(self):
+        variables = generate_variables()
+        assert variables["RESULT_QUALITY_TOTAL_N"] == "500"
+        assert variables["RESULT_QUALITY_PILOT_N"] == "60"
+        assert variables["RESULT_QUALITY_CONFIRMATORY_N"] == "440"
+        assert variables["RESULT_QUALITY_CONDITIONS"] == "6"
+        assert variables["RESULT_QUALITY_RATERS"] == "2"
+        assert variables["RESULT_QUALITY_PRIMARY"] == "correctness_full_rate"
 
     def test_missing_v2_aggregate_raises_clearly(self, monkeypatch, tmp_path):
         import src.manuscript_variables as mv
@@ -90,7 +117,7 @@ class TestGenerateVariables:
     def test_deterministic(self):
         assert generate_variables() == generate_variables()
 
-    def test_older_bottleneck_aggregate_without_mode_breakdown_is_supported(self, monkeypatch, tmp_path):
+    def test_bottleneck_aggregate_requires_mode_breakdown(self, monkeypatch, tmp_path):
         import src.manuscript_variables as mv
 
         original = json.loads(mv._LME_BN_PATH.read_text())
@@ -99,9 +126,12 @@ class TestGenerateVariables:
         path.write_text(json.dumps(original), encoding="utf-8")
         monkeypatch.setattr(mv, "_LME_BN_PATH", path)
 
-        variables = mv.generate_variables()
+        with pytest.raises(KeyError, match="ranking_recall_by_mode"):
+            mv.generate_variables()
 
-        assert variables["RESULT_BN_RECALL_MODE_N"] == variables["RESULT_BN_N"]
-        assert variables["RESULT_BN_RECALL_LEXICAL"] == variables["RESULT_BN_RANKING_RECALL"]
-        assert "RESULT_BN_RECALL_DENSE" not in variables
-        assert "RESULT_BN_RECALL_HYBRID" not in variables
+    def test_missing_audit_bundle_raises_clearly(self, monkeypatch, tmp_path):
+        import src.manuscript_variables as mv
+
+        monkeypatch.setattr(mv, "_EVAL_RESULTS_PATH", tmp_path / "absent_eval.json")
+        with pytest.raises(FileNotFoundError, match="run_harness_eval"):
+            mv.generate_variables()

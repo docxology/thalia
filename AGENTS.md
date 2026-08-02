@@ -60,7 +60,7 @@ and [`manuscript/`](manuscript/) for the full design rationale.
 | `src/dspy_runtime/` | Real DSPy runtime (gated): `adapters.py` (parse/render), `runtime.py` (configure + program builders), `live_eval.py` (opt-in neural eval) |
 | `src/retrieval/learned.py` | Optional learned dense embedder (Ollama) + dense-RAG baseline (gated) |
 | `src/harness.py` | `AutoHarness`, `build_run_fn` (incl. opt-in `adaptive_windows`) |
-| `src/evaluation/` | `dataset.py` (demo, large, stratified research datasets), `accounting.py` (ledger/events/fingerprints), `budget.py`, `experiments.py`, `bundle.py` (`run_full_eval`), `ablation.py` (no-harness baseline, weight-sensitivity, memory, injection), `scaling.py` (seeded sample audit), `statistics.py` (cluster bootstrap, Wilson/exact paired tests/Holm/planning), `longmemeval.py` (validated benchmark loader + resumable neural path + bottleneck analysis), `campaign.py` (typed nested cohorts, checkpoints, promotion), `generalization.py` (seed sensitivity), `compiler_generalization.py` (held-out compiler validation) |
+| `src/evaluation/` | `dataset.py` (demo, large, stratified research datasets), `accounting.py` (ledger/events/fingerprints), `budget.py`, `experiments.py`, `bundle.py` (`run_full_eval`), `ablation.py` (no-harness baseline, weight-sensitivity, memory, injection), `scaling.py` (seeded sample audit), `statistics.py` (cluster bootstrap, Wilson/exact paired tests/Holm/planning), `integrity_advantage.py` (native-unit integrity comparison screen), `provenance_p0.py` (frozen P0 rubric/source/run-receipt ledgers, claim-linked blinded packets, and evidence-rebuilt promotion), `longmemeval.py` (validated benchmark loader + resumable neural path + bottleneck analysis), `campaign.py` (typed nested cohorts, checkpoints, promotion), `quality.py` (separate expert-rater quality protocol/schema/report/certificate), `quality_runner.py` (external raw-answer/evidence matrix runner), `llm_judge.py` (exploratory pinned local judge diagnostic), `production_readiness.py` and `production_runner.py` (independent operational acceptance), `generalization.py` (seed sensitivity), `compiler_generalization.py` (held-out compiler validation) |
 | `src/figures/` | `plots.py` (data-driven matplotlib), `diagrams.py` (architecture figures), `manifest.py` (figure SSOT) |
 | `src/evaluation/schemas.py` | Typed payloads for committed JSON → plot pipeline |
 | `src/manuscript_variables.py` | `{{…}}` token generation (reads committed aggregate JSONs) |
@@ -90,6 +90,11 @@ uv run --project . --extra dev python scripts/run_harness_eval.py  # 5,550 examp
 uv run --project . --extra dev python scripts/run_compiler.py
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
 uv run --project . --extra dev python scripts/run_compiler_generalization.py
+uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
+uv run --project . --extra dev python scripts/freeze_provenance_p0.py --help
+uv run --project . --extra dev python scripts/build_provenance_p0_packets.py --help
+uv run --project . --extra dev python scripts/analyze_provenance_p0.py --help
+uv run --project . --extra dev python scripts/promote_provenance_p0.py --help
 uv run --project . --extra dev python scripts/run_pipeline.py
 uv run --project . --extra dev python scripts/generate_figures.py
 uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
@@ -121,12 +126,21 @@ uv run --project . --extra neural python scripts/run_injection_probe.py       # 
 
 # Real LongMemEval_S benchmark (download once, then record); needs Ollama for neural rows:
 bash scripts/get_longmemeval.sh
-uv run --project . --extra neural python scripts/run_longmemeval.py            # accuracy/grounding/composite + bootstrap CIs
+uv run --project . --extra neural python scripts/run_longmemeval.py            # accuracy/grounding/composite + descriptive bootstrap intervals
 uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
 
 # THALIA v2 external-volume campaign (resumable; incomplete tiers are never promoted)
 uv run --project . --extra neural python scripts/run_research_campaign.py
 uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
+
+# Exploratory local-LLM protocol diagnostic; it cannot produce the publication certificate.
+uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
+uv run --project . --extra dev python scripts/analyze_quality.py --help
+uv run --project . --extra dev python scripts/freeze_quality_protocol.py --help
+uv run --project . --extra neural python scripts/run_quality_campaign.py --phase confirmatory --protocol /path/to/frozen-quality-protocol.json
+uv run --project . --extra dev python scripts/promote_quality_report.py /path/to/quality-report.json data/quality_results.json --acceptance /path/to/quality-acceptance.json
+uv run --project . --extra dev python scripts/analyze_production_readiness.py --help
+uv run --project . --extra dev python scripts/promote_production_readiness.py /path/to/production-report.json data/production_readiness.json --acceptance /path/to/production-acceptance.json
 ```
 
 ## Extension points

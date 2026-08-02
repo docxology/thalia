@@ -36,23 +36,13 @@
     0.0425735194701284,
     0.054692653773552834
   ],
-  "extractive_accuracy_rate": {
-    "confidence": 0.95,
-    "estimand": "success_probability",
-    "high": 0.007624340461552241,
-    "low": 4.336808689942018e-19,
-    "method": "wilson_score",
-    "rate": 0.0,
-    "successes": 0,
-    "trials": 500,
-    "unit": "binary_observation"
-  },
   "extractive_accuracy_statistics": {
     "cluster_count": 0,
     "confidence": 0.95,
     "estimand": "mean",
     "estimate": 0.0483920022672186,
     "high": 0.054692653773552834,
+    "interval_interpretation": "descriptive_resampling_interval",
     "low": 0.0425735194701284,
     "median": 0.0,
     "method": "percentile_bootstrap_mean",
@@ -60,6 +50,7 @@
     "resample_provenance": "iid_observation_bootstrap",
     "resamples": 2000,
     "seed": 0,
+    "small_cluster_warning": false,
     "standard_deviation": 0.07065345958607817,
     "standard_error": 0.0031597187696000987,
     "strata": [],
@@ -75,6 +66,11 @@
     0.4094693816590036,
     0.4504726061552841
   ],
+  "extractive_session_reachability": [
+    0.678,
+    0.636,
+    0.718
+  ],
   "n_extractive": 500,
   "n_neural": 50,
   "neural_accuracy": [
@@ -82,23 +78,13 @@
     0.07579017319905142,
     0.14798372342823193
   ],
-  "neural_accuracy_rate": {
-    "confidence": 0.95,
-    "estimand": "success_probability",
-    "high": 0.07134759913335872,
-    "low": 6.938893903907228e-18,
-    "method": "wilson_score",
-    "rate": 0.0,
-    "successes": 0,
-    "trials": 50,
-    "unit": "binary_observation"
-  },
   "neural_accuracy_statistics": {
     "cluster_count": 0,
     "confidence": 0.95,
     "estimand": "mean",
     "estimate": 0.10962043308238106,
     "high": 0.15158046712055928,
+    "interval_interpretation": "descriptive_resampling_interval",
     "low": 0.07545925196228731,
     "median": 0.06696428571428571,
     "method": "percentile_bootstrap_mean",
@@ -106,6 +92,7 @@
     "resample_provenance": "iid_observation_bootstrap",
     "resamples": 2000,
     "seed": 1,
+    "small_cluster_warning": false,
     "standard_deviation": 0.13729948076344156,
     "standard_error": 0.019417078780244294,
     "strata": [],
@@ -136,10 +123,15 @@
     "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
     "model": "gemma3:4b",
     "modified_at": "2026-07-19T20:17:29.24740752-07:00",
-    "ollama_version": "0.32.1",
+    "ollama_version": "0.32.3",
     "requested_model": "gemma3:4b",
     "size": 3338801804
   },
+  "neural_session_reachability": [
+    0.64,
+    0.5,
+    0.76
+  ],
   "runtime_provenance": {
     "benchmark": {
       "path": "data/longmemeval/longmemeval_s.json",
@@ -165,7 +157,7 @@
         "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
         "model": "gemma3:4b",
         "modified_at": "2026-07-19T20:17:29.24740752-07:00",
-        "ollama_version": "0.32.1",
+        "ollama_version": "0.32.3",
         "requested_model": "gemma3:4b",
         "size": 3338801804
       }

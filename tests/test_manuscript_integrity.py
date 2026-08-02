@@ -1,7 +1,9 @@
 """Manuscript / reproducibility integrity gates (Zero-Mock)."""
 
+import json
 from pathlib import Path
 import re
+from typing import Any, cast
 
 import pytest
 
@@ -12,6 +14,8 @@ from src.manuscript_integrity import (
     find_template_root,
     load_claim_ledger,
     validate_claim_ledger,
+    validate_integrity_advantage_report,
+    verify_injected_manuscript,
     verify_token_coverage,
     load_paper_audit,
     validate_paper_audit,
@@ -139,6 +143,51 @@ class TestManuscriptGates:
         # scripts/validate_artifacts.py owns the strict release-time artifact check.
         validate_claim_ledger(load_claim_ledger(), project_root=PROJECT)
 
+    def test_integrity_advantage_report_is_source_bound_and_unpromoted(self):
+        validate_integrity_advantage_report(project_root=PROJECT)
+
+    def test_integrity_advantage_report_rejects_promoted_unexecuted_p0(self, tmp_path):
+        source = PROJECT / "data" / "integrity_advantage.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        promotion = dict(payload["promotion"])
+        promotion.update(
+            {
+                "status": "promoted",
+                "promoted": True,
+                "promotion_gate_passed": True,
+            }
+        )
+        payload["promotion"] = promotion
+        report = tmp_path / "integrity_advantage.json"
+        report.write_text(json.dumps(payload), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="unexecuted P0 integrity evidence"):
+            validate_integrity_advantage_report(project_root=PROJECT, report_path=report)
+
+    def test_integrity_advantage_report_rejects_drifted_source_fingerprint(self, tmp_path):
+        source = PROJECT / "data" / "integrity_advantage.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["source_provenance"][0]["sha256"] = "0" * 64
+        report = tmp_path / "integrity_advantage.json"
+        report.write_text(json.dumps(payload), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="source_provenance\\[0\\].sha256 does not match"):
+            validate_integrity_advantage_report(project_root=PROJECT, report_path=report)
+
+    def test_integrity_advantage_report_rejects_missing_source_input(self, tmp_path):
+        source = PROJECT / "data" / "integrity_advantage.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["source_provenance"] = [
+            entry
+            for entry in payload["source_provenance"]
+            if entry["path"] != "data/injection_eval.json"
+        ]
+        report = tmp_path / "integrity_advantage.json"
+        report.write_text(json.dumps(payload), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="missing source inputs"):
+            validate_integrity_advantage_report(project_root=PROJECT, report_path=report)
+
     def test_claim_ledger_checks_json_field_when_artifacts_exist(self, tmp_path):
         artifact = tmp_path / "metrics.json"
         artifact.write_text('{"score": 0.5}\n')
@@ -159,7 +208,8 @@ class TestManuscriptGates:
         validate_claim_ledger(payload, project_root=tmp_path, check_artifacts=True)
 
     def test_claim_ledger_rejects_unsafe_artifact_path(self):
-        payload = {"claims": [dict(load_claim_ledger()["claims"][0], artifact_path="../outside.json")]}
+        ledger = cast(dict[str, Any], load_claim_ledger())
+        payload = {"claims": [dict(ledger["claims"][0], artifact_path="../outside.json")]}
         with pytest.raises(ValueError, match="unsafe artifact path"):
             validate_claim_ledger(payload, project_root=PROJECT)
 
@@ -168,6 +218,51 @@ class TestManuscriptGates:
         used, missing = verify_token_coverage(variables, MANUSCRIPT)
         assert used
         assert missing == []
+
+    def test_injected_manuscript_matches_exact_source_substitution(self, tmp_path):
+        source = tmp_path / "manuscript"
+        injected = tmp_path / "output" / "manuscript"
+        source.mkdir()
+        injected.mkdir(parents=True)
+        (source / "01_intro.md").write_text("Value {{ANSWER}}.\n", encoding="utf-8")
+        (injected / "01_intro.md").write_text("Value blue.\n", encoding="utf-8")
+
+        checked = verify_injected_manuscript(source, injected, {"ANSWER": "blue"})
+
+        assert checked == (injected / "01_intro.md",)
+
+    def test_injected_manuscript_rejects_file_set_drift(self, tmp_path):
+        source = tmp_path / "manuscript"
+        injected = tmp_path / "injected"
+        source.mkdir()
+        injected.mkdir()
+        (source / "01_intro.md").write_text("ok\n", encoding="utf-8")
+        (injected / "02_extra.md").write_text("ok\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="file set drift"):
+            verify_injected_manuscript(source, injected, {})
+
+    def test_injected_manuscript_rejects_unresolved_token(self, tmp_path):
+        source = tmp_path / "manuscript"
+        injected = tmp_path / "injected"
+        source.mkdir()
+        injected.mkdir()
+        (source / "01_intro.md").write_text("Value {{ANSWER}}.\n", encoding="utf-8")
+        (injected / "01_intro.md").write_text("Value {{ANSWER}}.\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="unresolved tokens"):
+            verify_injected_manuscript(source, injected, {"ANSWER": "blue"})
+
+    def test_injected_manuscript_rejects_content_drift(self, tmp_path):
+        source = tmp_path / "manuscript"
+        injected = tmp_path / "injected"
+        source.mkdir()
+        injected.mkdir()
+        (source / "01_intro.md").write_text("Value {{ANSWER}}.\n", encoding="utf-8")
+        (injected / "01_intro.md").write_text("Value green.\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="exact source token substitution"):
+            verify_injected_manuscript(source, injected, {"ANSWER": "blue"})
 
     def test_result_bearing_numeric_literals_are_tokenized(self):
         findings = find_hardcoded_numeric_claims(MANUSCRIPT)
@@ -202,6 +297,8 @@ class TestManuscriptGates:
 
         path = PROJECT / "scripts" / "z_generate_manuscript_variables.py"
         spec = importlib.util.spec_from_file_location("_thalia_z_gen", path)
+        assert spec is not None
+        assert spec.loader is not None
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         out = mod.main()
@@ -273,8 +370,9 @@ class TestManuscriptGates:
     def test_injection_and_figure_captions_are_small_n_honest(self):
         evaluation = (MANUSCRIPT / "07_evaluation.md").read_text()
 
-        assert "true source in its cited evidence" in evaluation
-        assert evaluation.count("true source in its cited evidence") == 1
+        assert "cited-excerpt/source-exposure proxy" in evaluation
+        assert evaluation.count("cited-excerpt/source-exposure proxy") == 1
+        assert "recoverable source record" in evaluation
         assert "the dashed line marks the overall composite" not in evaluation
         assert "exact cases, not population rates" in evaluation
         assert "optional neural rows appear only when" in evaluation

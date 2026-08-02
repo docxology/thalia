@@ -10,6 +10,7 @@ from src.evaluation.accounting import (
     ledger_row,
     validate_ledger,
     validate_event_stream,
+    write_accounting_report,
     write_ledger_and_events,
 )
 from src.evaluation.dataset import build_research_dataset
@@ -36,6 +37,7 @@ def test_ledger_schema_and_event_order(tmp_path):
     )
     ledger_path, event_path = write_ledger_and_events([row], events, tmp_path / "ledger.jsonl", tmp_path / "events.jsonl")
     loaded = json.loads(ledger_path.read_text())
+    assert example.task_category is not None
     assert loaded["example_id"] == example.example_id
     assert loaded["status"] == "complete"
     assert loaded["content_fingerprint"]
@@ -43,6 +45,15 @@ def test_ledger_schema_and_event_order(tmp_path):
     assert [json.loads(line)["sequence"] for line in event_path.read_text().splitlines()] == [1, 2, 3]
     assert json.loads(event_path.read_text().splitlines()[-1])["event"] == "run_finished"
     assert json.loads(event_path.read_text().splitlines()[1])["dataset_fingerprint"] == fingerprint
+
+
+def test_accounting_report_requires_current_schema_and_writes_atomically(tmp_path):
+    path = tmp_path / "accounting.json"
+    report = {"schema_version": 2, "experiment": "test", "n_failed": 0}
+    assert write_accounting_report(report, path) == path
+    assert json.loads(path.read_text()) == report
+    with pytest.raises(ValueError, match="schema_version 2"):
+        write_accounting_report({"schema_version": 1}, path)
 
 
 def test_ledger_validation_requires_global_contiguous_sequence():

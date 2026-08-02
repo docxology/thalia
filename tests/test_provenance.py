@@ -53,6 +53,23 @@ class TestVerificationSummary:
         assert payload["latest_observed_coverage"] == "94.68% (src; gate 90%)"
         assert payload["status"] == "pass"
 
+    def test_refreshes_artifact_observation_from_manifest(self, tmp_path):
+        root = tmp_path / "thalia"
+        reports = root / "output" / "reports"
+        data = root / "output" / "data"
+        reports.mkdir(parents=True)
+        data.mkdir(parents=True)
+        (data / "demo_result.json").write_text("{}\n")
+        summary_path = write_verification_summary(reports / "verification_summary.json")
+        write_artifact_manifest(root)
+
+        refreshed = write_verification_summary(summary_path)
+        payload = json.loads(refreshed.read_text())
+        artifact_result = payload["command_results"]["artifact_pipeline"]
+        assert artifact_result["status"] == "pass"
+        assert artifact_result["checked"] >= 2
+        assert artifact_result["required"] == 0
+
 
 class TestFigureRegistry:
     def test_writes_template_compatible_registry(self, tmp_path):
@@ -79,6 +96,20 @@ class TestArtifactManifest:
         assert entries[0]["path"] == "output/data/demo_result.json"
         assert entries[0]["contract_match"] is True
         assert len(entries[0]["sha256"]) == 64
+
+    def test_tracks_source_bound_integrity_screen(self, tmp_path):
+        root = tmp_path / "thalia"
+        screen = root / "data" / "integrity_advantage.json"
+        screen.parent.mkdir(parents=True)
+        screen.write_text('{"schema_version": 3}\n')
+
+        write_artifact_manifest(root)
+        payload = json.loads((root / "output" / "reports" / "artifact_manifest.json").read_text())
+        paths = {entry["path"] for entry in payload["entries"]}
+
+        assert "data/integrity_advantage.json" in paths
+        report = validate_artifact_manifest(root, required_paths=("data/integrity_advantage.json",))
+        assert report.ok
 
     def test_validator_accepts_current_manifest(self, tmp_path):
         root = tmp_path / "thalia"

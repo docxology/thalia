@@ -1,13 +1,13 @@
-# Alignment with Active Inference {#sec:active_inference}
+# Active Inference Interpretation: Information, Belief, and Control {#sec:active_inference}
 
 The harness has natural correspondences with the Free Energy Principle and Active
 Inference [@friston2010free], relevant to the broader research programme at the
 intersection of Active Inference, computational biology, and cognitive security.
-This mapping is **interpretive scaffolding, not a claim**: none of the paper's
-evaluation results ([@sec:evaluation]) depend on it, and it is offered to connect
-the architecture to a research lineage, not to assert formal equivalence (any
-pipeline can be relabelled in this vocabulary, so the correspondence is suggestive,
-not falsifiable). With that caveat stated plainly:
+This mapping is **interpretive scaffolding**. The paper's evaluation results
+([@sec:evaluation]) stand on the executable contracts and recorded aggregates.
+The correspondence connects the architecture to a research lineage. It supplies
+suggestive framing; a falsifiable Active-Inference derivation would require a
+separate generative model and objective.
 
 - **Perception — the Inspector.** Selective attention over external context is a
   form of active sampling: the RLM-style grep/peek loop chooses which slices of
@@ -22,16 +22,19 @@ not falsifiable). With that caveat stated plainly:
 - **Memory — the Memory Gate.** The episodic-first architecture mirrors the
   distinction between fast episodic (hippocampal) traces and slow consolidated
   semantic memory. The consolidation gate is a precision-weighting safeguard: it
-  prevents low-precision derived beliefs from overwriting high-precision veridical
-  evidence, which is exactly the failure the consolidation-fault study documents
+  prevents low-precision derived beliefs from overwriting retained evidence, an
+  engineering response inspired by the consolidation-fault mode documented in
+  the cited study
   ([@sec:stage-memory], [@zhang2026memory]).
 
-- **Learning — the Compiler.** MIPRO search and GEPA reflective evolution minimise
-  a metric (expected loss) over a training distribution — a machine-learning
-  instantiation of the learning/inference duality in which slow parameter learning
-  improves fast inference ([@sec:stage-compiler]).
+- **Learning — the Compiler.** MIPRO search and GEPA reflective evolution optimise
+  a declared metric over a finite evaluation set. This recalls the
+  learning/inference distinction. The compiler optimizes configuration choices;
+  parameter learning, an Active-Inference objective, and generalization require
+  separate evidence ([@sec:stage-compiler]).
 
-Of these, only the memory correspondence is load-bearing in the engineering: the
-precision-weighting reading of the consolidation gate ([@zhang2026memory]) is what
-the episodic-first invariant actually enforces and what
-[@sec:val-memory] ablates. The other three are framing, and we treat them as such.
+Of these, the memory correspondence is the load-bearing engineering link: the
+precision-weighting reading of the consolidation gate ([@zhang2026memory]) is the
+interpretive rationale for the episodic-first invariant and what
+[@sec:val-memory] ablates. The other three remain framing elements in this
+manuscript.

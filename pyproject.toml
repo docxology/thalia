@@ -40,7 +40,7 @@ neural = [
 ]
 
 [tool.setuptools.packages.find]
-# THALIA intentionally exposes the historical ``src.*`` import surface.  The
+# THALIA intentionally exposes the package's ``src.*`` import surface.  The
 # explicit package discovery prevents setuptools' src-layout heuristic from
 # flattening ``src`` into top-level modules in built wheels.
 where = ["."]

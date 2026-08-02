@@ -9,7 +9,7 @@ generated artifact rather than a `{{TOKEN}}`:
 - claim_id: <kebab-id>
   kind: number
   value: <the literal value>
-  source: <human description of where it comes from>
+  source: <description of where it comes from>
   source_tier: project_source | generated_metric | manuscript_claim
   freshness: active
   artifact_path: <path that backs the value>

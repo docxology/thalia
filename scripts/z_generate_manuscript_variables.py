@@ -21,6 +21,7 @@ from src.manuscript_integrity import (  # noqa: E402
     find_hardcoded_numeric_claims,
     load_claim_ledger,
     validate_claim_ledger,
+    verify_injected_manuscript,
     verify_token_coverage,
     write_paper_audit_json,
 )
@@ -82,12 +83,20 @@ def main() -> Path:
         )
         return output_path
 
-    from infrastructure.rendering.manuscript_injection import write_resolved_manuscript_tree
+    from infrastructure.rendering.manuscript_injection import write_resolved_manuscript_tree  # type: ignore[import-not-found]
 
     injected = write_resolved_manuscript_tree(PROJECT_ROOT, variables)
+    injected_files = verify_injected_manuscript(
+        manuscript_dir,
+        Path(injected),
+        variables,
+    )
     print(str(output_path))
     print(str(manifest_path))
-    print(f"[ok] {len(used)} manuscript token(s) all generated; injected -> {injected}")
+    print(
+        f"[ok] {len(used)} manuscript token(s) all generated; "
+        f"{len(injected_files)} numbered section(s) exactly injected -> {injected}"
+    )
     return output_path
 
 

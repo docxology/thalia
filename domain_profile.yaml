@@ -13,7 +13,7 @@ validation_gates:
   - evidence_grounding
   - render_validation
 figure_types:
-  # Kept in src/figures/manifest.py::FIGURE_MANIFEST order (the SSOT — 26 entries).
+  # Kept in src/figures/manifest.py::FIGURE_MANIFEST order for profile-required figures.
   - retriever_comparison
   - rrf_sensitivity
   - compiler_convergence
@@ -33,11 +33,13 @@ figure_types:
   - thalia_cover
   - thalia_overview
   - foundations_map
+  - quality_protocol
   - memory_lifecycle
   - gepa_evolution_loop
   - backend_comparison
   - paraphrase_retrieval
   - injection_resistance
+  - integrity_advantage_audit
   - longmemeval
   - bottleneck
 citation_policy: official_or_scholarly
@@ -46,7 +48,11 @@ review_gates:
   - experiment_method_design
   - evidence_grounding
   - render_validation
+  - model_quality_review
+  - production_readiness_review
 artifact_expectations:
+  # Committed input to the source-bound integrity screen (not a disposable output).
+  - data/integrity_advantage.json
   - output/data/eval_results.json
   - output/data/compile_result.json
   - output/data/seed_sensitivity.json
@@ -78,6 +84,7 @@ artifact_expectations:
   - output/figures/backend_comparison.png
   - output/figures/paraphrase_retrieval.png
   - output/figures/injection_resistance.png
+  - output/figures/integrity_advantage_audit.png
   - output/figures/longmemeval.png
   - output/figures/bottleneck.png
   - output/figures/figure_registry.json

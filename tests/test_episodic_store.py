@@ -35,19 +35,25 @@ class TestAppend:
     def test_indices_roundtrip(self):
         store = EpisodicStore()
         store.append(_entry(0, indices=(3, 7, 9)))
-        assert store.get(0).evidence_indices == (3, 7, 9)
+        entry = store.get(0)
+        assert entry is not None
+        assert entry.evidence_indices == (3, 7, 9)
 
     def test_empty_indices_roundtrip(self):
         store = EpisodicStore()
         store.append(_entry(0, indices=()))
-        assert store.get(0).evidence_indices == ()
+        entry = store.get(0)
+        assert entry is not None
+        assert entry.evidence_indices == ()
 
 
 class TestRetrieval:
     def test_get_present(self):
         store = EpisodicStore()
         store.append(_entry(5, query="hello"))
-        assert store.get(5).query == "hello"
+        entry = store.get(5)
+        assert entry is not None
+        assert entry.query == "hello"
 
     def test_get_absent_returns_none(self):
         assert EpisodicStore().get(99) is None

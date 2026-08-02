@@ -15,16 +15,20 @@ that can be explicitly compiled to PDF/HTML by the template rendering pipeline.
 | `04a_`-`04c_*.md` | Method contract/stage flow, formalism/added methods, and implementation traceability |
 | `05_template_integration.md` | `AGENTS.md`/`SKILL.md` duality + build lifecycle mapping |
 | `06_active_inference.md` | Correspondences with the Free Energy Principle |
-| `07_evaluation.md` | Evaluation spine and explicit scope-boundary reminder |
-| `07a_`-`07e_*.md` | Setup/scaling, external benchmark/bottleneck, baseline/neural/security, retrieval/noise, and compiler/summary evidence |
+| `07_evaluation.md` | Top-level evaluation chapter: evidence tiers, estimands, and scope boundaries |
+| `07a_`-`07e_*.md` | Evaluation subsections: experimental design, benchmark transfer, baselines/context-poisoning probe, retrieval/noise, and compiler synthesis |
 | `08_reference_architecture.md` | Design-principle table + file structure |
 | `09_reproducibility.md` | Determinism, generated tokens, regeneration commands |
 | `10_operability.md` | Configuration, real LM adapters, persistent session, CLI |
 | `11_validation.md` | Invariants, Zero-Mock suite, golden regression, dashboard |
+| `12_supplemental_notation.md` | Canonical symbols and statistical contracts |
 | `99_references.md` | Reference list (Pandoc `--citeproc`) |
 
 Supporting files: `config.yaml` (metadata), `preamble.md` (LaTeX), `references.bib`
-(bibliography), `SYNTAX.md` (citation/figure/equation conventions).
+(bibliography), `SYNTAX.md` (citation/figure/equation conventions). The
+THALIA-local `thalia_overlay.yaml` holds project-specific model-quality,
+campaign, and production-readiness declarations that do not belong in the
+generic template profile/experiment schemas.
 
 ## Generated tokens
 
