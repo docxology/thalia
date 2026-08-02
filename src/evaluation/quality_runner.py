@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, replace
@@ -30,7 +31,9 @@ from .quality import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_QUALITY_ROOT = Path("/Volumes/blue/data/thalia_quality")
+DEFAULT_QUALITY_ROOT = Path(
+    os.environ.get("THALIA_QUALITY_ROOT", Path.home() / "thalia_external" / "quality")
+)
 DEFAULT_BENCHMARK = PROJECT_ROOT / "data" / "longmemeval" / "longmemeval_s.json"
 
 

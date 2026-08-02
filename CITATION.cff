@@ -5,6 +5,7 @@ type: software
 version: "0.1.0"
 date-released: 2026-08-02
 license: MIT
+doi: "10.5281/zenodo.21763245"
 authors:
   - family-names: Friedman
     given-names: Daniel Ari

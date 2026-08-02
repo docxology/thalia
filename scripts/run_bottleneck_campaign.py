@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,7 +20,9 @@ from src.evaluation.longmemeval import load_longmemeval, ranking_diagnostics  # 
 from src.evaluation.accounting import file_provenance  # noqa: E402
 
 
-DEFAULT_CAMPAIGN_ROOT = Path("/Volumes/blue/data/thalia_campaigns")
+DEFAULT_CAMPAIGN_ROOT = Path(
+    os.environ.get("THALIA_CAMPAIGN_ROOT", Path.home() / "thalia_external" / "campaigns")
+)
 DEFAULT_BENCHMARK = PROJECT_ROOT / "data" / "longmemeval" / "longmemeval_s.json"
 
 

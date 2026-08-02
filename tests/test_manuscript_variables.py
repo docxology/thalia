@@ -47,6 +47,7 @@ EXPECTED_TOKENS = {
     "RESULT_INTEGRITY_COMPILER_ADJ_P",
     "RESULT_INTEGRITY_NEURAL_DELTA",
     "RESULT_INTEGRITY_NEURAL_ADJ_P",
+    "ZENODO_DOI",
 }
 
 
@@ -113,6 +114,18 @@ class TestGenerateVariables:
     def test_config_echoed(self):
         variables = generate_variables(default_config())
         assert variables["CONFIG_TOP_K"] == "8"
+
+    def test_zenodo_doi_is_loaded_from_source_metadata(self):
+        assert generate_variables()["ZENODO_DOI"] == "10.5281/zenodo.21763245"
+
+    def test_invalid_zenodo_doi_fails_closed(self, monkeypatch, tmp_path):
+        import src.manuscript_variables as mv
+
+        path = tmp_path / ".zenodo.json"
+        path.write_text("{}", encoding="utf-8")
+        monkeypatch.setattr(mv, "_ZENODO_METADATA_PATH", path)
+        with pytest.raises(ValueError, match="valid DOI"):
+            mv.generate_variables()
 
     def test_deterministic(self):
         assert generate_variables() == generate_variables()

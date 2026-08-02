@@ -24,6 +24,7 @@ def test_citation_metadata_is_parseable_and_matches_package() -> None:
     assert metadata["type"] == "software"
     assert metadata["version"] == __version__
     assert metadata["license"] == "MIT"
+    assert metadata["doi"] == "10.5281/zenodo.21763245"
     assert metadata["repository-code"] == "https://github.com/docxology/thalia"
     assert metadata["authors"]
     assert metadata["title"]
@@ -52,6 +53,7 @@ def test_mit_metadata_is_consistent_across_package_and_archive_files() -> None:
     assert zenodo["license"] == "MIT"
     assert zenodo["upload_type"] == "software"
     assert zenodo["version"] == __version__
+    assert zenodo["doi"] == "10.5281/zenodo.21763245"
     assert zenodo["creators"]
     assert any(
         item["identifier"] == "https://github.com/docxology/thalia"

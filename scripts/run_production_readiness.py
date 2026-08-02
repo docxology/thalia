@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -25,7 +26,9 @@ from src.harness import AutoHarness  # noqa: E402
 from src.llm import OllamaLM  # noqa: E402
 
 
-DEFAULT_OUTPUT_ROOT = Path("/Volumes/blue/data/thalia_production_readiness")
+DEFAULT_OUTPUT_ROOT = Path(
+    os.environ.get("THALIA_PRODUCTION_ROOT", Path.home() / "thalia_external" / "production_readiness")
+)
 DEFAULT_THRESHOLDS = {
     "p95_latency_upper_bound": 30.0,
     "p99_latency_upper_bound": 60.0,

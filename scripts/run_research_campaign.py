@@ -9,6 +9,7 @@ volume so the repository keeps only validated aggregate evidence.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -28,7 +29,9 @@ from src.evaluation.campaign import (  # noqa: E402
 from src.evaluation.longmemeval import load_longmemeval  # noqa: E402
 
 
-DEFAULT_CAMPAIGN_ROOT = Path("/Volumes/blue/data/thalia_campaigns")
+DEFAULT_CAMPAIGN_ROOT = Path(
+    os.environ.get("THALIA_CAMPAIGN_ROOT", Path.home() / "thalia_external" / "campaigns")
+)
 DEFAULT_BENCHMARK = PROJECT_ROOT / "data" / "longmemeval" / "longmemeval_s.json"
 
 

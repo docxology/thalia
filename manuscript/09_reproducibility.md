@@ -141,6 +141,20 @@ data → script output → manuscript token → hydrated manuscript → rendered
 That route is what prevents a polished PDF from becoming detached from the
 executable harness it describes.
 
+## Public archive and release identity {#sec:repro-release}
+
+The source release and rendered manuscript are archived as one reproducibility
+package at [Zenodo](https://doi.org/{{ZENODO_DOI}}).
+
+**Release DOI:** [{{ZENODO_DOI}}](https://doi.org/{{ZENODO_DOI}}).
+
+The canonical development history is maintained in the
+[public GitHub repository](https://github.com/docxology/thalia). The DOI is a
+release identifier, not evidence of model-quality, integrity-advantage, or
+production-readiness claims. The archived package intentionally excludes raw
+answers, private external-volume records, credentials, and model weights; those
+lanes remain separately documented and gated.
+
 The final local refusal boundary is `validate_artifacts.py`. It checks the
 generated manifest's relative paths, file sizes, and SHA-256 values against the
 current output tree and verifies the required paths declared by

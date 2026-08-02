@@ -7,7 +7,7 @@
 quality_evidence:
   schema: src/evaluation/quality.py
   protocol_source: thalia_overlay.yaml:model_quality
-  raw_output_root: /Volumes/blue/data/thalia_quality
+  raw_output_root: "${THALIA_QUALITY_ROOT}"
   conditional_committed_artifacts:
     - data/quality_results.json
     - output/data/quality_results.json
@@ -19,7 +19,7 @@ quality_evidence:
 
 production_readiness:
   schema: src/evaluation/production_readiness.py
-  raw_output_root: /Volumes/blue/data/thalia_production_readiness
+  raw_output_root: "${THALIA_PRODUCTION_ROOT}"
   acceptance_dimensions:
     - p95_latency
     - p99_latency
@@ -37,7 +37,7 @@ v2_campaign:
   evidence_tiers: [contract, finite_synthetic, live_model, external_benchmark]
   benchmark: LongMemEval_S
   benchmark_path: data/longmemeval/longmemeval_s.json
-  raw_output_root: /Volumes/blue/data/thalia_campaigns
+  raw_output_root: "${THALIA_CAMPAIGN_ROOT}"
   generation:
     temperature: 0.0
     num_predict: 512
@@ -148,7 +148,7 @@ model_quality:
     paired_binary_test: exact_mcnemar
     agreement: quadratic_weighted_cohen_kappa_between_raters
     stratification: question_type
-  raw_output_root: /Volumes/blue/data/thalia_quality
+  raw_output_root: "${THALIA_QUALITY_ROOT}"
   promotion:
     committed_artifact: data/quality_results.json
     required_status: passed

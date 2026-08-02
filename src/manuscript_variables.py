@@ -9,6 +9,7 @@ up as a missing/changed token, which the manuscript-variable test flags.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from .compiler.metrics import (
@@ -56,6 +57,19 @@ _EVAL_RESULTS_PATH = _DATA_DIR.parent / "output" / "data" / "eval_results.json"
 _SEED_SENSITIVITY_PATH = _DATA_DIR.parent / "output" / "data" / "seed_sensitivity.json"
 _COMPILER_GENERALIZATION_PATH = _DATA_DIR.parent / "output" / "data" / "compiler_generalization.json"
 _INTEGRITY_ADVANTAGE_PATH = _DATA_DIR / "integrity_advantage.json"
+_ZENODO_METADATA_PATH = _DATA_DIR.parent / ".zenodo.json"
+
+
+def _load_zenodo_doi() -> str:
+    """Load and validate the source-controlled DOI used in the manuscript."""
+    try:
+        metadata = json.loads(_ZENODO_METADATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Zenodo metadata is unreadable: {_ZENODO_METADATA_PATH}") from exc
+    doi = metadata.get("doi")
+    if not isinstance(doi, str) or re.fullmatch(r"10\.\d{4,9}/\S+", doi) is None:
+        raise ValueError(".zenodo.json must contain a valid DOI before manuscript generation")
+    return doi
 
 
 def _fmt(value: float, places: int = 3) -> str:
@@ -144,6 +158,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         evaluation results, the retriever comparison, and the compiled optimum.
     """
     config = config or default_config()
+    zenodo_doi = _load_zenodo_doi()
     audit_ledger = load_paper_audit()
     traceability = load_and_validate_traceability()
     if traceability["status"] != "pass":
@@ -244,6 +259,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "CONFIG_CI_LEVEL": str(round(DEFAULT_CONFIDENCE_LEVEL * 100)),
         "CONFIG_BACKEND_FIGURE_WIDTH": str(BACKEND_FIGURE_WIDTH_PERCENT),
         "CONFIG_COV_GATE": str(_coverage_gate()),
+        "ZENODO_DOI": zenodo_doi,
         # Planned quality-study scope. These are protocol metadata, not observed
         # results; keeping them tokenised prevents the manuscript plan from drifting
         # away from experiment_plan.yaml.

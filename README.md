@@ -10,13 +10,18 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-> **Status:** in-progress, local-only research checkout, rendered only when
+> **Status:** development-stage research package, rendered only when
 > explicitly requested through the template pipeline. Runnable
 > and covered by the strict local test gate; generated outputs are gitignored. "In-progress"
 > describes the project's lifecycle stage (not yet promoted to a public template
 > exemplar), independent of the manuscript/package's own publish-readiness —
 > see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) for the current
 > assessment of whether *this checkout's* code and manuscript are ready to submit.
+
+> **Release identity:** MIT-licensed source and the rendered manuscript are
+> archived under the reserved Zenodo DOI
+> [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245), with the
+> canonical source at [github.com/docxology/thalia](https://github.com/docxology/thalia).
 
 > **Public release gate:** MIT is now the selected source-code license, but this
 > checkout is not yet a public GitHub or Zenodo release. The exact gates are
@@ -94,8 +99,8 @@ The v2 research campaign extends this evidence with nested, question-type-balanc
 Gemma cohorts at 100/250/500 questions, a matched Hermes sensitivity cohort, a
 five-policy Inspector bottleneck study, learned nomic-embed-text ranking
 diagnostics, a pre-registered ten-seed synthetic sensitivity lane, and held-out
-compiler validation. Live rows and atomic checkpoints are stored on
-`/Volumes/blue/data/thalia_campaigns`; an incomplete tier cannot replace a
+compiler validation. Live rows and atomic checkpoints are stored under a
+user-selected external campaign root; an incomplete tier cannot replace a
 retained aggregate, and all model-dependent values remain finite local
 observations rather than deterministic or population-level claims.
 
@@ -109,7 +114,7 @@ labels are non-promotable. The study measures answer-level correctness,
 completeness, evidence faithfulness, usefulness, abstention, safety, and
 calibration, then issues a certificate that is either explicitly promoted or
 remains `complete_not_promoted`. Raw answers, evidence packets, annotations, and
-adjudications stay on `/Volumes/blue/data/thalia_quality`; no quality aggregate
+adjudications stay under a user-selected external quality root; no quality aggregate
 is committed until the expert-rater certificate passes its frozen thresholds and
 digest check.
 Production readiness is a separate operational gate covering latency, cost,
@@ -148,9 +153,11 @@ uv run --project . --extra dev python scripts/run_demo.py
 uv run --project . --extra dev python scripts/build_dashboard.py
 uv run --project . --extra dev python scripts/validate_artifacts.py
 
-# v2 live research (raw evidence stays on /Volumes/blue; no promotion by default)
-uv run --project . --extra neural python scripts/run_research_campaign.py
-uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
+# v2 live research (raw evidence stays outside the repository; no promotion by default)
+uv run --project . --extra neural python scripts/run_research_campaign.py \
+  --output-root /path/to/external/thalia_campaigns
+uv run --project . --extra neural python scripts/run_bottleneck_campaign.py \
+  --output-root /path/to/external/thalia_campaigns
 
 # model-quality lane (raw answers/annotations stay external; thresholds freeze after pilot)
 uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
@@ -345,8 +352,8 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
 ## License and release metadata
 
 The THALIA source code is licensed under the [MIT License](LICENSE). Citation
-and archive metadata are maintained in [`CITATION.cff`](CITATION.cff) and
-`.zenodo.json`; the latter is a deposition template, not a minted DOI. MIT
+and archive metadata, including the release DOI, are maintained in
+[`CITATION.cff`](CITATION.cff) and `.zenodo.json`. MIT
 covers this project's code and does not by itself grant redistribution rights
 for external benchmark data, model weights, raw answers, credentials, or other
 third-party artifacts. The current release boundary is tracked in

@@ -114,7 +114,7 @@ tasks:
   - live-research
   - provenance
   - longmemeval
-  notes: 'Completed external evidence: 950 active rows across the recorded Gemma/Hermes tiers with zero execution failures. The immutable report/checkpoints remain under /Volumes/blue/data/thalia_campaigns and are explicitly non-promoted: answer hashes and automated metrics are operational/provenance evidence, not model-quality evidence.'
+  notes: 'Completed external evidence: 950 active rows across the recorded Gemma/Hermes tiers with zero execution failures. The immutable report/checkpoints remain under the external campaign root and are explicitly non-promoted: answer hashes and automated metrics are operational/provenance evidence, not model-quality evidence.'
 
 - id: thalia-v2-generalization
   title: Ten-seed sensitivity and held-out compiler validation
@@ -240,7 +240,7 @@ tasks:
   - model-quality
   - live-research
   - longmemeval
-  notes: 'Implemented the six-condition runner and confidence probe for Gemma and Hermes under THALIA default harness, no-harness full-context, and oracle-evidence conditions. Raw answers/evidence/failures are retained externally under /Volumes/blue, with model/config/code fingerprints, standardized confidence responses, deterministic atomic claims, and randomized condition-neutral packets; the oracle exposes gold evidence but not a gold answer field. Execution and expert annotation remain downstream tasks.'
+  notes: 'Implemented the six-condition runner and confidence probe for Gemma and Hermes under THALIA default harness, no-harness full-context, and oracle-evidence conditions. Raw answers/evidence/failures are retained under the external quality root, with model/config/code fingerprints, standardized confidence responses, deterministic atomic claims, and randomized condition-neutral packets; the oracle exposes gold evidence but not a gold answer field. Execution and expert annotation remain downstream tasks.'
 
 - id: thalia-quality-pilot
   title: Execute the exploratory 60-question pilot and blinded double annotation

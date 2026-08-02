@@ -100,8 +100,8 @@ The current recovery baseline is 50 neural examples, not a fabricated larger run
 
 ## v2 live campaign (optional)
 
-The v2 campaign is resumable and stores raw rows/checkpoints on the external
-`/Volumes/blue/data/thalia_campaigns` volume. Run the campaign and bottleneck
+The v2 campaign is resumable and stores raw rows/checkpoints under the external
+output root supplied by the caller. Run the campaign and bottleneck
 diagnostic scripts with the neural extra only after checking model availability
 and free disk space. A timeout or repeated model failure leaves the checkpoint
 and marks the tier partial; partial reports are not promoted or used to replace
@@ -111,8 +111,10 @@ ID or the explicit `--allow-scope-change` flag to create a sidecar scope. Inspec
 the campaign report before resuming:
 
 ```bash
-uv run --project . --extra neural python scripts/run_research_campaign.py
-uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
+uv run --project . --extra neural python scripts/run_research_campaign.py \
+  --output-root /path/to/external/thalia_campaigns
+uv run --project . --extra neural python scripts/run_bottleneck_campaign.py \
+  --output-root /path/to/external/thalia_campaigns
 ```
 
 The deterministic extensions remain repository-local and regenerable:
@@ -129,7 +131,7 @@ hashes and automated diagnostics, not answer-level labels. The publication path
 requires two independent expert raters and blinded adjudication. The local-LLM
 runner is an exploratory diagnostic for packet, rubric, and provenance mechanics;
 its labels cannot be promoted. Raw answers and annotation packets stay outside
-the repository at `/Volumes/blue/data/thalia_quality`.
+the repository under the caller's external quality root.
 
 Run the exploratory pilot first:
 

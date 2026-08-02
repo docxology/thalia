@@ -33,13 +33,13 @@
 - `dashboard.html`
 
 The live v2 campaign scripts write raw rows and atomic checkpoints only to the
-external `/Volumes/blue/data/thalia_campaigns` root. They never promote an
+caller-selected external campaign root. They never promote an
 incomplete report into the repository's `data/` layer; promotion requires
 complete accounting plus benchmark, model, generation, cohort, code, and config
 provenance.
 
-The model-quality scripts use a separate external root,
-`/Volumes/blue/data/thalia_quality`. `run_quality_campaign.py` writes raw answer
+The model-quality scripts use a separate caller-selected external root.
+`run_quality_campaign.py` writes raw answer
 and evidence packets, observations, blinded annotation templates, and runtime
 metadata; `analyze_quality.py` writes an external report; and only
 `promote_quality_report.py` may create `data/quality_results.json`. Confirmation

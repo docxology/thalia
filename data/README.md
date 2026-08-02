@@ -37,8 +37,8 @@ explicitly promoted; see [`../docs/provenance_p0.md`](../docs/provenance_p0.md).
 
 ## THALIA v2 campaign lanes
 
-Raw rows and atomic checkpoints live outside the repository at
-`/Volumes/blue/data/thalia_campaigns`. A campaign report is promotable only when
+Raw rows and atomic checkpoints live outside the repository under a user-selected
+campaign root. A campaign report is promotable only when
 every requested row is evaluated and every tier carries the benchmark SHA-256,
 model digest, generation options, selected question IDs, config fingerprint, and
 code fingerprint. A complete campaign can still remain an external evidence tier:
@@ -67,8 +67,8 @@ and deterministic atomic claims. The local-LLM judging implementation remains an
 engineering diagnostic and is rejected by promotion.
 
 - `scripts/run_quality_campaign.py` — capture raw answers, evidence, confidence,
-  latency, failures, and model/config/code provenance under
-  `/Volumes/blue/data/thalia_quality`.
+  latency, failures, and model/config/code provenance under a user-selected
+  external quality root.
 - `scripts/analyze_quality.py` — validate paired rows, annotations, adjudication,
   Brier/ECE calibration, reliability/selective metrics, agreement, safety, and
   threshold outcomes.

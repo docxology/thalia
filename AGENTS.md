@@ -1,10 +1,9 @@
 # THALIA — Agent Reference
 
-Agent-facing technical reference for the THALIA auto-harness. This is an
-in-progress, local-only research checkout; it is not discovered or rendered by
-the template pipeline by default. Project source is tracked in this private
-sidecar; generated `output/` artifacts are gitignored and must not be committed
-to the public template checkout.
+Agent-facing technical reference for the THALIA auto-harness. This file describes
+the public source checkout and its optional integration with the sibling template
+renderer. Generated `output/` artifacts are local, gitignored build products and
+must be regenerated from source before they are bundled for a release.
 
 ## What THALIA is
 

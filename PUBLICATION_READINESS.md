@@ -7,8 +7,8 @@ integrity, or production readiness remain unpromoted._
 
 ## Current evidence
 
-- **Executable package:** the authoritative strict suite collected 852 tests,
-  passed 849, skipped 3 optional live-model tests, and recorded 90.50% `src/`
+- **Executable package:** the authoritative strict suite collected 854 tests,
+  passed 847, skipped 7 optional live-model tests, and recorded 90.49% `src/`
   coverage against the 90% gate. Ruff, mypy, compileall, `uv lock --check`,
   and `uv build` pass. The aggregate gate is authoritative; some optional or
   defensive modules have lower local coverage and remain visible in the

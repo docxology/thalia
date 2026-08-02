@@ -71,7 +71,7 @@ def find_template_root(starts: tuple[Path, ...] | None = None) -> Path | None:
     """Return the template repo root containing ``infrastructure/rendering/``.
 
     Walks ancestors from each start path until the injection module exists. For
-    private sidecar checkouts, also checks for a sibling ``template/`` checkout
+    sidecar checkouts, also checks for a sibling ``template/`` checkout
     next to the ``projects/`` repo. Returns ``None`` when THALIA runs standalone
     outside any template tree.
     """
