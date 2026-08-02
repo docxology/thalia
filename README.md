@@ -18,6 +18,12 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 > see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) for the current
 > assessment of whether *this checkout's* code and manuscript are ready to submit.
 
+> **Public release gate:** this checkout is not yet ready for a public GitHub or
+> Zenodo release. The exact gates are recorded in
+> [`docs/release_readiness.md`](docs/release_readiness.md); the repository remains
+> private until licensing, clean-clone, release-bundle, and DOI authority are
+> resolved.
+
 ## What THALIA is
 
 THALIA is five composable stages that turn an unstructured LLM agent into a
@@ -319,7 +325,7 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
   lambda=1 reducing to relevance, episode append-only, consolidation gate strictness,
   harness determinism, answer grounding, query-expansion superset, recall read-only,
   recency-zero noop, static determinism guard, and more.
-- **29 registered figures** — all generated deterministically from `src/evaluation`
+- **30 registered figures** — all generated deterministically from `src/evaluation`
   and `src/figures`, including the title-page cover visual abstract, the
   per-category component breakdown, the metric-construct-audit heatmap,
   pipeline evidence-flow, GEPA component trajectory, and multi-seed

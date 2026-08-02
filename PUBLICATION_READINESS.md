@@ -7,8 +7,8 @@ integrity, or production readiness remain unpromoted._
 
 ## Current evidence
 
-- **Executable package:** the authoritative strict suite collected 848 tests,
-  passed 841, skipped 7 optional live-model tests, and recorded 90.47% `src/`
+- **Executable package:** the authoritative strict suite collected 851 tests,
+  passed 844, skipped 7 optional live-model tests, and recorded 90.50% `src/`
   coverage against the 90% gate. Ruff, mypy, compileall, `uv lock --check`,
   and `uv build` pass. The aggregate gate is authoritative; some optional or
   defensive modules have lower local coverage and remain visible in the
@@ -53,7 +53,7 @@ integrity, or production readiness remain unpromoted._
   false, PDF 2.0, and structurally valid; page-level visual review found no
   clipping in the cover, formalism table, evaluation, quality, reproducibility,
   validation, or reference pages. The correctly rooted browser check loaded
-  all 28 images with zero broken images and no horizontal overflow at a 1,200px
+  all 29 images with zero broken images and no horizontal overflow at a 1,280px
   viewport; only non-fatal MathJax CDN version warnings remained.
 
 The generic template metadata remains separate from the THALIA-owned overlay;
@@ -68,6 +68,19 @@ harness, methods, and reproducibility paper, provided the manuscript retains
 its current evidence tiers and limitations. It is not ready for publication
 as a broad model-quality, true-source-recovery, integrity-advantage, or
 production-readiness result.
+
+## GitHub and Zenodo release decision
+
+The repository is **not yet ready for a public GitHub or Zenodo release**. At
+this review the GitHub repository is private, no release tag exists, and no
+software license has been selected. Generated `output/` artifacts remain ignored
+and therefore are not an automatically source-current public bundle. A starter
+[`CITATION.cff`](CITATION.cff) and the detailed
+[`docs/release_readiness.md`](docs/release_readiness.md) checklist are now in
+the source tree, but no DOI or license has been fabricated. Public release
+requires an exact tagged commit, a reviewed license and redistribution boundary,
+a clean-clone receipt, an intentional PDF/HTML/artifact bundle, and Zenodo
+metadata verified against the same tag.
 
 ## Remaining work before stronger claims or public release
 

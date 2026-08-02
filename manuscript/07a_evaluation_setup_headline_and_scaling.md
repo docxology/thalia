@@ -86,8 +86,8 @@ deterministic difficulty strata. The audit records {{RESULT_AUDIT_INTERVAL_LABEL
 seed-cluster precision checks ({{RESULT_AUDIT_CLUSTER_WARNING}}), {{RESULT_AUDIT_CONFIDENCE}}% Wilson intervals for binary outcomes,
 exact paired binary tests, and one named Holm family of size {{RESULT_AUDIT_FAMILY_SIZE}} spanning every sample-size
 row, overall paired comparison, and stratum-level paired comparison. A per-example ledger records {{RESULT_AUDIT_FAILURES}} failed method rows and
-configuration/dataset fingerprints. This is a stronger accounting layer for
-synthetic variance. Generalization beyond the generated task family requires
+configuration/dataset fingerprints. This strengthens accounting for finite
+synthetic variation. Generalization beyond the generated task family requires
 external data.
 
 #### Estimands, Resampling, and Paired Inference {#sec:eval-statistics}

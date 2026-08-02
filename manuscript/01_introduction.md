@@ -23,6 +23,26 @@ substrate into a single executable method. It then evaluates the method in
 separate evidence tiers so deterministic contract validation and model performance
 remain distinct claims.
 
+## Research Questions and Claim Ceilings
+
+The study separates questions about the measurement instrument from questions
+about the systems measured by that instrument. This separation is a claim
+boundary: a passing contract or artifact check cannot by itself promote an
+answer-quality, security, or production claim.
+
+| Question | Primary evidence | Observation unit | Claim ceiling |
+|---|---|---|---|
+| RQ1. Does the contract execute reproducibly? | Typed tests, invariants, ledgers, and artifact hashes | Run and trace | Implementation integrity and reproducibility |
+| RQ2. Where does a failure enter the pipeline? | Seeded synthetic ablations and bottleneck diagnostics | Example and context window | Failure localization in the generated task family |
+| RQ3. What changes under backend or context replacement? | Recorded neural, learned-retrieval, and external-benchmark rows | Paired question or probe; model-dependent | Host- and configuration-specific transfer diagnostics |
+| RQ4. Are stronger claims warranted? | P0 provenance, expert quality, and production acceptance gates | Adjudicated or operational row | Promotion only after an accepted certificate |
+
+The results in this manuscript address RQ1--RQ3. RQ4 is a promotion boundary,
+not a completed result: the corresponding protocols are implemented, but their
+independent acceptance records are not yet present.
+
+![Claim-ceiling map for the four evidence tiers. The schematic distinguishes the observation retained by each tier, the claim it can support, and the stronger interpretation it cannot support without a separate acceptance record. It is a design and release boundary, not an empirical result.](../output/figures/evidence_tier_map.png){#fig:evidence_tier_map width=95%}
+
 The central methodological move is to make every handoff explicit. The Inspector
 emits line-addressed evidence windows with grep patterns and confidence metadata.
 The Retriever exposes lexical and surrogate-semantic rankings, fuses them by a
@@ -137,7 +157,7 @@ Four design contributions define that boundary:
 
 ### What we found
 
-The experiments answer the three practical questions posed by the harness design:
+The results answer RQ1--RQ3; RQ4 remains a release decision boundary:
 
 - **The contract is executable.** The deterministic tier reaches composite
   {{RESULT_COMPOSITE}} on the fixed {{RESULT_NUM_EXAMPLES}}-example set, with

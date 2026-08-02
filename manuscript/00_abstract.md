@@ -49,7 +49,7 @@ recall is {{RESULT_BN_RANKING_RECALL}} while Inspector recall is
 token-F1 from {{RESULT_BN_NEURAL_ACC_LO}} to {{RESULT_BN_ADAPTIVE_ACC}} while
 compact-context outputs remain unchanged.
 
-The findings establish three contributions: a typed and inspectable contract
+The paper makes three design contributions: a typed and inspectable contract
 graph; an evidence-preserving runtime that localizes retrieval, narrowing, and
 memory failures; and a source-bound evaluation layer that can be regenerated and
 extended across models, embeddings, and context policies. The results support

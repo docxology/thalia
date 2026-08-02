@@ -591,13 +591,11 @@ def plot_bottleneck(data: BottleneckPayload, output_path: str | Path) -> Path:
                 label=f"neural ({data.neural_model})",
             )
             label_points(reach_ax, neural_reach_x, neural_reach_y, PALETTE["semantic"], offset=-12)
-        reach_ax.set_title("A. Session reachability")
-        reach_ax.set_ylabel("Metric value (0–1)")
         reach_ax.legend(loc="best", fontsize=8)
     else:
         reach_ax.text(0.5, 0.5, "Not recorded in\nthis aggregate", ha="center", va="center", transform=reach_ax.transAxes)
-        reach_ax.set_title("A. Session reachability")
-        reach_ax.set_ylabel("Metric value (0–1)")
+    reach_ax.set_title("A. Session reachability")
+    reach_ax.set_ylabel("Metric value (0–1)")
     proxy_ax.plot(mws, proxy, marker="o", color=PALETTE["hybrid"], linewidth=1.8, label="extractive")
     label_points(proxy_ax, mws, proxy, PALETTE["hybrid"])
     if neural_proxy:

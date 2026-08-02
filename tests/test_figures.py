@@ -73,6 +73,12 @@ class TestExtendedFigures:
         path = plot_evidence_funnel(tmp_path / "funnel.png")
         assert path.exists() and path.stat().st_size > 0
 
+    def test_evidence_tier_map(self, tmp_path):
+        from src.figures import plot_evidence_tier_map
+
+        path = plot_evidence_tier_map(tmp_path / "evidence-tiers.png")
+        assert path.exists() and path.stat().st_size > 0
+
     def test_noise_scaling(self, tmp_path):
         from src.figures import plot_noise_scaling
 

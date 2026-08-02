@@ -117,8 +117,8 @@ sequence numbers and complete failure/fingerprint fields, while the event stream
 repeats dataset/config identity per sample and contains no wall-clock fields.
 
 The tracked `data/openrouter_eval.json` is a committed normalized OpenRouter
-aggregate used only when present; the canonical local pipeline leaves it unchanged.
-pipeline. The current live smoke recorder is `scripts/run_openrouter.py`, which
+aggregate used only when present; the canonical local pipeline leaves it
+unchanged. The current live smoke recorder is `scripts/run_openrouter.py`, which
 writes `output/data/openrouter_result.json` and requires the environment variable
 `THALIA_OPENROUTER_API_KEY` to be set to a valid OpenRouter API key. Like all
 recorder outputs, an unavailable key is recorded as an isolated skip and the tracked

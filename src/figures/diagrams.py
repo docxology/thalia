@@ -228,6 +228,104 @@ def plot_thalia_overview(output_path: str | Path) -> Path:
     return path
 
 
+def plot_evidence_tier_map(output_path: str | Path) -> Path:
+    """Map each evidence tier to its supported claim and explicit ceiling."""
+    from matplotlib.patches import FancyBboxPatch
+
+    path = _prepare(output_path)
+    fig, ax = plt.subplots(figsize=(8.4, 4.8))
+    fig.patch.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 8)
+    ax.axis("off")
+
+    ax.text(
+        8,
+        7.72,
+        "Evidence tiers and claim ceilings",
+        ha="center",
+        va="top",
+        fontsize=15,
+        fontweight="bold",
+        color=PALETTE["ink"],
+    )
+    ax.text(
+        8,
+        7.35,
+        "A passing machinery gate cannot promote a stronger scientific or operational claim",
+        ha="center",
+        va="top",
+        fontsize=8,
+        color=PALETTE["muted"],
+        fontstyle="italic",
+    )
+
+    columns = (
+        (0.62, "Evidence retained"),
+        (5.05, "What it can support"),
+        (10.02, "Ceiling / current status"),
+    )
+    for x, label in columns:
+        ax.text(x, 6.82, label, ha="left", va="center", fontsize=8, fontweight="bold", color=PALETTE["ink"])
+
+    rows = (
+        ("1  Contract", "Tests, invariants,\nledgers, artifact hashes", "Implementation integrity\nand reproducibility", "Not answer quality", PALETTE["lexical"]),
+        ("2  Diagnostics", "Seeded synthetic\nablations and sweeps", "Failure localization in\nthe generated task family", "Not external\ngeneralization", PALETTE["hybrid"]),
+        ("3  Transfer", "Neural, learned retrieval,\nand external rows", "Host- and configuration-\nspecific transfer diagnostics", "Not model ranking or\na causal effect", PALETTE["semantic"]),
+        ("4  Promotion", "P0 provenance, expert\nquality, production gates", "Stronger claim only after\nan accepted certificate", "Not promoted: protocols\nand open gates", _COMPILER_PURPLE),
+    )
+    row_ys = (5.45, 4.20, 2.95, 1.70)
+    widths = (4.15, 4.55, 5.92)
+    x_starts = (0.42, 4.82, 9.78)
+    for y, (tier, evidence, supported, ceiling, color) in zip(row_ys, rows):
+        for x, width in zip(x_starts, widths):
+            ax.add_patch(
+                FancyBboxPatch(
+                    (x, y),
+                    width,
+                    0.92,
+                    boxstyle="round,pad=0.06",
+                    facecolor="#FFFDF8",
+                    edgecolor="#D0C8BE",
+                    linewidth=0.8,
+                    zorder=1,
+                )
+            )
+        ax.add_patch(
+            FancyBboxPatch(
+                (x_starts[0], y),
+                0.16,
+                0.92,
+                boxstyle="round,pad=0.02",
+                facecolor=color,
+                edgecolor=color,
+                linewidth=0,
+                zorder=2,
+            )
+        )
+        ax.text(x_starts[0] + 0.34, y + 0.63, tier, ha="left", va="center", fontsize=8.2, fontweight="bold", color=color, zorder=3)
+        ax.text(x_starts[0] + 0.34, y + 0.28, evidence, ha="left", va="center", fontsize=7.1, color=PALETTE["ink"], linespacing=1.08, zorder=3)
+        ax.text(x_starts[1] + 0.24, y + 0.46, supported, ha="left", va="center", fontsize=7.3, color=PALETTE["ink"], linespacing=1.08, zorder=3)
+        ax.text(x_starts[2] + 0.24, y + 0.46, ceiling, ha="left", va="center", fontsize=7.3, color=PALETTE["muted"], linespacing=1.08, zorder=3)
+
+    ax.plot([0.55, 15.35], [0.92, 0.92], color=PALETTE["muted"], linewidth=0.7, alpha=0.55)
+    ax.text(
+        0.58,
+        0.60,
+        "Claim ceilings are part of the release contract, not empirical results.",
+        ha="left",
+        va="center",
+        fontsize=7.2,
+        color=PALETTE["muted"],
+        fontstyle="italic",
+    )
+    fig.subplots_adjust(left=0.02, right=0.99, top=0.98, bottom=0.07)
+    fig.savefig(path, dpi=EXPORT_DPI, facecolor=_DIAGRAM_PAPER)
+    plt.close(fig)
+    return path
+
+
 def plot_thalia_cover(output_path: str | Path) -> Path:
     """Create the manuscript cover visual abstract from the typed stage contract."""
     from matplotlib.patches import FancyBboxPatch
@@ -581,6 +679,7 @@ def plot_gepa_evolution_loop(output_path: str | Path) -> Path:
 __all__ = [
     "plot_thalia_cover",
     "plot_thalia_overview",
+    "plot_evidence_tier_map",
     "plot_foundations_map",
     "plot_quality_protocol",
     "plot_memory_lifecycle",

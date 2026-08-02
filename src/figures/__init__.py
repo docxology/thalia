@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from ..figure_style import EXPORT_DPI, PALETTE, zoomed_ylim as _zoomed_ylim
 from .diagrams import (
+    plot_evidence_tier_map,
     plot_foundations_map,
     plot_gepa_evolution_loop,
     plot_memory_lifecycle,
@@ -76,6 +77,7 @@ __all__ = [
     "plot_gepa_trajectory",
     "plot_thalia_cover",
     "plot_thalia_overview",
+    "plot_evidence_tier_map",
     "plot_foundations_map",
     "plot_quality_protocol",
     "plot_memory_lifecycle",

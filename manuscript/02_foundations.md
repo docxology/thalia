@@ -14,8 +14,8 @@ motivate the executable synthesis without constituting a unified theory of agenc
 DSPy [@khattab2023dspy] abstracts LM pipelines as imperative computational graphs
 in which LMs are invoked through declarative modules. DSPy specifies the required
 inputs and outputs through **Signatures**, while modules and optimizers select
-the implementation strategy. It
-decomposes into four primitives: Signatures (declarative I/O), Modules
+the implementation strategy. It decomposes into four primitives: Signatures
+(declarative I/O), Modules
 (`Predict`, `ChainOfThought` [@wei2022cot], `ReAct` [@yao2023react], …),
 Programs (modules wired into graphs), and Optimizers (compilers that tune
 instructions and few-shot examples against a metric). One prominent
@@ -72,28 +72,31 @@ implementation described in [@sec:repro-provenance].
 
 **Implication for THALIA.** Raw episodes are first-class evidence. The Memory Gate
 always appends the raw turn to an append-only store and *only* consolidates a
-derived MEMORY.md delta when explicitly gated ([@sec:stage-memory]). Automatic
-per-turn consolidation — the documented failure mode — is structurally impossible:
-`src/memory/consolidation.py::should_consolidate` requires both a Reasoner request
-and an explicit criterion.
+derived MEMORY.md delta when explicitly gated ([@sec:stage-memory]). The
+configured per-turn consolidation path is forbidden: the gate in
+`src/memory/consolidation.py::should_consolidate` requires both a Reasoner
+request and an explicit criterion.
 
 The scope is one safety property within long-term memory. Systems such as
-MemGPT [@packer2023memgpt] and Mem0 [@chhikara2025mem0] explore richer memory
-architectures and operational policies. THALIA isolates one safety property —
-preserve the source episode and make consolidation conditional — so that it can
-be tested independently of a model's broader memory competence.
+MemGPT [@packer2023memgpt], Mem0 [@chhikara2025mem0], TiMem [@li2026timem],
+and APEX-MEM [@banerjee2026apexmem] explore richer memory representations,
+temporal organization, and operational policies. They are adjacent comparison
+points, not baselines in the present deterministic study. THALIA isolates one
+safety property -- preserve the source episode and make consolidation
+conditional -- so that it can be tested independently of a model's broader
+memory competence.
 
 ## Agentic Search: Lexical Anchoring and Context Selection {#sec:found-grep}
 
 This empirical study [@sen2026grep] compares lexical (grep/regex) and semantic
 (dense) retrieval across models, harnesses, and tool-calling paradigms on
-LongMemEval. Its abstract reports that grep generally yields higher accuracy than
-vector retrieval in the study's comparisons. The comparison remains
-tool-style-dependent, and overall scores also depend strongly on the harness. We
-cite that external result and keep its model/harness comparison in the external evidence tier. Under increasing
-session noise, the source studies how the ordering changes; THALIA uses that
-motivation for a bounded, local surrogate diagnostic. The source's magnitude and
-ranking remain external evidence.
+LongMemEval. The paper reports higher accuracy for grep than vector retrieval
+in its own comparisons. That result remains tool-style-dependent, and overall
+scores also depend strongly on the harness. We cite the external result and
+keep its model/harness comparison in the external evidence tier. Under
+increasing session noise, the source studies how the ordering changes; THALIA
+uses that motivation for a bounded, local surrogate diagnostic. The source's
+magnitude and ranking remain external evidence.
 
 **Implications for THALIA.** (i) Lexical-first, hybrid by default — grep/BM25 as
 the inline lane, semantic as fallback. (ii) Weighted Reciprocal Rank Fusion
