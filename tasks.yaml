@@ -2,6 +2,7 @@
 # Managed by the projects/taskboard server (live read-write) and seed_tasks.py.
 # status: todo | in_progress | blocked | done. dates: YYYY-MM-DD. progress: 0-100.
 project:
+  lifeArea: research
   name: thalia
   title: THALIA — typed long-context memory harness
   status: active
