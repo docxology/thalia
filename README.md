@@ -16,7 +16,7 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 > explicitly requested through the template pipeline. Runnable
 > and covered by the strict local test gate; generated outputs are gitignored. "In-progress"
 > describes the project's lifecycle stage (not yet promoted to a public template
-> exemplar), independent of the manuscript/package's own publish-readiness —
+> exemplar), independent of the docs/manuscript/package's own publish-readiness —
 > see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) for the current
 > assessment of whether *this checkout's* code and manuscript are ready to submit.
 
@@ -31,6 +31,18 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 > [`docs/release_receipt.md`](docs/release_receipt.md). This release authority
 > does not promote model-quality, integrity-advantage, or production-readiness
 > claims; those remain separately gated in [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md).
+
+## Status & next actions
+
+- **Current state:** the release/readiness snapshot above is generated from this
+  checkout; verify it, don't trust it — see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md)
+  (dated assessment with the commands it ran) and [`docs/release_readiness.md`](docs/release_readiness.md).
+- **What to do next:** the canonical backlog is [`tasks.yaml`](tasks.yaml)
+  ("task + Gantt source of truth", managed by the projects/taskboard server).
+  Read its `status:` fields for open work (`todo` / `in_progress` / `blocked`);
+  there is deliberately no duplicated task list anywhere else. Agent-facing
+  ergonomics findings live in [`TODO.md`](TODO.md).
+- **Verify the code:** run the strict local gate (see [Quick start](#quick-start)).
 
 ## What THALIA is
 
@@ -271,7 +283,7 @@ one-method `LMClient` protocol whose default is a deterministic extractive
 responder. A real LLM, a learned embedder, or real DSPy/GEPA each drop in behind
 their respective interface without touching any other stage.
 
-**Two honest scope boundaries** (see the [neural comparison](manuscript/07c_evaluation_baseline_neural_and_context_poisoning.md) and [learned-retrieval diagnostics](manuscript/07d_evaluation_retrieval_learned_embedder_and_noise.md)):
+**Two honest scope boundaries** (see the [neural comparison](docs/manuscript/07c_evaluation_baseline_neural_and_context_poisoning.md) and [learned-retrieval diagnostics](docs/manuscript/07d_evaluation_retrieval_learned_embedder_and_noise.md)):
 the extractive LM bounds token-F1 accuracy, and the semantic lane is a hashing
 sub-word surrogate rather than a learned dense retriever — so the lexical-vs-dense
 *magnitude* of the agentic-search study is intentionally not reproduced locally.
@@ -371,7 +383,7 @@ Contributor workflow and responsible security reporting are documented in
 - `tests/` — Zero-Mock suite, one file per module; ≥ 90% `src/` coverage gate
 - `scripts/` — thin orchestrators (preflight, eval, compile, pipeline, figures, dashboard, demo, manuscript tokens)
 - `skills/` — `SKILL.md` per stage (machine-readable capability descriptors)
-- `manuscript/` — the full write-up (sections 00–99) with generated `{{…}}` tokens
+- `docs/manuscript/` — the full write-up (sections 00–99) with generated `{{…}}` tokens
 - `domain_profile.yaml` · `experiment_plan.yaml` · `data/claim_ledger.yaml` · `data/paper_audit.yaml` — evidence and audit registries
 
 See [`AGENTS.md`](AGENTS.md) for the agent-facing technical reference.

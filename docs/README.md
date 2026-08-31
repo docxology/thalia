@@ -12,5 +12,5 @@ Agent- and reader-facing documentation hub. Start with [`quickstart.md`](quickst
 | [`glossary.md`](glossary.md) | Terms used across code and manuscript |
 | [`provenance_p0.md`](provenance_p0.md) | Frozen, adjudicated provenance-confirmation protocol and promotion boundary |
 
-The full design rationale lives in [`../manuscript/`](../manuscript); the
+The full design rationale lives in [`manuscript/`](manuscript/); the
 runnable, tested implementation lives in [`../src/`](../src).
