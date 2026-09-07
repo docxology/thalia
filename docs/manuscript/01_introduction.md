@@ -41,7 +41,7 @@ The results in this manuscript address RQ1--RQ3. RQ4 is a promotion boundary,
 not a completed result: the corresponding protocols are implemented, but their
 independent acceptance records are not yet present.
 
-![Claim-ceiling map for the four evidence tiers. The schematic distinguishes the observation retained by each tier, the claim it can support, and the stronger interpretation it cannot support without a separate acceptance record. It is a design and release boundary, not an empirical result.](../output/figures/evidence_tier_map.png){#fig:evidence_tier_map width=95%}
+![Claim-ceiling map for the four evidence tiers. The schematic distinguishes the observation retained by each tier, the claim it can support, and the stronger interpretation it cannot support without a separate acceptance record. It is a design and release boundary, not an empirical result.](../../output/figures/evidence_tier_map.png){#fig:evidence_tier_map width=95%}
 
 The central methodological move is to make every handoff explicit. The Inspector
 emits line-addressed evidence windows with grep patterns and confidence metadata.
@@ -51,7 +51,7 @@ The Reasoner returns an answer, a task class, a trace, and source citations. The
 Memory Gate appends the raw turn before evaluating a derived memory delta. The
 Compiler searches a bounded configuration surface and records the full trace.
 
-![Schematic architecture map with no empirical unit, sample size, uncertainty interval, or model dependence. Query and history pass through inspection, retrieval, reasoning, and memory gating; arrows indicate typed data flow. The Compiler is a bounded offline loop with a recorded trace.](../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
+![Schematic architecture map with no empirical unit, sample size, uncertainty interval, or model dependence. Query and history pass through inspection, retrieval, reasoning, and memory gating; arrows indicate typed data flow. The Compiler is a bounded offline loop with a recorded trace.](../../output/figures/thalia_overview.png){#fig:thalia_overview width=95%}
 
 ## Four Research Foundations and the Reproducible Substrate
 

@@ -2,7 +2,8 @@
 # Download the LongMemEval_S benchmark (external, ~277 MB, not committed).
 # Source: huggingface.co/datasets/xiaowu0162/longmemeval-cleaned (Wu et al., 2025).
 set -euo pipefail
-DIR="$(cd "$(dirname "$0")/.." && pwd)/data/longmemeval"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DIR="$ROOT/data/longmemeval"
 mkdir -p "$DIR"
 URL="https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_s_cleaned.json"
 TARGET="$DIR/longmemeval_s.json"
@@ -13,13 +14,19 @@ echo "Downloading LongMemEval_S to $TARGET ..."
 # truncated JSON document.
 curl --fail --show-error --location --retry 5 --retry-delay 2 --retry-connrefused \
   --continue-at - "$URL" -o "$PARTIAL"
-uv run --project "$(cd "$(dirname "$0")/.." && pwd)" python - "$PARTIAL" <<'PY'
+uv run --project "$ROOT" python - "$PARTIAL" "$ROOT" <<'PY'
 import hashlib
 import json
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
+PROJECT_ROOT = pathlib.Path(sys.argv[2])
+for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
+    text = str(_path)
+    if text not in sys.path:
+        sys.path.insert(0, text)
+
 from src.evaluation.longmemeval import validate_longmemeval_payload
 
 try:

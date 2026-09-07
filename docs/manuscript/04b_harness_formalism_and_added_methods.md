@@ -302,7 +302,7 @@ source-index diagnostics therefore strengthen the audit of its lexical support
 proxy while remaining below sentence-level entailment. [@fig:metric_construct_audit]
 shows the finite demo decomposition by task category.
 
-![Metric construct audit for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. Rows are task categories and columns are answer token-F1, the blended citation-support proxy, source-index citation precision, source-index recall, session reachability, and evidence-count efficiency. Cell values are finite category means on a unit interval; the figure is a construct audit with no uncertainty interval or model-quality estimand.](../output/figures/metric_construct_audit.png){#fig:metric_construct_audit width=100%}
+![Metric construct audit for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. Rows are task categories and columns are answer token-F1, the blended citation-support proxy, source-index citation precision, source-index recall, session reachability, and evidence-count efficiency. Cell values are finite category means on a unit interval; the figure is a construct audit with no uncertainty interval or model-quality estimand.](../../output/figures/metric_construct_audit.png){#fig:metric_construct_audit width=100%}
 
 **Structural efficiency and composite score.** With $n=|R|$ ranked evidence
 windows and scale $S_{\mathrm{eff}}={{CONFIG_EFFICIENCY_SCALE}}$:

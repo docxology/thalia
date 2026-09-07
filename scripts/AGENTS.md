@@ -1,57 +1,62 @@
 # `scripts/` — Agent contract
 
-## Thin orchestrator rules
+## Thin-orchestrator contract
 
-1. **No business logic.** Import from `src/`; handle only I/O, path setup, and
-   serialisation. If you are tempted to compute something here, it belongs in `src/`.
-2. **Path setup.** Each script defines
-   `PROJECT_ROOT = Path(__file__).resolve().parent.parent` and inserts
-   `PROJECT_ROOT`, `PROJECT_ROOT/src`, and the repo root onto `sys.path` before
-   importing `src.*`.
-3. **Print output paths.** Every produced artifact path is printed to stdout for
-   manifest collection.
-4. **Determinism.** Scripts must produce byte-identical artifacts on repeated runs
-   (JSON serialised with `sort_keys=True`).
-5. **Fail loudly.** `z_generate_manuscript_variables.py` raises `SystemExit` if the
-   manuscript uses a token the generator does not emit — never silence it.
-6. **Validate after generation.** Run `validate_artifacts.py` after the final
-   generator; it refuses missing, mutated, or unsafe manifest entries.
+Every script in this directory is a thin orchestrator: argparse, the shared
+path bootstrap, I/O/serialisation, and delegated calls into `src/` entrypoints.
+Business, data, plot, and analysis logic lives in `src/` (importable and
+tested); if you are tempted to compute something here, it belongs in `src/`.
 
-## Outputs (all under `output/`, gitignored / regeneratable)
+1. **No business logic.** Import from `src/`; scripts never implement
+   algorithms, metrics, or parsing rules of their own.
+2. **Identical path bootstrap.** Use the exact block from
+   [CONVENTIONS.md](CONVENTIONS.md) (`PROJECT_ROOT` + `PROJECT_ROOT/src` +
+   `PROJECT_ROOT.parent.parent`) before any `src.*` import, which carries
+   `# noqa: E402`. Shell scripts pass the repo root to their embedded Python
+   heredoc, which applies the same block (`get_longmemeval.sh`).
+3. **`main()` does the work.** No module-level side effects: no work before the
+   `if __name__ == "__main__":` guard other than the bootstrap and imports
+   (e.g. `z_generate_manuscript_variables.py` resolves `TEMPLATE_ROOT` inside
+   `main()`, never at import time).
+4. **Print output paths.** Every produced artifact path is printed to stdout
+   for manifest collection.
+5. **Determinism.** Artifacts are byte-identical on repeated runs; JSON is
+   serialised with `indent=2, sort_keys=True`.
+6. **Fail loudly / fail closed.** Never silence `SystemExit` from coverage,
+   crossref, or numeric-lint checks; `validate_artifacts.py` refuses missing,
+   mutated, or unsafe manifest entries and runs after the final generator.
 
-- `data/eval_results.json`, `data/compile_result.json`, `data/seed_sensitivity.json`,
-  `data/compiler_generalization.json`, `data/manuscript_variables.json`
-- `data/demo_result.json`, `reports/verification_summary.json`,
-  `figures/figure_registry.json`, `reports/artifact_manifest.json`,
-  `reports/evaluation_accounting.json`, `reports/evaluation_events.jsonl`,
-  `reports/evaluation_ledger.jsonl`
-- `figures/retriever_comparison.png`, `figures/rrf_sensitivity.png`,
-  `figures/compiler_convergence.png`, `figures/consolidation_curve.png`,
-  `figures/category_breakdown.png`, `figures/evidence_funnel.png`,
-  `figures/noise_scaling.png`, `figures/mmr_tradeoff.png`,
-  `figures/method_ablation.png`
-- `dashboard.html`
+## Inventory (35 scripts; delegation map in [README.md](README.md))
 
-The live v2 campaign scripts write raw rows and atomic checkpoints only to the
-caller-selected external campaign root. They never promote an
-incomplete report into the repository's `data/` layer; promotion requires
-complete accounting plus benchmark, model, generation, cohort, code, and config
-provenance.
+| Role | Scripts | Gate |
+|---|---|---|
+| Deterministic generators + query CLI | `00_preflight.py`, `run_harness_eval.py`, `run_compiler.py`, `run_pipeline.py`, `run_seed_sensitivity.py`, `run_compiler_generalization.py`, `analyze_integrity_advantage.py`, `generate_figures.py`, `z_generate_manuscript_variables.py`, `run_demo.py`, `build_dashboard.py`, `run_query.py` | `dev` extra |
+| Validators / frozen-protocol promoters (fail-closed) | `validate_artifacts.py`, `freeze_quality_protocol.py`, `analyze_quality.py`, `promote_quality_report.py`, `analyze_production_readiness.py`, `promote_production_readiness.py`, `freeze_provenance_p0.py`, `build_provenance_p0_packets.py`, `analyze_provenance_p0.py`, `promote_provenance_p0.py` | `dev` extra |
+| Neural opt-in recorders / campaigns | `run_dspy.py`, `run_neural_eval.py`, `run_learned_retrieval.py`, `run_injection_probe.py`, `run_longmemeval.py`, `run_longmemeval_bottleneck.py`, `run_research_campaign.py`, `run_bottleneck_campaign.py`, `run_quality_campaign.py`, `run_production_readiness.py`, `run_openrouter.py` | `neural` extra + live model/network |
+| External helpers | `get_longmemeval.sh` (benchmark download + validation), `render_pdf_external.py` (optional `../template` PDF) | bash / template project |
 
-The model-quality scripts use a separate caller-selected external root.
-`run_quality_campaign.py` writes raw answer
-and evidence packets, observations, blinded annotation templates, and runtime
-metadata; `analyze_quality.py` writes an external report; and only
-`promote_quality_report.py` may create `data/quality_results.json`. Confirmation
-requires a frozen protocol with pilot-review provenance. A complete or
-below-threshold quality run is never promoted implicitly, and no production
-readiness claim may be inferred from its certificate.
+## Gotchas
 
-`analyze_production_readiness.py` consumes service observations and explicit
-control evidence for latency, cost/throughput, retries/failures, privacy/data
-handling, model pinning, rollback, monitoring, drift, and red-team coverage. Its
-report is operational evidence only; it must not be used to promote or label a
-model-quality result.
-`promote_production_readiness.py` additionally requires an explicit acceptance
-record bound to the readiness certificate before writing committed operational
-evidence.
+- **`z_` scripts run late.** Manuscript hydration happens after figures; the
+  token-coverage, crossref, bibliography, numeric-lint, and claim-ledger checks
+  are fail-closed — never bypass them.
+- **Template injection is optional.** Without `../template` on the path,
+  `z_generate_manuscript_variables.py` prints a `[skip]` line and still writes
+  `output/data/manuscript_variables.json`; source-only generation must work in
+  a clean checkout.
+- **External roots, never implicit promotion.** The campaign/quality/production
+  runners write raw rows, checkpoints, and packets only to caller-selected
+  external roots. Only the dedicated `promote_*` scripts create entries under
+  `data/`, and only behind digest/threshold/acceptance gates. An incomplete or
+  below-threshold run is never promoted implicitly.
+- **`verification_summary.json` hygiene.** Refresh it via `run_demo.py` or
+  `build_dashboard.py` only after a completed strict test/JUnit/coverage run;
+  reconcile `data/claim_ledger.yaml` `test-count`/`test-coverage` from that
+  refreshed summary only.
+- **Large external data.** `get_longmemeval.sh` downloads ~277 MB into
+  `data/longmemeval/`; the benchmark is validated before its `.partial` file is
+  moved into place and is never committed.
+- **Zero-Mock.** No `unittest.mock`/`MagicMock` in scripts or tests; use real
+  data, real SQLite, and real temp files.
+- **Keep `scripts/` clean.** No `__pycache__/`, `.DS_Store`, or deprecated
+  shims; remove a shim only after grep confirms zero callers.

@@ -23,7 +23,7 @@ from src.manuscript_integrity import (
 from src.manuscript_variables import generate_variables
 
 PROJECT = Path(__file__).resolve().parent.parent
-MANUSCRIPT = PROJECT / "manuscript"
+MANUSCRIPT = PROJECT / "docs" / "manuscript"
 STALE_PREFIX = "projects_in_progress"
 
 

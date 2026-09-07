@@ -10,7 +10,7 @@ must be regenerated from source before they are bundled for a release.
 A DSPy + Hermes auto-harness: five composable stages (Inspector, Retriever,
 Reasoner, Memory Gate, Compiler), each a typed `Signature` backed by a `SKILL.md`,
 with a deterministic offline core. See [`README.md`](README.md) for the overview
-and [`manuscript/`](manuscript/) for the full design rationale.
+and [`docs/manuscript/`](docs/manuscript/) for the full design rationale.
 
 ## Architecture invariants (do not break)
 
@@ -181,4 +181,4 @@ locally. Do not let generated or edited text claim otherwise. The in-house
 labelled "-style"/"analogue" — not a fake of `dspy`. When `dspy` is installed,
 `src/dspy_runtime/` runs the *real* dspy `Predict`/optimizer; the deterministic
 core and the headline results remain extractive-bounded as documented. Citations marked
-"as provided" in `manuscript/references.bib` come from the commissioning brief.
+"as provided" in `docs/manuscript/references.bib` come from the commissioning brief.

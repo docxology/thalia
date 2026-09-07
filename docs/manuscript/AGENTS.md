@@ -1,4 +1,4 @@
-# `manuscript/` — Agent contract
+# `docs/manuscript/` — Agent contract
 
 ## Token substitution protocol
 

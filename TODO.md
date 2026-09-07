@@ -24,10 +24,10 @@
 
 ## Major
 
-- [ ] **Manuscript-location migration is uncommitted in this checkout.** The move
+- [x] (2026-08-31) **Manuscript-location migration landed.** The move
       `manuscript/` -> `docs/manuscript/` (28 tracked deletions + untracked new
-      tree) plus matching doc-path fixes were pre-existing local changes at dispatch
-      time (2026-08-31), deliberately left uncommitted by the agent-ergonomics pass
-      per dirty-tree discipline. An agent arriving cold should commit or revert that
-      migration explicitly - until then, docs paths and git history disagree.
-      Verify with: `git status --porcelain -- manuscript/ docs/manuscript/`.
+      tree) plus matching doc-path fixes were verified on disk (all 28 migrated
+      files present; 5 content diffs are intentional path updates), one remaining
+      stale docstring reference fixed (`src/__init__.py`), and committed as the
+      owner-authorized migration commit. Verify with:
+      `git status --porcelain -- manuscript/ docs/manuscript/` (clean).

@@ -135,4 +135,4 @@ The substrate is methodological infrastructure. Its tests and provenance checks
 make a claim auditable. Representativeness of deployed conversations requires a
 separate sampling and validation design.
 
-![Schematic traceability map with no empirical unit, sample size, or uncertainty interval. Each cited foundation maps to one or more THALIA stages; mappings record conceptual reuse, while source-system validation remains in the cited evidence.](../output/figures/foundations_map.png){#fig:foundations_map width=90%}
+![Schematic traceability map with no empirical unit, sample size, or uncertainty interval. Each cited foundation maps to one or more THALIA stages; mappings record conceptual reuse, while source-system validation remains in the cited evidence.](../../output/figures/foundations_map.png){#fig:foundations_map width=90%}

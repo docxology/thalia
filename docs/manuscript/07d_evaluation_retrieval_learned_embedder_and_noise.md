@@ -15,7 +15,7 @@ separate methods. The ablation, MMR, and RRF-weight figures use
 `top_k={{CONFIG_TIGHT_TOP_K}}` and `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`,
 the binding budget inherited from the noise study.
 
-![Composite metric by retrieval mode on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo at the default slack budget (top-k {{CONFIG_TOP_K}}, max-evidence {{CONFIG_MAX_EVIDENCE}}). The observation unit is one deterministic extractive-LM evaluation per example. All three lanes resolve the unambiguous gold evidence identically; the tight-budget, noise, and learned-embedder probes supply the separation diagnostics. Bars are finite descriptive values, and the semantic lane is a hashing surrogate.](../output/figures/retriever_comparison.png){#fig:retriever_comparison width=70%}
+![Composite metric by retrieval mode on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo at the default slack budget (top-k {{CONFIG_TOP_K}}, max-evidence {{CONFIG_MAX_EVIDENCE}}). The observation unit is one deterministic extractive-LM evaluation per example. All three lanes resolve the unambiguous gold evidence identically; the tight-budget, noise, and learned-embedder probes supply the separation diagnostics. Bars are finite descriptive values, and the semantic lane is a hashing surrogate.](../../output/figures/retriever_comparison.png){#fig:retriever_comparison width=70%}
 
 **Scope boundary (stated plainly).** The cited agentic-search study reports that
 grep generally beats vector retrieval in its inline comparisons, with dependence
@@ -67,7 +67,7 @@ representation-level probe. Retrieval recall measures the upstream representatio
 and ranking step; answer quality also depends on how the generator uses surfaced
 evidence [@lewis2020rag].
 
-![Paired recall@1 for {{RESULT_NUM_PROBES}} synthetic paraphrase probes. Each point and bar records whether the gold document was retrieved by the deterministic hashing surrogate or the learned embedder (`{{RESULT_EMBED_MODEL}}` via Ollama); bars show Wilson intervals and the exact paired McNemar comparison reports p={{RESULT_EMBED_PAIRED_P}}. The observation unit is a probe, model provenance is recorded in `data/learned_retrieval.json`, and the panel supports a finite representation diagnostic. The hashing surrogate remains the offline default.](../output/figures/paraphrase_retrieval.png){#fig:paraphrase_retrieval width=60%}
+![Paired recall@1 for {{RESULT_NUM_PROBES}} synthetic paraphrase probes. Each point and bar records whether the gold document was retrieved by the deterministic hashing surrogate or the learned embedder (`{{RESULT_EMBED_MODEL}}` via Ollama); bars show Wilson intervals and the exact paired McNemar comparison reports p={{RESULT_EMBED_PAIRED_P}}. The observation unit is a probe, model provenance is recorded in `data/learned_retrieval.json`, and the panel supports a finite representation diagnostic. The hashing surrogate remains the offline default.](../../output/figures/paraphrase_retrieval.png){#fig:paraphrase_retrieval width=60%}
 
 ### Retrieval Under Distractor Noise {#sec:eval-noise}
 

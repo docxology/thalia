@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TEMPLATE_ROOT = None
 
-for _path in (PROJECT_ROOT, PROJECT_ROOT / "src"):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
+    text = str(_path)
+    if text not in sys.path:
+        sys.path.insert(0, text)
 
 from src.manuscript_integrity import (  # noqa: E402
     check_bibliography_integrity,
@@ -29,16 +29,15 @@ from src.formalism_traceability import write_traceability_report  # noqa: E402
 from src.manuscript_variables import generate_variables  # noqa: E402
 from src.provenance import write_artifact_manifest  # noqa: E402
 
-TEMPLATE_ROOT = find_template_root(starts=(Path.cwd(), PROJECT_ROOT))
-if TEMPLATE_ROOT is not None and str(TEMPLATE_ROOT) not in sys.path:
-    sys.path.insert(0, str(TEMPLATE_ROOT))
-
 
 def main() -> Path:
     """Generate variables, verify manuscript token coverage, and serialise."""
+    template_root = find_template_root(starts=(Path.cwd(), PROJECT_ROOT))
+    if template_root is not None and str(template_root) not in sys.path:
+        sys.path.insert(0, str(template_root))
     output_dir = PROJECT_ROOT / "output" / "data"
     output_dir.mkdir(parents=True, exist_ok=True)
-    manuscript_dir = PROJECT_ROOT / "manuscript"
+    manuscript_dir = PROJECT_ROOT / "docs" / "manuscript"
 
     variables = generate_variables()
     validate_claim_ledger(load_claim_ledger(), project_root=PROJECT_ROOT)
@@ -73,7 +72,7 @@ def main() -> Path:
     )
     manifest_path = write_artifact_manifest(PROJECT_ROOT)
 
-    if TEMPLATE_ROOT is None:
+    if template_root is None:
         print(str(output_path))
         print(str(manifest_path))
         print(

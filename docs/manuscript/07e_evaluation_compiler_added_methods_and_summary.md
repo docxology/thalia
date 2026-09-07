@@ -50,7 +50,7 @@ that forced per-turn consolidation can degrade utility as memory accumulates and
 that episodic-first gating can preserve a useful baseline. The schematic carries
 no observed memory trajectory.
 
-![MIPRO-style compiler trace for {{RESULT_NUM_CANDIDATES}} candidate configurations on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a candidate configuration; each candidate reaches composite {{RESULT_COMPILED_SCORE}}, and the inset shows the constant weighted answer token-F1, citation-support, and efficiency components. The selected top-k {{RESULT_COMPILED_TOP_K}} and max-evidence {{RESULT_COMPILED_MAX_EVIDENCE}} follow the deterministic first-achieving tie rule. The trace is a finite project-source diagnostic.](../output/figures/compiler_convergence.png){#fig:compiler_convergence width=70%}
+![MIPRO-style compiler trace for {{RESULT_NUM_CANDIDATES}} candidate configurations on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a candidate configuration; each candidate reaches composite {{RESULT_COMPILED_SCORE}}, and the inset shows the constant weighted answer token-F1, citation-support, and efficiency components. The selected top-k {{RESULT_COMPILED_TOP_K}} and max-evidence {{RESULT_COMPILED_MAX_EVIDENCE}} follow the deterministic first-achieving tie rule. The trace is a finite project-source diagnostic.](../../output/figures/compiler_convergence.png){#fig:compiler_convergence width=70%}
 
 The GEPA-style optimizer is designed to move when a harder distribution exposes a
 weak component: it reflects on that component and mutates accordingly.
@@ -61,11 +61,11 @@ mutation. The composite plateaus on the easy set while the component trace recor
 the optimizer's decision path. Readers can inspect the mutation strategy directly
 in the generated trace and its provenance fields.
 
-![GEPA-style component trajectory over a deterministic compiler run on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an optimizer iteration; solid lines show answer token-F1, citation support, and efficiency, the dashed line shows the composite, and the open halo marks the weakest component selected for the next bounded mutation. The trace records an algorithmic decision path and carries no sampling estimate.](../output/figures/gepa_trajectory.png){#fig:gepa_trajectory width=70%}
+![GEPA-style component trajectory over a deterministic compiler run on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an optimizer iteration; solid lines show answer token-F1, citation support, and efficiency, the dashed line shows the composite, and the open halo marks the weakest component selected for the next bounded mutation. The trace records an algorithmic decision path and carries no sampling estimate.](../../output/figures/gepa_trajectory.png){#fig:gepa_trajectory width=70%}
 
-![Weighted RRF sensitivity on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lexical weight; the line reports composite score across the feasible weight sweep, with the highest tied settings and the change from the maximum annotated. The slack default budget yields a flat score because every setting retains the same gold evidence. This finite deterministic sweep describes budget-conditioned ranking behaviour.](../output/figures/rrf_sensitivity.png){#fig:rrf_sensitivity width=70%}
+![Weighted RRF sensitivity on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lexical weight; the line reports composite score across the feasible weight sweep, with the highest tied settings and the change from the maximum annotated. The slack default budget yields a flat score because every setting retains the same gold evidence. This finite deterministic sweep describes budget-conditioned ranking behaviour.](../../output/figures/rrf_sensitivity.png){#fig:rrf_sensitivity width=70%}
 
-![Mechanism schematic for memory utility across turns. The curves encode the design expectation that forced per-turn consolidation can accumulate harmful derived memory while episodic-first gating preserves a useful trajectory. Values are illustrative indices tied to the mechanism discussion in [@zhang2026memory]; the panel contains no observed trajectory, sample, model estimate, or population estimand.](../output/figures/consolidation_curve.png){#fig:consolidation width=70%}
+![Mechanism schematic for memory utility across turns. The curves encode the design expectation that forced per-turn consolidation can accumulate harmful derived memory while episodic-first gating preserves a useful trajectory. Values are illustrative indices tied to the mechanism discussion in [@zhang2026memory]; the panel contains no observed trajectory, sample, model estimate, or population estimand.](../../output/figures/consolidation_curve.png){#fig:consolidation width=70%}
 
 ### Added-Method Diagnostics {#sec:eval-added}
 
@@ -86,7 +86,7 @@ penalty because dissimilarity can evict the discriminative span from the retaine
 evidence; the curve reaches its plateau once relevance receives a positive weight.
 The slack budget supplies the flat reference regime.
 
-![Evidence narrowing funnel for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a query; bars show mean line counts at raw session, Inspector-window, ranked-evidence, and cited-source boundaries, while annotations report Inspector and citation retention. The panel measures context narrowing and source exposure; answer quality uses the separate token-F1 and support estimands.](../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
+![Evidence narrowing funnel for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is a query; bars show mean line counts at raw session, Inspector-window, ranked-evidence, and cited-source boundaries, while annotations report Inspector and citation retention. The panel measures context narrowing and source exposure; answer quality uses the separate token-F1 and support estimands.](../../output/figures/evidence_funnel.png){#fig:evidence_funnel width=70%}
 
 The funnel is a mean view. [@fig:pipeline_flow] shows the per-example evidence
 path for the {{RESULT_NUM_EXAMPLES}} demo examples, one per task category, with
@@ -95,9 +95,9 @@ sources. Each bar triplet exposes the exact transition contributing to the funne
 means. A matched ranked and cited count indicates full source selection for that
 example; a lower cited count identifies a concrete support gap for inspection.
 
-![Per-example evidence path across pipeline stages for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an example: blue bars show Inspector windows, green bars show hybrid ranked evidence, and pink bars show Reasoner citations for each task category. The annotation reports citation retention and marks ranked-to-cited gaps. The panel is a deterministic source-exposure diagnostic.](../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
+![Per-example evidence path across pipeline stages for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. The observation unit is an example: blue bars show Inspector windows, green bars show hybrid ranked evidence, and pink bars show Reasoner citations for each task category. The annotation reports citation retention and marks ranked-to-cited gaps. The panel is a deterministic source-exposure diagnostic.](../../output/figures/pipeline_flow.png){#fig:pipeline_flow width=70%}
 
-![Composite score by task category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo, with one example per category. Each bar is the declared weighted combination of answer token-F1, citation-support, and evidence-count efficiency. The observation unit is a generated example and the panel is a deterministic diagnostic of category-specific failure modes.](../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
+![Composite score by task category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo, with one example per category. Each bar is the declared weighted combination of answer token-F1, citation-support, and evidence-count efficiency. The observation unit is a generated example and the panel is a deterministic diagnostic of category-specific failure modes.](../../output/figures/category_breakdown.png){#fig:category_breakdown width=70%}
 
 The composite is a sum of three declared components. [@fig:category_components]
 decomposes each category into the weighted answer token-F1, citation-support, and
@@ -107,11 +107,11 @@ and efficiency contributions remain separately visible. The pattern is consisten
 with the answer ceiling documented in [@sec:eval-neural] and identifies the
 component that a stronger generator would need to change.
 
-![Weighted component audit by category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. Stacks show {{CONFIG_WEIGHT_ACC}}·answer token-F1 in blue, {{CONFIG_WEIGHT_GROUND}}·citation-support proxy in green, and {{CONFIG_WEIGHT_EFF}}·evidence-count efficiency in pink; their sum equals the composite in [@eq:composite]. The observation unit is a generated example, and the extractive responder bounds the answer token-F1 component.](../output/figures/category_components.png){#fig:category_components width=70%}
+![Weighted component audit by category for the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo. Stacks show {{CONFIG_WEIGHT_ACC}}·answer token-F1 in blue, {{CONFIG_WEIGHT_GROUND}}·citation-support proxy in green, and {{CONFIG_WEIGHT_EFF}}·evidence-count efficiency in pink; their sum equals the composite in [@eq:composite]. The observation unit is a generated example, and the extractive responder bounds the answer token-F1 component.](../../output/figures/category_components.png){#fig:category_components width=70%}
 
-![Composite score by retrieval lane and distractor level on the fixed synthetic demo. Lexical false-friend lines are appended under the tight budget (`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`); the observation unit is an example-level score aggregated across the six demo cases. The semantic trace uses the deterministic hashing surrogate, so the ordering describes this finite mechanical probe and its recorded budget regime.](../output/figures/noise_scaling.png){#fig:noise_scaling width=70%}
+![Composite score by retrieval lane and distractor level on the fixed synthetic demo. Lexical false-friend lines are appended under the tight budget (`top_k={{CONFIG_TIGHT_TOP_K}}`, `max_evidence={{CONFIG_TIGHT_MAX_EVIDENCE}}`); the observation unit is an example-level score aggregated across the six demo cases. The semantic trace uses the deterministic hashing surrogate, so the ordering describes this finite mechanical probe and its recorded budget regime.](../../output/figures/noise_scaling.png){#fig:noise_scaling width=70%}
 
-![MMR composite across the full diversity-to-relevance lambda sweep on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lambda setting; the pure-diversity endpoint carries the measured selection penalty, and the curve reaches its plateau as relevance receives weight. The slack budget supplies the flat reference regime.](../output/figures/mmr_tradeoff.png){#fig:mmr_tradeoff width=70%}
+![MMR composite across the full diversity-to-relevance lambda sweep on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a tested lambda setting; the pure-diversity endpoint carries the measured selection penalty, and the curve reaches its plateau as relevance receives weight. The slack budget supplies the flat reference regime.](../../output/figures/mmr_tradeoff.png){#fig:mmr_tradeoff width=70%}
 
 ### Added-Method Ablations {#sec:eval-ablation}
 
@@ -132,7 +132,7 @@ the base configuration on this small set. Memory recall uses a separate populate
 episodic-store contract; recall and harness tests exercise a fact held only in the
 episodic store and verify its appearance in answer citations.
 
-![Added-method ablation on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a configuration; bars show composite for the base pipeline, query expansion, recency weighting, MMR, and the combined setting. Recency weighting is highest in this run, expansion is lower, and MMR is near the base. The extractive responder and hashing surrogate define the evidence tier.](../output/figures/method_ablation.png){#fig:method_ablation width=70%}
+![Added-method ablation on the fixed {{RESULT_NUM_EXAMPLES}}-example synthetic demo under the tight retrieval budget. The observation unit is a configuration; bars show composite for the base pipeline, query expansion, recency weighting, MMR, and the combined setting. Recency weighting is highest in this run, expansion is lower, and MMR is near the base. The extractive responder and hashing surrogate define the evidence tier.](../../output/figures/method_ablation.png){#fig:method_ablation width=70%}
 
 ### Integrity-Advantage Screen: Current Findings and Open Tests {#sec:eval-integrity-advantage}
 
@@ -144,7 +144,7 @@ differences. The compiler comparison resamples seed
 clusters. The neural comparison uses its recorded paired aggregate. Aggregate
 comparisons without matched rows remain point estimates.
 
-![Endpoint-level integrity-advantage screen. The observation units remain separate: binary probe effects use direction-normalized rate differences; continuous panels retain composite, token-F1, and context-policy units. Filled markers show recorded intervals, open markers show point-only aggregates, and the lower panel retains the two condition rates with Wilson intervals. Positive effects favor the left condition. Rows are not pooled. The legacy injection “auditability” row is a lexical cited-excerpt/source-exposure proxy, not a source-record-recovery or claim-level-auditability test; raw and exploratory-Holm paired p-values are displayed where available.](../output/figures/integrity_advantage_audit.png){#fig:integrity_advantage_audit width=100%}
+![Endpoint-level integrity-advantage screen. The observation units remain separate: binary probe effects use direction-normalized rate differences; continuous panels retain composite, token-F1, and context-policy units. Filled markers show recorded intervals, open markers show point-only aggregates, and the lower panel retains the two condition rates with Wilson intervals. Positive effects favor the left condition. Rows are not pooled. The legacy injection “auditability” row is a lexical cited-excerpt/source-exposure proxy, not a source-record-recovery or claim-level-auditability test; raw and exploratory-Holm paired p-values are displayed where available.](../../output/figures/integrity_advantage_audit.png){#fig:integrity_advantage_audit width=100%}
 
 The strongest current screen row is the legacy lexical cited-excerpt/source-exposure
 proxy under the recorded injection probes. THALIA's cited excerpts contain the

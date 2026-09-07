@@ -113,7 +113,7 @@ def _check_test_anchor(anchor: str, root: Path, identifier: str) -> Traceability
 def _all_manuscript_text(root: Path) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8")
-        for path in sorted((root / "manuscript").glob("[0-9]*.md"))
+        for path in sorted((root / "docs" / "manuscript").glob("[0-9]*.md"))
     )
 
 

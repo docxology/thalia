@@ -9,7 +9,7 @@ hybrid (BM25/grep + hashing-embedding + weighted RRF). The pipeline records
 bounded optimization traces through structured search (MIPRO-style) and
 trace-reflective evolution (GEPA-style) rather than ad-hoc prompt tweaking.
 
-The full design rationale lives in ``manuscript/``; this package is the runnable,
+The full design rationale lives in ``docs/manuscript/``; this package is the runnable,
 deterministic, fully-tested implementation.
 """
 

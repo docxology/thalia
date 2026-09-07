@@ -36,9 +36,9 @@ from the contracts.
 
 This spine preserves the stable auto-harness design anchor. The detailed method contract, stage-by-stage design, formalism, added-method diagnostics, and implementation traceability now live in adjacent `04a_` through `04c_` modules.
 
-![Schematic lifecycle with no empirical unit, sample size, uncertainty interval, or model comparison. Every raw episode is appended to SQLite EpisodicStore; the dual-key gate controls whether a derived MEMORY.md delta is written, preserving the source turn.](../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
+![Schematic lifecycle with no empirical unit, sample size, uncertainty interval, or model comparison. Every raw episode is appended to SQLite EpisodicStore; the dual-key gate controls whether a derived MEMORY.md delta is written, preserving the source turn.](../../output/figures/memory_lifecycle.png){#fig:memory_lifecycle width=80%}
 
-![Schematic GEPA-style audit loop with no empirical unit, sample size, uncertainty interval, or external model dependence. The Compiler evaluates a configuration, identifies the weakest metric component, applies a bounded mutation, and records the complete trace as described in [@sec:eval-compiler].](../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
+![Schematic GEPA-style audit loop with no empirical unit, sample size, uncertainty interval, or external model dependence. The Compiler evaluates a configuration, identifies the weakest metric component, applies a bounded mutation, and records the complete trace as described in [@sec:eval-compiler].](../../output/figures/gepa_evolution_loop.png){#fig:gepa_evolution_loop width=80%}
 
 Modular harness-design files:
 

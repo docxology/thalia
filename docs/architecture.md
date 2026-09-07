@@ -46,5 +46,5 @@ session history + query
 5. Resource safety: `Session` and `EpisodicStore` implement `__enter__`/`__exit__`
    so connections are released even when callers exit via exception.
 
-See [`methods.md`](methods.md) for the algorithms and `manuscript/08_reference_architecture.md`
+See [`methods.md`](methods.md) for the algorithms and `docs/manuscript/08_reference_architecture.md`
 for the full file map and design-principle table.

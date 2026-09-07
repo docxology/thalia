@@ -60,7 +60,7 @@ def main() -> int:
         ):
             raise ValueError("manuscript variables must be a string-to-string mapping")
         injected = PROJECT_ROOT / "output" / "manuscript"
-        files = verify_injected_manuscript(PROJECT_ROOT / "manuscript", injected, variables)
+        files = verify_injected_manuscript(PROJECT_ROOT / "docs" / "manuscript", injected, variables)
         print(f"injection_checked={len(files)} exact=True")
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         injection_ok = False
@@ -68,8 +68,8 @@ def main() -> int:
     bibliography_ok = True
     try:
         check_bibliography_integrity(
-            PROJECT_ROOT / "manuscript",
-            PROJECT_ROOT / "manuscript" / "references.bib",
+            PROJECT_ROOT / "docs" / "manuscript",
+            PROJECT_ROOT / "docs" / "manuscript" / "references.bib",
         )
     except ValueError as exc:
         bibliography_ok = False
