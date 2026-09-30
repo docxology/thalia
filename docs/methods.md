@@ -1,7 +1,7 @@
 # Methods: Executable Contracts and Evidence Boundaries
 
 Deterministic-core methods below are unit-tested and formally specified. Equations
-appear in `manuscript/04b_harness_formalism_and_added_methods.md`; the machine-
+appear in `docs/manuscript/04b_harness_formalism_and_added_methods.md`; the machine-
 checked registry at `data/paper_audit.yaml` is the implementer's view of the same
 contracts.
 

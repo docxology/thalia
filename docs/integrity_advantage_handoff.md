@@ -267,7 +267,7 @@ record.
    family, stopping rule, and missing-row policy.
 2. Pair methods on the same probe/question before calculating a delta.
 3. Use the canonical notation in
-   [`manuscript/12_supplemental_notation.md`](../manuscript/12_supplemental_notation.md):
+   [`docs/manuscript/12_supplemental_notation.md`](../manuscript/12_supplemental_notation.md):
    (Y_q), (Delta_q), (p_{\mathrm{Holm}}), (n_{\mathrm{obs}}), and
    (n_{\mathrm{cluster}}).
 4. Use Wilson intervals for marginal binary rates, exact McNemar tests for paired

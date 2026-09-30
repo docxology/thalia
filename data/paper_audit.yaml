@@ -12,7 +12,7 @@ interpretation_policy:
   paired_continuous_tests: sign-flip randomization diagnostics require paired-difference exchangeability; exhaustive enumeration is limited to small paired samples
   paired_binary_tests: exact two-sided McNemar conditional on discordant pairs
 notation:
-  supplemental_section: manuscript/12_supplemental_notation.md
+  supplemental_section: docs/manuscript/12_supplemental_notation.md
   symbols:
     - {symbol: 'T(x)', meaning: ordered lowercase alphanumeric token sequence}
     - {symbol: 'U(x)', meaning: set of distinct tokens in T(x)}
@@ -141,7 +141,7 @@ formalisms:
     equation: eq:tokenizer
     implementation: src/module.py::tokenize
     tests: tests/test_module.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: token sequence
@@ -157,7 +157,7 @@ formalisms:
     equation: eq:typed-composition
     implementation: src/pipeline.py::Pipeline
     tests: tests/test_pipeline.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: stage invocation
@@ -174,7 +174,7 @@ formalisms:
     equation: eq:compiler-selection
     implementation: src/compiler/mipro.py::MIPROCompiler
     tests: tests/test_mipro.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: candidate configuration
@@ -192,7 +192,7 @@ formalisms:
     equation: eq:token-f1
     implementation: src/compiler/metrics.py::token_f1
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: example
@@ -209,7 +209,7 @@ formalisms:
     equation: eq:bm25
     implementation: src/retrieval/lexical.py::BM25Index
     tests: tests/test_lexical.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: query-document score
@@ -227,7 +227,7 @@ formalisms:
     equation: eq:hash-cosine
     implementation: [src/retrieval/semantic.py::embed, src/retrieval/semantic.py::cosine]
     tests: tests/test_semantic.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: query-document similarity
@@ -244,7 +244,7 @@ formalisms:
     equation: eq:rrf
     implementation: src/retrieval/fusion.py::rrf_fuse
     tests: tests/test_fusion.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: candidate chunk
@@ -262,7 +262,7 @@ formalisms:
     equation: eq:mmr
     implementation: src/retrieval/mmr.py::mmr_rerank
     tests: tests/test_mmr.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: candidate ordering
@@ -280,7 +280,7 @@ formalisms:
     equation: eq:inspector-relevance
     implementation: src/stages/inspector.py::_relevance
     tests: tests/test_inspector.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: transcript record
@@ -297,7 +297,7 @@ formalisms:
     equation: eq:inspector-partition
     implementation: src/stages/inspector.py::Inspector._coarse_block_filter
     tests: tests/test_inspector.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: transcript block
@@ -314,7 +314,7 @@ formalisms:
     equation: eq:prf
     implementation: src/retrieval/expansion.py::expand_query
     tests: tests/test_expansion.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: expanded query
@@ -331,7 +331,7 @@ formalisms:
     equation: eq:recency
     implementation: src/stages/retriever.py::Retriever._apply_recency
     tests: tests/test_retriever.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: candidate score
@@ -349,7 +349,7 @@ formalisms:
     equation: eq:evidence-budget
     implementation: src/stages/retriever.py::estimate_tokens
     tests: tests/test_retriever.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: project_source
     status: executable_contract
     unit: ranked evidence list
@@ -366,7 +366,7 @@ formalisms:
     equation: eq:grounding
     implementation: src/compiler/metrics.py::citation_support_proxy
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
     status: executable_contract
     unit: evaluation example
@@ -383,7 +383,7 @@ formalisms:
     equation: eq:efficiency
     implementation: src/compiler/metrics.py::efficiency_score
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
     status: executable_contract
     unit: evaluation example
@@ -400,7 +400,7 @@ formalisms:
     equation: eq:citation-precision
     implementation: src/compiler/metrics.py::citation_precision
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
     status: executable_contract
     unit: evaluation example
@@ -417,7 +417,7 @@ formalisms:
     equation: eq:source-recall
     implementation: src/compiler/metrics.py::source_recall
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
     status: executable_contract
     unit: evaluation example
@@ -434,7 +434,7 @@ formalisms:
     equation: eq:composite
     implementation: src/compiler/metrics.py::harness_metric
     tests: tests/test_metrics.py
-    manuscript_sections: manuscript/04b_harness_formalism_and_added_methods.md
+    manuscript_sections: docs/manuscript/04b_harness_formalism_and_added_methods.md
     evidence_tier: finite_generated_evaluation
     status: executable_contract
     unit: evaluation example
@@ -451,7 +451,7 @@ formalisms:
     equation: none
     implementation: src/evaluation/statistics.py::clustered_bootstrap_mean
     tests: tests/test_statistics.py
-    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    manuscript_sections: docs/manuscript/07a_evaluation_setup_headline_and_scaling.md
     evidence_tier: finite_generated_evaluation
     status: descriptive_resampling
     unit: seed-stratum cluster
@@ -469,7 +469,7 @@ formalisms:
     equation: none
     implementation: src/evaluation/dataset.py::build_research_dataset
     tests: tests/test_scaling.py
-    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    manuscript_sections: docs/manuscript/07a_evaluation_setup_headline_and_scaling.md
     evidence_tier: finite_generated_evaluation
     status: executable_construct
     unit: generated example
@@ -487,7 +487,7 @@ formalisms:
     equation: none
     implementation: src/evaluation/accounting.py::ledger_row
     tests: tests/test_accounting.py
-    manuscript_sections: manuscript/07a_evaluation_setup_headline_and_scaling.md
+    manuscript_sections: docs/manuscript/07a_evaluation_setup_headline_and_scaling.md
     evidence_tier: project_source
     status: executable_artifact_contract
     unit: example-method evaluation row
@@ -505,7 +505,7 @@ formalisms:
     equation: none
     implementation: src/evaluation/quality.py::build_quality_report
     tests: tests/test_quality.py
-    manuscript_sections: manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
+    manuscript_sections: docs/manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
     evidence_tier: project_source
     status: executable_contract
     unit: question-condition-output with two blinded expert raters and expert adjudication
@@ -523,7 +523,7 @@ formalisms:
     equation: eq:quality-primary
     implementation: src/evaluation/quality.py::build_quality_report
     tests: tests/test_quality.py::test_quality_report_requires_two_judges_and_adjudication
-    manuscript_sections: manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
+    manuscript_sections: docs/manuscript/07b_evaluation_real_benchmark_and_bottleneck.md
     evidence_tier: project_source
     status: executable_contract
     unit: held-out confirmatory question
@@ -541,7 +541,7 @@ formalisms:
     equation: none
     implementation: src/evaluation/production_readiness.py::build_production_readiness_report
     tests: tests/test_production_readiness.py
-    manuscript_sections: manuscript/11_validation.md
+    manuscript_sections: docs/manuscript/11_validation.md
     evidence_tier: project_source
     status: executable_contract
     unit: service observation and operational control

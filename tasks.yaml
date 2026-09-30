@@ -58,7 +58,7 @@ tasks:
   - thalia-10
   tags:
   - docs
-  notes: 'Completed across docs/architecture.md, docs/configuration.md, docs/quickstart.md, docs/glossary.md, docs/methods.md, README.md, and manuscript/10_operability.md; added Pipeline, context managers, serialisation, py.typed, versioning, and coverage-report commands.'
+  notes: 'Completed across docs/architecture.md, docs/configuration.md, docs/quickstart.md, docs/glossary.md, docs/methods.md, README.md, and docs/manuscript/10_operability.md; added Pipeline, context managers, serialisation, py.typed, versioning, and coverage-report commands.'
 
 - id: thalia-12
   title: Update claim_ledger + experiment_plan + domain_profile for new artifacts

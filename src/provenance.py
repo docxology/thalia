@@ -2,7 +2,7 @@
 
 The template validator consumes project-local registries from ``output/``.  These
 helpers write those registries from source code so the files are regenerable and
-the manuscript/render gates do not depend on hand-edited output artifacts.
+the docs/manuscript/render gates do not depend on hand-edited output artifacts.
 """
 
 from __future__ import annotations

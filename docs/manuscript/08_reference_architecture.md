@@ -59,7 +59,7 @@ thalia/
 +-- skills/                          # thalia-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
 +-- scripts/                         # thin orchestrators (eval, compile, figures, dashboard, preflight, tokens, run_query)
 +-- tests/                           # Zero-Mock suite, one file per module
-+-- manuscript/                      # this document (sections 00-11, 99) + config/preamble/refs
++-- docs/manuscript/                      # this document (sections 00-11, 99) + config/preamble/refs
 ```
 
 ## Stage, Signature, Skill, and Test Map {#sec:ref-map}
