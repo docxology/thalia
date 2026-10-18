@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 from .compiler.metrics import (
@@ -93,10 +94,10 @@ def _fmt_p(value: float) -> str:
 
 def _coverage_gate() -> int:
     """Read the enforced ``src/`` coverage gate from pyproject.toml (no hard-coding)."""
-    try:
-        import tomllib  # Python >= 3.11
-    except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
-        import tomli as tomllib  # type: ignore[import-not-found,no-redef]
+    if sys.version_info >= (3, 11):
+        import tomllib
+    else:
+        import tomli as tomllib
 
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text())
