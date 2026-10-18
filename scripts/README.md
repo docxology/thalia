@@ -85,10 +85,12 @@ before testing. CI retains the original Python matrix and90% coverage gate.
 The optional live injection test belongs to the existing availability-gated
 neural class; its assertions are unchanged.
 
-The publication validator also requires a resolved manuscript. CI checks out
+The publication validator also requires a resolved manuscript. CI fetches
 Template source `4670c48cc490636455f2eac09ba4396baed9ffd7`, prepares its locked
 Python3.14 environment, and invokes `z_generate_manuscript_variables.py` from
-that SDK directory. This consumes a pinned implementation without asserting a
+that SDK directory under the runner temporary directory, outside the consumer
+project scanned by the documentation checks. The exact fetched commit is
+verified before use. This consumes a pinned implementation without asserting a
 Template4.0.2 release. Standalone token generation retains its explicit optional
 injection status. Exact test counts and percentages remain in real JUnit,
 coverage and refreshed verification reports; per-run values do not belong in

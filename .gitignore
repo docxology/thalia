@@ -23,6 +23,3 @@ data/longmemeval/
 
 # Environment / secrets.
 .env
-
-# Pinned CI manuscript injection SDK checkout.
-.ci-template-sdk/

@@ -35,15 +35,18 @@ jobs:
         run: uv run --project . --extra dev mypy src
       - name: Run lint check
         run: uv run --project . --extra dev ruff check src tests scripts
-      - name: Check out the pinned manuscript injection SDK
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
-        with:
-          repository: docxology/template
-          ref: 4670c48cc490636455f2eac09ba4396baed9ffd7
-          path: .ci-template-sdk
-          persist-credentials: false
+      - name: Fetch the pinned manuscript injection SDK outside the project
+        run: |
+          sdk="$(mktemp -d "$RUNNER_TEMP/thalia-template-sdk.XXXXXX")"
+          git init "$sdk"
+          git -C "$sdk" remote add origin https://github.com/docxology/template.git
+          git -C "$sdk" fetch --depth 1 origin 4670c48cc490636455f2eac09ba4396baed9ffd7
+          git -C "$sdk" checkout --detach FETCH_HEAD
+          test "$(git -C "$sdk" rev-parse HEAD)" = 4670c48cc490636455f2eac09ba4396baed9ffd7
+          printf 'THALIA_TEMPLATE_SDK=%s\n' "$sdk" >> "$GITHUB_ENV"
+
       - name: Prepare the SDK locked Python 3.14 environment
-        run: uv sync --project .ci-template-sdk --python 3.14 --locked
+        run: uv sync --project "$THALIA_TEMPLATE_SDK" --python 3.14 --locked
       - name: Download and validate the real public benchmark
         run: bash scripts/get_longmemeval.sh
       - name: Generate actual test artifact prerequisites
@@ -56,8 +59,8 @@ jobs:
           uv run --project . --extra dev python scripts/run_pipeline.py
           uv run --project . --extra dev python scripts/generate_figures.py
           (
-            cd .ci-template-sdk
-            uv run --locked --python 3.14 python ../scripts/z_generate_manuscript_variables.py
+            cd "$THALIA_TEMPLATE_SDK"
+            uv run --locked --python 3.14 python "$GITHUB_WORKSPACE/scripts/z_generate_manuscript_variables.py"
           )
           uv run --project . --extra dev python scripts/run_demo.py
           uv run --project . --extra dev python scripts/build_dashboard.py
@@ -105,15 +108,18 @@ jobs:
           uv run --no-project --isolated
           --with numpy --with matplotlib --with pyyaml --with tomli
           python -c 'import src.compiler.metrics; print("core import ok")'
-      - name: Check out the pinned manuscript injection SDK
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
-        with:
-          repository: docxology/template
-          ref: 4670c48cc490636455f2eac09ba4396baed9ffd7
-          path: .ci-template-sdk
-          persist-credentials: false
+      - name: Fetch the pinned manuscript injection SDK outside the project
+        run: |
+          sdk="$(mktemp -d "$RUNNER_TEMP/thalia-template-sdk.XXXXXX")"
+          git init "$sdk"
+          git -C "$sdk" remote add origin https://github.com/docxology/template.git
+          git -C "$sdk" fetch --depth 1 origin 4670c48cc490636455f2eac09ba4396baed9ffd7
+          git -C "$sdk" checkout --detach FETCH_HEAD
+          test "$(git -C "$sdk" rev-parse HEAD)" = 4670c48cc490636455f2eac09ba4396baed9ffd7
+          printf 'THALIA_TEMPLATE_SDK=%s\n' "$sdk" >> "$GITHUB_ENV"
+
       - name: Prepare the SDK locked Python 3.14 environment
-        run: uv sync --project .ci-template-sdk --python 3.14 --locked
+        run: uv sync --project "$THALIA_TEMPLATE_SDK" --python 3.14 --locked
       - name: Generate and validate deterministic artifacts
         run: |
           PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_harness_eval.py
@@ -124,8 +130,8 @@ jobs:
           uv run --project . --extra dev python scripts/run_pipeline.py
           uv run --project . --extra dev python scripts/generate_figures.py
           (
-            cd .ci-template-sdk
-            uv run --locked --python 3.14 python ../scripts/z_generate_manuscript_variables.py
+            cd "$THALIA_TEMPLATE_SDK"
+            uv run --locked --python 3.14 python "$GITHUB_WORKSPACE/scripts/z_generate_manuscript_variables.py"
           )
           uv run --project . --extra dev python scripts/run_demo.py
           uv run --project . --extra dev python scripts/build_dashboard.py
