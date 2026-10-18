@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -392,10 +393,10 @@ def _sha256(path: Path) -> str:
 
 
 def _coverage_gate() -> int:
-    try:
-        import tomllib  # Python >= 3.11
-    except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
-        import tomli as tomllib  # type: ignore[import-not-found,no-redef]
+    if sys.version_info >= (3, 11):
+        import tomllib
+    else:
+        import tomli as tomllib
 
     pyproject = PROJECT_ROOT / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
