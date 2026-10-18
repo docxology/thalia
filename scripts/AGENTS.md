@@ -51,8 +51,8 @@ tested); if you are tempted to compute something here, it belongs in `src/`.
   below-threshold run is never promoted implicitly.
 - **`verification_summary.json` hygiene.** Refresh it via `run_demo.py` or
   `build_dashboard.py` only after a completed strict test/JUnit/coverage run;
-  reconcile `data/claim_ledger.yaml` `test-count`/`test-coverage` from that
-  refreshed summary only.
+  retain observed counts and percentages in that generated summary. They are
+  volatile run observations, not fixed numeric manuscript-ledger entries.
 - **Large external data.** `get_longmemeval.sh` downloads ~277 MB into
   `data/longmemeval/`; the benchmark is validated before its `.partial` file is
   moved into place and is never committed.

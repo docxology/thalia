@@ -79,22 +79,6 @@ claims:
     source_tier: data_source
     freshness: active
     artifact_path: src/evaluation/dataset.py
-  - claim_id: test-count
-    kind: number
-    value: 854
-    source: latest strict pytest collected item count after the manuscript-injection and publication-size audit refresh
-    source_tier: generated_metric
-    freshness: active
-    artifact_path: output/reports/verification_summary.json
-    artifact_field: command_results.tests.collected
-  - claim_id: test-coverage
-    kind: number
-    value: 90.49
-    source: latest strict pytest --cov coverage percentage after the manuscript-injection and publication-size audit refresh
-    source_tier: generated_metric
-    freshness: active
-    artifact_path: output/reports/verification_summary.json
-    artifact_field: command_results.tests.coverage_percent
   - claim_id: v2-campaign-schema
     kind: number
     value: 1

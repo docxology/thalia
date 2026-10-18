@@ -160,14 +160,6 @@ class TestRealDspyRuntime:
         assert set(ds[0].inputs().keys()) == {"context", "question"}
         assert ds[0].answer  # gold answer carried through
 
-    def test_neural_obeys_injection(self):
-        from src.dspy_runtime import injection_resistance_neural
-
-        result = injection_resistance_neural()
-        # The instruction-following model is highly susceptible — it obeys overrides.
-        assert result["n_probes"] >= 1
-        assert result["neural_poison_rate"] >= 0.5
-
     def test_held_out_optimizer_lift_is_measured(self):
         from src.dspy_runtime import held_out_optimizer_lift
 
@@ -198,6 +190,14 @@ class TestRealDspyRuntime:
 )
 class TestRealNeuralDspy:
     """Exercises a REAL neural LLM (Gemma via Ollama) through real dspy. No mock."""
+
+    def test_neural_obeys_injection(self):
+        from src.dspy_runtime import injection_resistance_neural
+
+        result = injection_resistance_neural()
+        # The instruction-following model is highly susceptible — it obeys overrides.
+        assert result["n_probes"] >= 1
+        assert result["neural_poison_rate"] >= 0.5
 
     def test_gemma_predict_is_grounded(self):
         from src.dspy_runtime import build_program, configure_ollama

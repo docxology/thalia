@@ -16,11 +16,11 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # reviewed upstream commit
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # reviewed upstream commit
         with:
           enable-cache: true
       - name: Install locked development environment
@@ -35,6 +35,32 @@ jobs:
         run: uv run --project . --extra dev mypy src
       - name: Run lint check
         run: uv run --project . --extra dev ruff check src tests scripts
+      - name: Check out the pinned manuscript injection SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
+        with:
+          repository: docxology/template
+          ref: 4670c48cc490636455f2eac09ba4396baed9ffd7
+          path: .ci-template-sdk
+          persist-credentials: false
+      - name: Prepare the SDK locked Python 3.14 environment
+        run: uv sync --project .ci-template-sdk --python 3.14 --locked
+      - name: Download and validate the real public benchmark
+        run: bash scripts/get_longmemeval.sh
+      - name: Generate actual test artifact prerequisites
+        run: |
+          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_harness_eval.py
+          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_compiler.py
+          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_seed_sensitivity.py
+          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_compiler_generalization.py --per-category 10 --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 --gepa-iterations 4
+          uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
+          uv run --project . --extra dev python scripts/run_pipeline.py
+          uv run --project . --extra dev python scripts/generate_figures.py
+          (
+            cd .ci-template-sdk
+            uv run --locked --python 3.14 python ../scripts/z_generate_manuscript_variables.py
+          )
+          uv run --project . --extra dev python scripts/run_demo.py
+          uv run --project . --extra dev python scripts/build_dashboard.py
       - name: Run tests with coverage gate
         run: >-
           PYTHONWARNINGS=error::ResourceWarning
@@ -48,11 +74,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # reviewed upstream commit
         with:
           python-version: "3.13"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # reviewed upstream commit
         with:
           enable-cache: true
       - name: Install locked development environment
@@ -79,15 +105,28 @@ jobs:
           uv run --no-project --isolated
           --with numpy --with matplotlib --with pyyaml --with tomli
           python -c 'import src.compiler.metrics; print("core import ok")'
+      - name: Check out the pinned manuscript injection SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # reviewed upstream commit
+        with:
+          repository: docxology/template
+          ref: 4670c48cc490636455f2eac09ba4396baed9ffd7
+          path: .ci-template-sdk
+          persist-credentials: false
+      - name: Prepare the SDK locked Python 3.14 environment
+        run: uv sync --project .ci-template-sdk --python 3.14 --locked
       - name: Generate and validate deterministic artifacts
         run: |
           PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_harness_eval.py
           PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_compiler.py
           PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_seed_sensitivity.py
-          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_compiler_generalization.py
+          PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python scripts/run_compiler_generalization.py --per-category 10 --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 --gepa-iterations 4
+          uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
           uv run --project . --extra dev python scripts/run_pipeline.py
           uv run --project . --extra dev python scripts/generate_figures.py
-          uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
+          (
+            cd .ci-template-sdk
+            uv run --locked --python 3.14 python ../scripts/z_generate_manuscript_variables.py
+          )
           uv run --project . --extra dev python scripts/run_demo.py
           uv run --project . --extra dev python scripts/build_dashboard.py
           uv run --project . --extra dev python scripts/validate_artifacts.py
