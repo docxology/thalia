@@ -1,4 +1,4 @@
-# THALIA — Agentic Typed-pipeline with Lexical And Structured stages
+# THALIA — Typed Harness with Analytical Lexical-Integrated Architecture
 
 A typed agentic harness that fuses DSPy's compiler-driven optimization
 with the Hermes Agent layered-memory and trace-evolution ecosystem, built inside

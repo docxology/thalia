@@ -1,5 +1,5 @@
 # THALIA Project Configuration
-# Agentic Typed-pipeline with Lexical And Self-improving stages.
+# Typed Harness with Analytical Lexical-Integrated Architecture.
 # Inherits workspace settings from the repository root pyproject.toml.
 
 [build-system]
@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "thalia"
 version = "0.1.0"
-description = "Agentic Typed-pipeline with Lexical And Self-improving stages: a DSPy + Hermes auto-harness"
+description = "Typed Harness with Analytical Lexical-Integrated Architecture: a DSPy + Hermes auto-harness"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

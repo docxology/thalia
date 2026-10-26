@@ -1,6 +1,8 @@
 # Glossary
 
-- **THALIA** — Agentic Typed-pipeline with Lexical And Structured stages.
+- **THALIA** — Typed Harness with Analytical Lexical-Integrated Architecture
+  (the release title; informally, an agentic typed-pipeline with lexical and
+  structured stages).
 - **Signature** — a declarative typed I/O contract for a stage (DSPy-style),
   `src/signatures/`.
 - **Inspector** — Stage 0; RLM-style context narrowing (grep/peek/partition).

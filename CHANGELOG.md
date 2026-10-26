@@ -1,8 +1,10 @@
 # Changelog
 
-All notable changes to THALIA are documented here. The repository is still a
-private research checkout; the entries below are release-candidate notes, not
-a claim that version `0.1.0` has already been archived or assigned a DOI.
+All notable changes to THALIA are documented here. Version `0.1.0` is publicly
+released and archived at
+[10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245); the entries
+below are release-candidate notes for work after that boundary, not a new
+release or DOI.
 
 ## [Unreleased]
 
@@ -17,6 +19,11 @@ a claim that version `0.1.0` has already been archived or assigned a DOI.
 
 ### Changed
 
+- Corrected the project-name drift: `README.md`, `docs/glossary.md`, the
+  `src` package docstring, the dashboard subtitle, the manuscript config
+  comment, and the package description now use the published release title
+  ("Typed Harness with Analytical Lexical-Integrated Architecture") instead of
+  the three divergent taglines.
 - Tightened manuscript language so finite deterministic, neural, integrity, and
   production observations are not promoted beyond their evidence tiers.
 - Improved the release checklist to distinguish code licensing from the
