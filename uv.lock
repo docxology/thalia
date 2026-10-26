@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -413,7 +413,7 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/66/54/eb9bfc647b19f2009dd5c7f5ec51c4e6ca831725f1aea7a993034f483147/contourpy-1.3.2.tar.gz", hash = "sha256:b6945942715a034c671b7fc54f9588126b0b8bf23db2696e3ca8328f3ff0ab54", size = 13466130, upload-time = "2025-04-15T17:47:53.79Z" }
 wheels = [
@@ -484,7 +484,7 @@ resolution-markers = [
     "python_full_version >= '3.11' and python_full_version < '3.15'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880", size = 13466174, upload-time = "2025-07-26T12:03:12.549Z" }
 wheels = [
@@ -737,23 +737,11 @@ wheels = [
 ]
 
 [[package]]
-name = "dspy-ai"
-version = "3.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "dspy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3b/9e/e09701f7ac9a9f7dc3d4407eacb022268eb2000b8fcce2e4b76ae08ffafd/dspy_ai-3.2.1.tar.gz", hash = "sha256:d5cb7e0dc1597612a8b49e06f42bc446235e84bd68249fe6adc3287c8184e41b", size = 1220, upload-time = "2026-05-05T19:35:16.765Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/37/e4dc75151932629a1a9c20f24f7ea83d080f47d6c19c402ebf2b3536dc8e/dspy_ai-3.2.1-py3-none-any.whl", hash = "sha256:613d0ce08d7965fa6ea078df0923c17cfb38489cb3a7300a0a425a54c70ea396", size = 1170, upload-time = "2026-05-05T19:35:15.429Z" },
-]
-
-[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -3228,7 +3216,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "dspy-ai" },
+    { name = "dspy" },
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "pytest" },
@@ -3238,13 +3226,13 @@ dev = [
     { name = "types-pyyaml" },
 ]
 neural = [
-    { name = "dspy-ai" },
+    { name = "dspy" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "dspy-ai", marker = "extra == 'dev'", specifier = ">=3.2.1" },
-    { name = "dspy-ai", marker = "extra == 'neural'", specifier = ">=3.2.1" },
+    { name = "dspy", marker = "extra == 'dev'", specifier = ">=3.2.1" },
+    { name = "dspy", marker = "extra == 'neural'", specifier = ">=3.2.1" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100.0" },
     { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },

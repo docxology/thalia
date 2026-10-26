@@ -148,7 +148,7 @@ uv run --project . --extra dev python scripts/promote_production_readiness.py /p
   `AutoHarness` / `Reasoner`.
 - **Real embedder:** replace `src/retrieval/semantic.py::SemanticIndex` (same
   `top_k(query, k)` contract).
-- **Real DSPy:** `dspy-ai` is an optional `dev`/`neural` extra. The deterministic
+- **Real DSPy:** `dspy` is an optional `dev`/`neural` extra. The deterministic
   core remains importable without it. When installed, two real seams are
   available without changing the core: `to_dspy_signature` (THALIA signature →
   real `dspy.Signature`) and the full `src/dspy_runtime/` runtime — a real

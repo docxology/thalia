@@ -56,7 +56,7 @@ recording the full trace. The size/non-empty constraints on evolved skill
 artifacts are enforced by `check_skill_constraints` with the documented skill-size
 budget mirrored from
 the Hermes roadmap, and a `to_dspy_signature` bridge produces a real
-`dspy.Signature`; `dspy-ai` is installed as a package dependency while the
+`dspy.Signature`; `dspy` is installed as a package dependency while the
 deterministic core keeps that dependency outside its import boundary
 ([@sec:stage-compiler]). The
 `src/dspy_runtime/` package extends the signature bridge: it runs a

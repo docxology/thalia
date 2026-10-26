@@ -7,7 +7,7 @@ writes ``data/neural_eval.json`` — a tracked, reproducible measurement that th
 deterministic figure pipeline reads (so the figure renders without re-running the
 model). Logic lives in :func:`src.dspy_runtime.evaluate_backends`.
 
-Needs the project's ``dspy-ai`` dependency and a live Ollama serving the model;
+Needs the project's ``dspy`` dependency and a live Ollama serving the model;
 otherwise prints a notice, leaves any existing ``data/neural_eval.json``
 untouched, and exits 0.
 """

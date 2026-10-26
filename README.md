@@ -290,7 +290,7 @@ sub-word surrogate rather than a learned dense retriever — so the lexical-vs-d
 
 ## Real DSPy (no mock/stub)
 
-`dspy-ai` is an optional `dev`/`neural` extra. The deterministic core remains
+`dspy` is an optional `dev`/`neural` extra. The deterministic core remains
 installable without it; when installed, the DSPy integration is always the real
 thing, not a stand-in: `to_dspy_signature`
 builds a genuine `dspy.Signature` from any THALIA signature, and

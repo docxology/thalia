@@ -19,6 +19,9 @@ release or DOI.
 
 ### Changed
 
+- Replaced the deprecated `dspy-ai` alias with the canonical `dspy` package in
+  the `dev` and `neural` extras (the alias stub only re-declared `dspy`), and
+  re-locked; `uv lock --check` stays green.
 - Corrected the project-name drift: `README.md`, `docs/glossary.md`, the
   `src` package docstring, the dashboard subtitle, the manuscript config
   comment, and the package description now use the published release title

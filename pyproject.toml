@@ -53,11 +53,11 @@ dev = [
     "types-PyYAML>=6.0",
     "mypy>=1.10.0",
     "ruff>=0.14.0",
-    "dspy-ai>=3.2.1",
+    "dspy>=3.2.1",
 ]
 
 neural = [
-    "dspy-ai>=3.2.1",
+    "dspy>=3.2.1",
 ]
 
 [project.urls]
