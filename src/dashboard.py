@@ -145,51 +145,100 @@ def _backend_benchmark_table(payload: dict | None) -> str:
     if payload is None:
         return (
             "<p class='status-banner'>Backend benchmark: MISSING. "
-            "No common-harness backend evidence was supplied; legacy local and cloud "
+            "No method benchmark evidence was supplied; legacy local and cloud "
             "measurements are not ranked as comparable results.</p>"
         )
-    rows = []
-    for backend in payload["backends"]:
-        cells = [
-            backend["provider"],
-            backend["model"],
-            backend["status"],
-            backend["n_requested"],
-            backend["n_completed"],
-            backend["n_failed"],
-            _number(backend["mean_token_f1"]),
-            _number(backend["p50_latency_seconds"]),
-            _number(backend["p95_latency_seconds"]),
-        ]
-        rows.append(
-            f"<tr><th scope='row'>{html.escape(backend['name'])}</th>"
-            + "".join(f"<td>{html.escape(str(value))}</td>" for value in cells)
-            + "</tr>"
+
+    def table(caption: str, headings: tuple[str, ...], rows: list[list[object]]) -> str:
+        return (
+            "<div class='table-scroll' role='region' aria-labelledby='backend-benchmark-heading' "
+            "aria-describedby='backend-benchmark-description' tabindex='0'>"
+            f"<table><caption>{html.escape(caption)}</caption><thead><tr>"
+            + "".join(f"<th scope='col'>{html.escape(h)}</th>" for h in headings)
+            + "</tr></thead><tbody>"
+            + "".join(
+                "<tr><th scope='row'>" + html.escape(str(row[0])) + "</th>"
+                + "".join(f"<td>{html.escape(str(value))}</td>" for value in row[1:])
+                + "</tr>" for row in rows
+            )
+            + "</tbody></table></div>"
         )
+
+    backends = {backend["name"]: backend for backend in payload["backends"]}
+
+    def observation(summary: dict) -> list[object]:
+        backend = backends[summary["backend"]]
+        return [
+            summary["backend"], backend["provider"], backend["model"], summary["method"],
+            summary["status"], summary["n_requested"], summary["n_completed"], summary["n_failed"],
+            _number(summary["mean_token_f1"]), _number(summary["mean_latency_seconds"]),
+            _number(summary["p50_latency_seconds"]), _number(summary["p95_latency_seconds"]),
+            _number(summary["mean_prompt_characters"]),
+        ]
+
     headings = (
-        "Backend", "Provider", "Model", "Status", "Requested", "Completed", "Failed",
-        "Mean token-F1", "p50 latency (s)", "p95 latency (s)",
+        "Backend", "Provider", "Model", "Method", "Status", "Requested", "Completed", "Failed",
+        "Mean token-F1", "Mean latency (s)", "p50 latency (s)", "p95 latency (s)",
+        "Mean prompt characters",
+    )
+    observations = table(
+        "Backend × method observations", headings,
+        [observation(summary) for summary in payload["summaries"]],
+    )
+    groups = "".join(
+        table(
+            f"Backend × method observations by {group}", (group.capitalize(),) + headings,
+            [[summary[group]] + observation(summary) for summary in payload["groups"][group]],
+        )
+        for group in ("category", "stratum")
+    )
+    contrasts = []
+    for comparison in payload["comparisons"]:
+        interval = comparison["interval"]
+        caveat = (
+            "Incomplete: paired estimate suppressed" if comparison["status"] != "complete"
+            else "Single-seed: interval unavailable" if comparison["n_seed_clusters"] < 2
+            else "Small-cluster warning" if interval["small_cluster_warning"]
+            else "Descriptive seed-cluster interval"
+        )
+        contrasts.append([
+            comparison["backend"], comparison["method"], comparison["reference_method"],
+            comparison["status"], comparison["n_requested_pairs"], comparison["n_complete_pairs"],
+            comparison["n_seed_clusters"], comparison["wins"], comparison["ties"], comparison["losses"],
+            _number(comparison["mean_delta"]),
+            "—" if interval is None else f"[{_number(interval['low'])}, {_number(interval['high'])}]",
+            caveat,
+        ])
+    comparisons = table(
+        "Within-model paired method contrasts",
+        ("Backend", "Method", "Reference", "Status", "Requested pairs", "Complete pairs",
+         "Seed clusters", "Wins", "Ties", "Losses", "Seed-mean token-F1 delta",
+         "Descriptive interval", "Caveat"),
+        contrasts,
+    ) if contrasts else (
+        "<p>Within-model contrasts: reference method absent or no non-reference method selected; "
+        "not recorded. No paired estimate is inferred.</p>"
     )
     metadata = {
-        key: payload[key]
-        for key in ("dataset_fingerprint", "config_fingerprint", "n_examples", "config", "runtime_provenance")
-    }
-    metadata["generation_options"] = {
-        backend["name"]: backend["generation_options"] for backend in payload["backends"]
+        key: payload[key] for key in (
+            "cohort", "dataset_fingerprint", "report_fingerprint", "n_examples", "methods",
+            "backends", "analysis", "runtime_provenance", "producer_provenance", "execution_order",
+        )
     }
     return (
         f"<p class='status-banner'>Backend benchmark: {html.escape(payload['status'].upper())}.</p>"
-        "<p id='backend-benchmark-description'>Common-harness observations on a finite seeded synthetic dataset. "
-        "Not a model-quality certificate or production-readiness result. "
-        "Incomplete backend F1 and latency summarize successes only, not complete paired estimates. "
-        "Latency is observed end-to-end harness time, not token throughput or price.</p>"
-        "<div class='table-scroll' role='region' aria-labelledby='backend-benchmark-heading' "
-        "aria-describedby='backend-benchmark-description' tabindex='0'>"
-        "<table><caption>Matched backend observations</caption>"
-        "<thead><tr>"
-        + "".join(f"<th scope='col'>{heading}</th>" for heading in headings)
-        + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
-        "<details><summary>Backend benchmark provenance</summary><pre>"
+        "<p id='backend-benchmark-description'>Finite seeded synthetic backend × method observations; "
+        "no mixed-method backend mean. Incomplete cells summarize successes only and retain all counts. "
+        "Within-model contrasts pair the same examples, then average per-seed mean paired token-F1 deltas "
+        "with equal seed weight; wins/ties/losses count raw complete pairs. Any incomplete planned pair "
+        "suppresses the estimate and interval. Single-seed contrasts have no interval; small seed-cluster "
+        "intervals are descriptive, not population-power or significance claims. "
+        "Prompt characters are submitted text length, not billed tokens or retained provider context. "
+        "Latency includes method, transport, serving, and cleanup; it is not throughput or cost. "
+        "This is not adjudicated answer quality or a production certificate. "
+        "Source checksums bind recorded bytes, not authenticity or provider-binary attestation.</p>"
+        + observations + comparisons + "<details><summary>Category and stratum observations</summary>"
+        + groups + "</details><details><summary>Backend benchmark provenance</summary><pre>"
         + html.escape(json.dumps(metadata, indent=2, sort_keys=True))
         + "</pre></details>"
     )
@@ -261,7 +310,7 @@ def render_dashboard_html(
         figure_paths: Relative paths/filenames of figure images to embed.
         verification: Optional generated verification-summary payload.
         demo: Optional deterministic demo payload.
-        backend_benchmark: Optional validated common-harness backend evidence.
+        backend_benchmark: Optional validated schema2 backend × method evidence.
 
     Returns:
         An offline HTML document referencing the supplied companion figure assets.
@@ -291,7 +340,7 @@ Deterministic headline evaluation and optional observational backend evidence ar
 {_evidence_status("Model quality", quality_status, "passed")}
 {_evidence_status("Production readiness", production_status, "ready")}
 
-<h2 id="backend-benchmark-heading">Common-harness backend benchmark</h2>
+<h2 id="backend-benchmark-heading">Backend × method benchmark</h2>
 {_backend_benchmark_table(backend_benchmark)}
 
 <h2>Per-category performance</h2>

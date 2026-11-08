@@ -1,22 +1,22 @@
 # Versioned GitHub release controls
 
-_Updated 2026-11-08 for v0.2.0._ Software availability remains separate from
+_Updated 2026-11-08 for v0.3.0._ Software availability remains separate from
 scientific claim promotion.
 
 ## Current release identity
 
-- Version: `0.2.0`; release date in source metadata: `2026-11-08`.
-- GitHub release target: [v0.2.0](https://github.com/docxology/thalia/releases/tag/v0.2.0).
+- Version: `0.3.0`; release date in source metadata: `2026-11-08`.
+- GitHub release target: [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0).
 - Canonical repository: [docxology/thalia](https://github.com/docxology/thalia).
-- Changes and scope: [v0.2.0 release notes](releases/v0.2.0.md).
+- Changes and scope: [v0.3.0 release notes](releases/v0.3.0.md).
 - Current metadata declares no DOI. No Zenodo publication or new DOI is
   authorized for this version. The historical DOI is recorded only as an
-  `isNewVersionOf` relation, not as v0.2.0's identity.
+  `isNewVersionOf` relation, not as v0.3.0's identity.
 
 The versioned URL is the intended release identity, not proof of remote
 publication. The publisher must verify the published tag, exact commit, assets,
 and candidate checks before recording release completion. Earlier local test
-results or the pre-version-change manuscript render do not certify v0.2.0.
+results or an earlier manuscript render do not certify v0.3.0.
 
 ## Current-candidate publication gates
 
@@ -25,20 +25,22 @@ results or the pre-version-change manuscript render do not certify v0.2.0.
    gates on the completed candidate. Exercise installed `thalia` and
    `thalia-benchmark` outside the checkout; benchmark output belongs under the
    caller's working directory, never in the installed package.
-3. Regenerate deterministic evidence, fingerprint-bound screens, figures,
+3. Execute the declared local method study with the recorded seeds, methods,
+   models, generation options, and failure accounting. Preserve incomplete
+   diagnostics and do not silently replace a failed cohort with a smaller one.
+   Regenerate deterministic evidence, fingerprint-bound screens, figures,
    variables, manuscript injection, dashboard, and manifests in dependency order.
-   Retained model-dependent aggregates need no new network inference; live
-   observations remain separately scoped.
+   Historical DSPy/cloud aggregates remain distinct; no new cloud call is implied.
 4. Validate exact source-to-render substitution and render the completed
    manuscript. Inspect the cover's current GitHub version versus historical DOI
    wording, benchmark limitations, tagged-PDF structure, HTML, and slides.
    Record actual page counts and checks rather than carrying them forward.
 5. Inventory redistributable assets, record sizes/checksums and the exact
-   candidate commit, then publish the distinct `v0.2.0` GitHub tag/release.
+   candidate commit, then publish the distinct `v0.3.0` GitHub tag/release.
    Verify remote publication and attached assets before announcing completion.
 
 These are release requirements, not a claim that the checks have already run.
-No new neural evaluation or scientific acceptance is implied by completing them.
+Model observations do not confer expert-quality or production acceptance.
 
 ## Immutable historical archive
 
@@ -48,8 +50,10 @@ The completed `v0.1.0` GitHub/Zenodo release remains documented in
 Its archive DOI is
 [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 Do not move that tag, overwrite its assets, repurpose its DOI, or claim that its
-manuscript is the regenerated v0.2.0 manuscript. The historical receipt remains
-unchanged.
+manuscript is the regenerated current manuscript. The historical receipt remains
+unchanged. The separate [v0.2.0 release](releases/v0.2.0.md), tag, report schema,
+and downloadable assets are likewise immutable; schema-2 consumers do not
+silently reinterpret schema-1 data.
 
 ## Rights and scientific scope
 
@@ -58,11 +62,14 @@ rights for benchmark-derived data, model weights, raw answers, annotations,
 private-volume artifacts, credentials, or third-party figures and metadata.
 Inventory every asset and exclude material whose rights are not established.
 
-The optional common-backend benchmark is a finite synthetic diagnostic with
-complete/failure accounting, not a general model ranking. Automatic support
-metrics are not entailment, faithfulness, or expert answer-quality labels.
-Latency is observed harness/client overhead under the recorded host/provider
-conditions, not a production guarantee. The extractive generation ceiling and
+The backend/method study is a finite synthetic diagnostic with complete/failure
+accounting, not a general model ranking. Its contrasts are within backend,
+paired by example, and averaged equally across seed clusters. Missing pairs
+suppress a contrast; a single represented seed suppresses its interval. Small
+seed counts and observed end-to-end latency limit interpretation. Prompt
+characters are not billed tokens; requested context is not proven context
+retention. Automatic support metrics are not entailment, faithfulness, or
+expert answer-quality labels. The extractive generation ceiling and
 hashing-embedding surrogate remain explicit limitations. Independent P0 integrity,
 expert-rater quality, and production acceptance remain separate gates; neither
 GitHub publication nor the historical DOI promotes those claims. See

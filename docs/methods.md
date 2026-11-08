@@ -86,6 +86,10 @@ surface wording can drift across turns. The configured explicit weights still wi
 when supplied. This makes routing a transparent retrieval prior rather than a
 hidden prompt instruction.
 
+A lane with zero scoring weight is not constructed/run and contributes neither
+membership nor rank to fusion. This does not disable independently requested
+BM25 PRF expansion or semantic representations used by explicit MMR.
+
 ## Diversity — MMR (`src/retrieval/mmr.py`)
 
 `mmr_rerank(ranked, lambda_, k)` greedily trades relevance against novelty.
@@ -263,30 +267,58 @@ seed counts. Together they validate composition, path hygiene, reproducibility,
 dispersion, and paired method comparisons; they do not claim population-level
 performance or reproduce learned-dense-retrieval results.
 
-### Common backend observations
+### Backend × method observations
 
-`src.evaluation.backend_benchmark` composes the existing `LMClient`, seeded
-`build_research_dataset`, `AutoHarness`, `token_f1`, and latency quantile helper.
-It does not substitute a DSPy program or full-context prompt for the harness.
-Examples are round-robin ordered across task categories before an optional limit;
-each backend sees the same selected examples and a fresh context-managed
-harness per example. Harness `verify` is disabled so a row has one completion
-attempt, not hidden retries or verification re-answers.
+`src.evaluation.backend_benchmark` composes real `LMClient` implementations with
+the seeded research cohort and token-F1. Frozen `BenchmarkMethod` records separate
+context selection from backend identity. Built-ins are base `harness`,
+`full_context`, `lexical_only` (base scoring weights 1/0), and `adaptive`
+(base adaptive windows enabled). Custom named harness configs are supported.
+All harness arms require `verify=False` and fresh context-managed state per cell.
 
-The schema validator rebuilds the seeded plan, checks dataset/config/content
-identity and prompt agreement, recomputes answer token-F1 and successful-row
-summaries, and rejects missing/duplicate matrix cells, invalid counts, nonfinite
-metrics/times, and report-fingerprint drift. Failed rows remain present with
-null answer/score and only an error class. An incomplete backend's mean is a
-successful-only diagnostic, not a complete paired estimate. This structural
-consistency check does not authenticate a provider or adjudicate answer quality.
+Full context directly calls the selected LM using the same typed
+`ReasonerSignature` renderer and query with `session_history.splitlines()`,
+without Inspector/Retriever filtering. The selected context differs; a submitted
+full history is not guaranteed provider-side retention. This is not the historical
+DSPy full-context diagnostic or a wrapper returning an identity answer.
 
-Recorded latency is sequential observed end-to-end harness time, including local
-work, transport, inference, and cleanup. It is not per-token throughput or cost,
-and cache, cold starts, hardware, and provider scheduling are uncontrolled.
-Historical DSPy local measurements and the legacy cloud aggregate are distinct
-cohorts, not inputs to a backend ranking. See
-[`backend_benchmark.md`](backend_benchmark.md) for commands and the claim-evidence audit.
+Zero-weight scoring lanes are not constructed/run and are excluded from fusion
+membership/ranks. Independently enabled PRF expansion can still use BM25; explicit
+MMR can use semantic representations. Thus lexical-only describes the scoring
+intervention, not a blanket ban on all semantic work under arbitrary configs.
+The declared default-base local study leaves PRF/MMR disabled.
+
+Each unique cohort seed builds its own examples with stable identity/category/
+stratum fields. Deterministic category/seed interleaving precedes the global
+limit. Execution is backend-outer with deterministic method-order rotation;
+rows retain contiguous execution indices and the report describes the schedule.
+One attempt per cell means no retries, warm-up, verification re-answer or
+benchmark response cache. Live provider caching/load remain uncontrolled.
+
+Schema 2 validates the full backend × method × example matrix, identities,
+method configs/fingerprints, schedule, safe failures, finite metrics/times,
+prompt agreement within example/method across backends, and recomputed token-F1,
+cell/category/stratum summaries and paired contrasts. Portable producer-source
+inventory and observed runtime/dependency/model metadata bind provenance, not
+authenticity or provider binaries. Schema 1 is explicitly rejected; preserve
+historical cohorts without conversion. API `seeds`/`methods` replace singular
+`seed` and run-level `config`.
+
+The paired estimand is the unweighted mean of per-seed mean token-F1 deltas
+against the selected reference within a backend. Wins/ties/losses count complete
+raw pairs. Any missing planned pair suppresses mean delta and interval; a complete
+single-seed contrast has no interval. With multiple represented seeds, resample
+seed means using the existing clustered bootstrap, explicit analysis seed,
+resample count and confidence metadata. Retain small-cluster warnings. A few
+synthetic seeds do not establish population precision, power, p-values or
+significance; this is descriptive finite analysis, not promotion or model ranking.
+
+Summaries are successful-only, always alongside requested/completed/failed counts.
+Prompt characters are not billed tokens. End-to-end timing includes local method
+work, transport, inference and cleanup, not per-token throughput or cost.
+Historical local DSPy and cloud aggregates remain distinct cohorts. See
+[`backend_benchmark.md`](backend_benchmark.md) for migration/consumption and
+[`local_method_study.md`](local_method_study.md) for the declared study plan.
 
 ### Statistical estimands and uncertainty
 

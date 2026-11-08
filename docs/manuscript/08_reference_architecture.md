@@ -85,3 +85,24 @@ thalia/
 | 2 Reasoner | `src/stages/reasoner.py` | `ReasonerSignature` | `skills/thalia-reasoner` |
 | 3 Memory Gate | `src/stages/memory_gate.py` | `MemoryGateSignature` | `skills/thalia-memory-gate` |
 | 4 Compiler | `src/compiler/` | — (operates on configs) | `skills/thalia-compiler` |
+
+## Backend and Context-Method Boundary {#sec:ref-method-benchmark}
+
+The optional benchmark separates `BenchmarkBackend` (real LM protocol and public
+model/options identity) from frozen `BenchmarkMethod` (kind and validated harness
+config, or no config for full context). Harness-derived methods execute the
+ordinary stage chain with fresh context-managed state and verification disabled.
+The `full_context` arm bypasses Inspector/Retriever and sends all history lines
+through the same typed Reasoner renderer/query to the actual selected client.
+The renderer is held fixed, not selected context; full submission does not attest
+provider retention. No SDK is introduced into the deterministic core.
+
+Schema two records the backend-by-method-by-example matrix, execution schedule,
+portable source inventory, method fingerprints, cell/category/stratum summaries
+and within-backend paired contrasts. Backend identities never pool method scores.
+Zero-weight scoring lanes are excluded from computation and fusion membership,
+while independently enabled PRF and MMR retain their documented behavior.
+Offline dashboard and manuscript readers validate the report before rendering.
+Legacy schema-one artifacts are rejected rather than silently converted;
+historical release evidence and distinct DSPy/cloud cohorts remain unchanged.
+The operational interface is described in [@sec:op-backend-benchmark].

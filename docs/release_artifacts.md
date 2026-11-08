@@ -42,8 +42,10 @@ explicit allowlist, never an indiscriminate archive of the worktree or `output/`
 The common-backend report includes generated answers to THALIA's own seeded
 synthetic examples. It is not a redistribution of private conversations or raw
 LongMemEval answers. Its validator reconstructs the cohort and checks the full
-example/backend matrix before inclusion. No live cloud run is implied by a
-provider adapter or the old unmatched cloud aggregate.
+example/backend/method matrix, cohort seeds, execution schedule, source inventory,
+and paired summaries before inclusion. No live cloud run is implied by a provider
+adapter or the old unmatched cloud aggregate. Reports from the immutable v0.2
+release retain schema 1; current method-aware reports use schema 2.
 
 Exclude credentials, `.env`, virtual environments, caches, Git internals, model
 weights, downloaded LongMemEval source, external-volume records, expert-rater
@@ -73,7 +75,7 @@ Download all assets into one empty directory and verify their bytes before
 installation or extraction:
 
 ```bash
-gh release download v0.2.0 --repo docxology/thalia
+gh release download v0.3.0 --repo docxology/thalia
 shasum -a 256 -c SHA256SUMS
 ```
 

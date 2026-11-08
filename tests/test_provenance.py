@@ -81,6 +81,32 @@ class TestFigureRegistry:
         assert payload["fig:retriever_comparison"]["caption"] == FIGURE_CAPTIONS["retriever_comparison"]
         assert set(FIGURE_LABELS.values())
 
+    def test_method_design_registry_and_authored_alt_text(self, tmp_path):
+        from src.figures.diagrams import plot_backend_method_design
+
+        fig = plot_backend_method_design(tmp_path / "backend_method_design.png")
+        path = tmp_path / "figure_registry.json"
+        authored_alt = "Authored description: query → context policies → complete-pair gate."
+        path.write_text(json.dumps({
+            "fig:backend_method_design": {"alt_text": authored_alt},
+        }), encoding="utf-8")
+        write_figure_registry([fig], path)
+        entry = json.loads(path.read_text())["fig:backend_method_design"]
+        assert entry["filename"] == "backend_method_design.png"
+        assert entry["label"] == "fig:backend_method_design"
+        assert entry["alt_text"] == authored_alt
+        assert entry["caption"] == FIGURE_CAPTIONS["backend_method_design"]
+        assert entry["generated_by"] == "scripts/generate_figures.py"
+        assert entry["source"] == "src/figures/"
+        write_figure_registry([fig], path)
+        assert json.loads(path.read_text())["fig:backend_method_design"]["alt_text"] == authored_alt
+
+    def test_missing_authored_alt_uses_source_caption(self, tmp_path):
+        fig = tmp_path / "backend_method_design.png"
+        path = write_figure_registry([fig], tmp_path / "figure_registry.json")
+        entry = json.loads(path.read_text())["fig:backend_method_design"]
+        assert entry["alt_text"] == FIGURE_CAPTIONS["backend_method_design"]
+
 
 class TestArtifactManifest:
     def test_writes_current_hashes_for_stable_outputs(self, tmp_path):

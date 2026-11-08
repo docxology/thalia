@@ -58,7 +58,13 @@ def estimate_tokens(texts: list[str]) -> int:
 
 
 class Retriever(Module):
-    """Stage 1 — rank Inspector windows into a budgeted, fused evidence list."""
+    """Rank Inspector windows into a budgeted, fused evidence list.
+
+    A zero-weight scoring lane is disabled: its index is neither built nor
+    queried, its candidates cannot enter fusion, and its reported ranks are
+    ``-1``. Independently enabled query expansion still uses BM25 for feedback,
+    and optional MMR still uses hashing embeddings to diversify active candidates.
+    """
 
     signature = RetrieverSignature
 
@@ -169,17 +175,22 @@ class Retriever(Module):
             return Prediction({"ranked_evidence": [], "delivery_mode": DeliveryMode.INLINE})
 
         texts = [w.text for w in evidence_windows]
+        lex_w, sem_w = self._weights(task_category)
 
-        # Pseudo-relevance feedback: expand the query from its own top windows.
+        # Feedback is an independent opt-in query transformation, not a scoring lane.
         if self.query_expansion:
             query = expand_query(query, texts, top_terms=self.expansion_terms)
 
-        bm25 = BM25Index(texts)
-        semantic = SemanticIndex(texts)
-
-        lexical = [ScoredChunk(idx, score) for idx, score in bm25.top_k(query, len(texts))]
-        dense = [ScoredChunk(idx, score) for idx, score in semantic.top_k(query, len(texts))]
-        lex_w, sem_w = self._weights(task_category)
+        lexical = (
+            [ScoredChunk(idx, score) for idx, score in BM25Index(texts).top_k(query, len(texts))]
+            if lex_w != 0
+            else []
+        )
+        dense = (
+            [ScoredChunk(idx, score) for idx, score in SemanticIndex(texts).top_k(query, len(texts))]
+            if sem_w != 0
+            else []
+        )
         fused = rrf_fuse(lexical, dense, k=self.k, lexical_weight=lex_w, semantic_weight=sem_w)
 
         all_ranked = [

@@ -1,0 +1,90 @@
+"""Pure, descriptive accounting for finite within-backend method observations.
+
+Seed means, not individual synthetic examples, are the resampling units. These
+intervals do not establish population power, significance, or expert quality.
+"""
+
+from __future__ import annotations
+
+from statistics import mean
+from typing import Any, Sequence
+
+from .statistics import _quantile, clustered_bootstrap_mean
+
+ANALYSIS_UNIT = "seed_mean_paired_token_f1_delta"
+
+
+def summarize_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Account for every requested cell, with success-only descriptive means."""
+    successes = [row for row in rows if row["status"] == "complete"]
+    latencies = sorted(row["latency_seconds"] for row in successes)
+    return {
+        "status": "complete" if len(successes) == len(rows) else "incomplete",
+        "n_requested": len(rows),
+        "n_completed": len(successes),
+        "n_failed": len(rows) - len(successes),
+        "mean_token_f1": mean(row["token_f1"] for row in successes) if successes else None,
+        "mean_latency_seconds": mean(latencies) if successes else None,
+        "p50_latency_seconds": _quantile(latencies, 0.5) if successes else None,
+        "p95_latency_seconds": _quantile(latencies, 0.95) if successes else None,
+        "mean_prompt_characters": mean(row["prompt_characters"] for row in successes) if successes else None,
+    }
+
+
+def analyze_benchmark_rows(
+    rows: Sequence[dict[str, Any]], *, backends: Sequence[str], methods: Sequence[str],
+    examples: Sequence[dict[str, Any]], reference_method: str, n_boot: int,
+    analysis_seed: int,
+) -> dict[str, Any]:
+    """Rebuild summaries, grouped accounting and complete-pair seed contrasts.
+
+    One missing pair suppresses the complete contrast, not its failure counts.
+    Wins/ties/losses describe the available complete raw pairs even in that case.
+    """
+    matrix = {(row["backend"], row["method"], row["example_id"]): row for row in rows}
+    summaries = []
+    groups: dict[str, list[dict[str, Any]]] = {"category": [], "stratum": []}
+    comparisons = []
+    for backend in backends:
+        for method in methods:
+            selected = [matrix[(backend, method, example["example_id"])] for example in examples]
+            summaries.append({"backend": backend, "method": method, **summarize_rows(selected)})
+            for field in groups:
+                for value in sorted({example[field] for example in examples}):
+                    grouped = [row for row in selected if row[field] == value]
+                    groups[field].append({"backend": backend, "method": method, field: value, **summarize_rows(grouped)})
+            if method == reference_method or reference_method not in methods:
+                continue
+            deltas: list[float] = []
+            by_seed: dict[int, list[float]] = {}
+            for example in examples:
+                candidate = matrix[(backend, method, example["example_id"])]
+                reference = matrix[(backend, reference_method, example["example_id"])]
+                if candidate["status"] != "complete" or reference["status"] != "complete":
+                    continue
+                delta = candidate["token_f1"] - reference["token_f1"]
+                deltas.append(delta)
+                by_seed.setdefault(example["seed"], []).append(delta)
+            complete = len(deltas) == len(examples)
+            seed_means = {seed: [mean(values)] for seed, values in sorted(by_seed.items())}
+            interval = None
+            if complete and len(seed_means) >= 2:
+                interval = clustered_bootstrap_mean(
+                    seed_means, resamples=n_boot, seed=analysis_seed,
+                    confidence=0.95, unit=ANALYSIS_UNIT,
+                ).to_dict()
+            comparisons.append({
+                "backend": backend, "method": method, "reference_method": reference_method,
+                "status": "complete" if complete else "incomplete",
+                "n_requested_pairs": len(examples), "n_complete_pairs": len(deltas),
+                "n_seed_clusters": len(seed_means),
+                "wins": sum(delta > 0 for delta in deltas),
+                "ties": sum(delta == 0 for delta in deltas),
+                "losses": sum(delta < 0 for delta in deltas),
+                "mean_delta": mean(values[0] for values in seed_means.values()) if complete else None,
+                "interval": interval,
+            })
+    return {"summaries": summaries, "groups": groups, "comparisons": comparisons}
+
+
+__all__ = ["ANALYSIS_UNIT", "summarize_rows", "analyze_benchmark_rows"]

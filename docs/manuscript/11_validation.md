@@ -78,13 +78,31 @@ during collection. These gated integration paths sit outside the deterministic
 coverage envelope. The historical local figure in [@sec:eval-neural] reads a
 retained DSPy full-context diagnostic, not a test-time run receipt.
 
-The common backend benchmark has a separate artifact-consistency boundary:
-`validate_backend_benchmark` rebuilds its seeded plan, checks all requested
-backend/example cells, prompt agreement and fingerprints, and recomputes
-token-F1 and successful-only summaries. Failed rows remain explicit, and the
-dashboard renders incomplete reports as diagnostics, not complete comparisons.
-This validator is neither a live-provider success claim nor a quality,
-scientific-promotion, or production-readiness gate.
+The backend/method benchmark has a separate schema-two consistency boundary.
+`validate_backend_benchmark` rebuilds all seeded cohorts and verifies the exact
+backend-by-method-by-example matrix, execution schedule, method configurations,
+prompt agreement within example/method across backends, finite metrics and
+fingerprints. It recomputes token-F1, successful-only cell/category/stratum
+summaries and within-backend paired seed-mean contrasts. Recorded portable
+producer-inventory structure is validated without requiring it to equal the
+reader's current source; checksums are not authenticity signatures.
+
+Missing or duplicated cells, changed schedules, recomputed-score disagreement,
+and altered summaries/paired statistics must fail validation. Honest failed rows
+retain safe exception classes and null scores. Any incomplete planned contrast
+suppresses both delta and interval; a single represented seed suppresses the
+interval, while small-seed warnings remain visible for descriptive clustered
+intervals. The reference absent from selected methods means not requested,
+not zero effect. Schema-one artifacts are rejected, never silently migrated.
+Historical cohorts remain intact.
+
+Real loopback-server tests exercise request content and safe failures without
+claiming live-provider quality. Offline consumers render incomplete reports as
+diagnostics, preserve method identity and denominators, and distinguish prompt
+characters from billed tokens and end-to-end timing from throughput/cost.
+This validator is neither an execution receipt nor an expert-quality, power,
+scientific-promotion, or production-readiness gate. The declared local study plan
+requires a separate real execution receipt and statistical-validity review.
 
 The suite is intentionally organized by responsibility: retrieval files test
 lexical, semantic, fusion, MMR, expansion, and recall; stage files test Inspector,

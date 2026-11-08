@@ -37,12 +37,18 @@ Public API surface and invariants for the THALIA implementation. Import via the
   temperature?, max_tokens?)` (raises `OpenRouterError`); all satisfy `LMClient`.
   OpenRouter reads the process environment key `THALIA_OPENROUTER_API_KEY`
   when omitted; select the model explicitly, not through a model env variable.
-- Common observations: `src.evaluation.backend_benchmark` composes backend
-  specifications with the same seeded research cohort and `AutoHarness`;
-  fresh state per example, one attempt (`verify=False`), complete/failure
-  accounting, validator, and isolated complete/incomplete outputs. See
-  [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md).
-  This lane has no DSPy prerequisite and never auto-selects cloud.
+- Backend/method observations: `src.evaluation.backend_benchmark` exposes frozen
+  `BenchmarkMethod(name, kind, config)`, `BenchmarkBackend`, backend/method
+  builders, runner, validator and atomic writer. `run_backend_benchmark` takes
+  `methods=...`, `seeds=(...)`, `reference_method`, `n_boot`, `analysis_seed`;
+  removed singular `seed`/run-level `config` have no compatibility shim.
+  Full context calls the real LM with the typed Reasoner renderer and all history
+  lines; harness kinds require `verify=False` and fresh context-managed state.
+  Schema 2 validates the exact backend × method × example matrix, schedule,
+  provenance, cell/group summaries and paired contrasts. Schema 1 is rejected.
+  Incomplete pairs suppress delta/interval; one seed suppresses interval; small
+  seed warnings remain visible. No retries/cache or implicit cloud selection.
+  [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md) owns details.
 - Installed commands: `thalia = src.cli:main` and
   `thalia-benchmark = src.benchmark_cli:main`; both accept `argv` and return a
   process status. Benchmark output paths are caller-relative, not package-relative.
@@ -78,6 +84,7 @@ Public API surface and invariants for the THALIA implementation. Import via the
 
 ## Invariants
 
-Determinism; raw episodes never overwritten; LM only in the Reasoner; no
-`infrastructure.*` imports; ≥ 90% coverage. Full rationale in the project-root
+Determinism; raw episodes never overwritten; harness LM calls only in Reasoner
+(explicit benchmark full-context arm is separate); no `infrastructure.*`
+imports; ≥ 90% coverage. Full rationale in the project-root
 [`AGENTS.md`](../AGENTS.md).

@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> Path:
     parser.add_argument(
         "--backend-benchmark",
         type=Path,
-        help="Common-harness benchmark JSON (default: output/data/backend_benchmark.json if present).",
+        help="Validated schema2 backend × method JSON; an incomplete report may be selected explicitly.",
     )
     args = parser.parse_args([] if argv is None else argv)
     backend_path = args.backend_benchmark or PROJECT_ROOT / "output" / "data" / "backend_benchmark.json"

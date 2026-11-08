@@ -154,15 +154,35 @@ Neither installed query nor benchmark use requires a checkout-relative script
 path. Runtime configuration and explicit live-model selection retain their
 documented precedence and network boundaries.
 
-For matched full-harness observations, use the installed `thalia-benchmark`
-command (or the source-checkout bootstrap `scripts/run_backend_benchmark.py`)
-with explicit backend selections and a new `--output` path
-([@sec:op-backend-benchmark]). The default output is
-`output/data/backend_benchmark.json` relative to the caller's working directory,
-not inside the installed package. Its complete/incomplete artifact accounting is
-separate from the smoke recorder. The dashboard validates this optional input;
-`validate_artifacts.py` remains the separate manifest/required-output gate.
-Neither structural validation nor a complete benchmark is scientific promotion.
+For matched backend-by-method observations, use installed `thalia-benchmark`
+(or `scripts/run_backend_benchmark.py`) with repeatable `--method` and `--seed`
+and a new `--output` path ([@sec:op-backend-benchmark]). The default destination
+is `output/data/backend_benchmark.json` relative to the caller's working
+directory, not inside the package. Cohort seeds define independent generated
+plans; `--analysis-seed` controls only descriptive bootstrap resampling.
+Optional `--config` loads base YAML without harness environment overrides.
+
+Execution uses backend-outer order and deterministic method-order rotation;
+each row retains a contiguous execution index. Schema two binds dataset,
+method/config, content and prompt fingerprints, the declared schedule, public
+runtime/model observations, and a portable producer-source inventory with
+observed package/dependency versions. The inventory is checksum/source binding,
+not authenticity or provider-binary attestation. A reader validates its recorded
+structure, not equality to the reader's installed source.
+
+Schema-one reports are rejected, not upgraded. Python callers migrate from
+singular `seed`/run-level `config` to `seeds` and explicit method construction.
+Historical release evidence and retained DSPy/cloud cohorts remain unchanged.
+Complete reports replace the requested destination atomically; failed evidence
+uses an incomplete sidecar, preserving the last good destination. Always select
+the actual printed path and inspect the exit status.
+
+The dashboard's `--backend-benchmark PATH` and variable generator's
+`--benchmark-report PATH` select the same validated report, including an explicit
+incomplete sidecar. Observation and within-model contrast tables are generated,
+not hand-transcribed. Neither consumer fetches missing measurements. The artifact
+manifest remains a separate required-output gate; complete accounting is not
+scientific promotion.
 
 ## Provenance from Source to Rendered Output {#sec:repro-provenance}
 
@@ -225,12 +245,20 @@ a separate plug-in point. The bibliography records primary or official URLs wher
 available; source-reported empirical claims retain their source status. A local
 aggregate explicitly records any THALIA replication.
 
-The common backend benchmark is a finite diagnostic of the same harness and
-seeded cohort under selected clients, not a general model ranking. Its synthetic
-examples and automatic support/answer metrics cannot replace expert correctness
-or faithfulness labels; successful schema/accounting validation does not change
-that boundary. Recorded latency includes harness and client overhead, and
-provider availability, model revisions, host hardware, and warm-up affect live
-observations. No v{{CURRENT_RELEASE_VERSION}} DOI, accepted expert-quality
-certificate, P0 integrity confirmation, or independent production certificate
-is asserted by this release.
+The backend/method benchmark is a finite synthetic diagnostic, not a general
+model ranking. Methods hold the typed renderer and query fixed but change
+selected context. Full-context submission and requested Ollama context size do
+not guarantee provider retention. No benchmark cache, retries, warm-up calls or
+verification re-answers are used. Provider caches and runtime load remain
+uncontrolled. The local study declaration in `docs/local_method_study.md` is a
+plan; only an actual receipt can establish execution.
+
+Paired comparisons are within a backend. Any missing planned pair suppresses
+both mean delta and interval; a single represented seed has no interval, and
+small-seed warnings remain visible with descriptive clustered intervals. Synthetic
+seed counts do not establish population precision, power or significance.
+Prompt characters are not billed tokens. End-to-end cell timing includes local
+method/client overhead and is neither throughput nor cost. Automatic answer
+overlap cannot replace expert correctness or faithfulness labels. No
+v{{CURRENT_RELEASE_VERSION}} DOI, accepted expert-quality certificate, P0 integrity
+confirmation, or independent production certificate is asserted by this release.
