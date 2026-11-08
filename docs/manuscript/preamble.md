@@ -2,7 +2,7 @@
 
 LaTeX packages and commands injected into the PDF compilation. Parsed by
 `infrastructure/rendering/latex_utils.py` and combined by the PDF renderer before
-the final Pandoc/XeLaTeX pass.
+the final Pandoc/LaTeX pass.
 
 ```latex
 % Core mathematics
@@ -28,6 +28,12 @@ the final Pandoc/XeLaTeX pass.
 
 % Code listings (DSPy-style signatures appear as code blocks)
 \usepackage{listings}
+% fvextra automatic wrapping is incompatible with the current tagged-PDF
+% paragraph hooks. Keep tagging and its diagnostics; use authored line breaks
+% in code examples instead of the renderer's automatic wrapping.
+\AtBeginDocument{%
+  \ifdefined\fvset\fvset{breaklines=false}\fi
+}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{remark}[theorem]{Remark}
 \newtheorem{example}[theorem]{Example}

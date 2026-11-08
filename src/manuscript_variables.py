@@ -8,11 +8,13 @@ up as a missing/changed token, which the manuscript-variable test flags.
 
 from __future__ import annotations
 
+import html
 import json
 import re
-import sys
+import tomllib
 from pathlib import Path
 
+from . import __version__
 from .compiler.metrics import (
     ACCURACY_WEIGHT,
     EFFICIENCY_WEIGHT,
@@ -57,19 +59,34 @@ _OPENROUTER_EVAL_PATH = _DATA_DIR / "openrouter_eval.json"
 _EVAL_RESULTS_PATH = _DATA_DIR.parent / "output" / "data" / "eval_results.json"
 _SEED_SENSITIVITY_PATH = _DATA_DIR.parent / "output" / "data" / "seed_sensitivity.json"
 _COMPILER_GENERALIZATION_PATH = _DATA_DIR.parent / "output" / "data" / "compiler_generalization.json"
+_BACKEND_BENCHMARK_PATH = _DATA_DIR.parent / "output" / "data" / "backend_benchmark.json"
 _INTEGRITY_ADVANTAGE_PATH = _DATA_DIR / "integrity_advantage.json"
 _ZENODO_METADATA_PATH = _DATA_DIR.parent / ".zenodo.json"
 
 
-def _load_zenodo_doi() -> str:
-    """Load and validate the source-controlled DOI used in the manuscript."""
+def _load_archived_release_doi() -> str:
+    """Load the prior release DOI, never a DOI for the current GitHub release."""
     try:
         metadata = json.loads(_ZENODO_METADATA_PATH.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"Zenodo metadata is unreadable: {_ZENODO_METADATA_PATH}") from exc
-    doi = metadata.get("doi")
-    if not isinstance(doi, str) or re.fullmatch(r"10\.\d{4,9}/\S+", doi) is None:
-        raise ValueError(".zenodo.json must contain a valid DOI before manuscript generation")
+    relations = metadata.get("related_identifiers", []) if isinstance(metadata, dict) else []
+    if not isinstance(relations, list):
+        relations = []
+    archives = [
+        item
+        for item in relations
+        if isinstance(item, dict) and item.get("relation") == "isNewVersionOf"
+    ]
+    if len(archives) != 1:
+        raise ValueError(".zenodo.json must identify exactly one archived release DOI")
+    doi = archives[0].get("identifier")
+    if (
+        archives[0].get("scheme") != "doi"
+        or not isinstance(doi, str)
+        or re.fullmatch(r"10\.\d{4,9}/\S+", doi) is None
+    ):
+        raise ValueError(".zenodo.json archived release relation must contain a valid DOI")
     return doi
 
 
@@ -94,11 +111,6 @@ def _fmt_p(value: float) -> str:
 
 def _coverage_gate() -> int:
     """Read the enforced ``src/`` coverage gate from pyproject.toml (no hard-coding)."""
-    if sys.version_info >= (3, 11):
-        import tomllib
-    else:
-        import tomli as tomllib
-
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text())
     return int(data["tool"]["coverage"]["report"]["fail_under"])
@@ -142,6 +154,43 @@ def _load_generated_eval(path: Path, command: str) -> dict:
     return payload
 
 
+def _backend_benchmark_variables(path: Path) -> dict[str, str]:
+    """Hydrate only validated observations; absence is not a zero measurement."""
+    if not path.exists():
+        return {
+            "BACKEND_BENCHMARK_STATUS": "not recorded",
+            "BACKEND_BENCHMARK_TABLE": "No common-harness backend benchmark is recorded.",
+        }
+    from .evaluation.backend_benchmark import validate_backend_benchmark
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    validate_backend_benchmark(payload)
+
+    def cell(value: object) -> str:
+        text = html.escape(str(value)).replace("\n", " ").replace("\r", " ")
+        return re.sub(r"([\\`*_{}\[\]()!|])", r"\\\1", text)
+
+    def number(value: float | None) -> str:
+        return "not recorded" if value is None else _fmt(value)
+
+    rows = [
+        "| Provider / model | Status | Requested / completed / failed | Mean token-F1 | p50 / p95 latency (s) |",
+        "|:--|:--|:--|--:|--:|",
+    ]
+    for backend in payload["backends"]:
+        rows.append(
+            f"| {cell(backend['provider'])} / {cell(backend['model'])} "
+            f"| {backend['status']} "
+            f"| {backend['n_requested']} / {backend['n_completed']} / {backend['n_failed']} "
+            f"| {number(backend['mean_token_f1'])} "
+            f"| {number(backend['p50_latency_seconds'])} / {number(backend['p95_latency_seconds'])} |"
+        )
+    return {
+        "BACKEND_BENCHMARK_STATUS": payload["status"],
+        "BACKEND_BENCHMARK_TABLE": "\n".join(rows),
+    }
+
+
 def _load_quality_plan() -> dict[str, object]:
     """Load the planned quality-study scope from the THALIA-owned overlay."""
     return load_thalia_overlay_section("model_quality")
@@ -159,7 +208,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         evaluation results, the retriever comparison, and the compiled optimum.
     """
     config = config or default_config()
-    zenodo_doi = _load_zenodo_doi()
+    archived_release_doi = _load_archived_release_doi()
     audit_ledger = load_paper_audit()
     traceability = load_and_validate_traceability()
     if traceability["status"] != "pass":
@@ -260,7 +309,9 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         "CONFIG_CI_LEVEL": str(round(DEFAULT_CONFIDENCE_LEVEL * 100)),
         "CONFIG_BACKEND_FIGURE_WIDTH": str(BACKEND_FIGURE_WIDTH_PERCENT),
         "CONFIG_COV_GATE": str(_coverage_gate()),
-        "ZENODO_DOI": zenodo_doi,
+        "CURRENT_RELEASE_VERSION": __version__,
+        "CURRENT_RELEASE_URL": f"https://github.com/docxology/thalia/releases/tag/v{__version__}",
+        "ARCHIVED_RELEASE_DOI": archived_release_doi,
         # Planned quality-study scope. These are protocol metadata, not observed
         # results; keeping them tokenised prevents the manuscript plan from drifting
         # away from experiment_plan.yaml.
@@ -553,9 +604,7 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         }
     )
 
-    # Real extractive-vs-neural measurement (Gemma via Ollama through real dspy).
-    # Binds the §evaluation neural prose to the recorded token-F1 numbers so the
-    # claim "a real LM raises accuracy" is measured, not asserted.
+    # Retained full-context DSPy diagnostic, not the common-harness benchmark.
     neural = _load_neural_eval()
     variables.update(
         {
@@ -577,6 +626,8 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
             "RESULT_NEURAL_MAX_TOKENS": str((neural.get("generation_options") or {}).get("max_tokens", "pending")),
         }
     )
+
+    variables.update(_backend_benchmark_variables(_BACKEND_BENCHMARK_PATH))
 
     # OpenRouter/Hy3 neural evaluation (cloud backend, tencent/hy3-preview).
     if _OPENROUTER_EVAL_PATH.exists():

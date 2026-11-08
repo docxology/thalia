@@ -23,10 +23,11 @@ is loadable, overridable, and serialisable:
   - `THALIA_SEMANTIC_WEIGHT=<semantic>` for the semantic lane weight.
   Lane weights remain both-or-neither; setting only one against an unset pair
   raises.
-  Two additional environment variables control the OpenRouter adapter:
-  `THALIA_OPENROUTER_API_KEY` (required to activate the adapter; absent → null
-  rows in evaluation output) and `THALIA_OPENROUTER_MODEL` (selects the
-  OpenRouter model; the current recorded aggregate uses `{{RESULT_OPENROUTER_MODEL}}`).
+  Provider credentials are separate from harness-field overrides:
+  `THALIA_OPENROUTER_API_KEY` supplies an OpenRouter key. Model selection is an
+  explicit adapter `model=` argument or benchmark `--openrouter-model` option,
+  not a `THALIA_OPENROUTER_MODEL` environment variable. Credentials alone never
+  select a cloud backend for the common benchmark.
 - **Round-trip** — `to_dict` / `from_dict`, `to_yaml` / `from_yaml`, and
   `save_config` make a config serialisable and reproducible; `from_dict` and
   `from_yaml` ignore unrecognised keys. `to_yaml` is the single serialisation
@@ -55,7 +56,12 @@ from src.pipeline import Pipeline
 pipe = (
     Pipeline(config)
     .with_inspector()
-    .add_step("log", lambda ctx: (ctx.extras.update({"n": len(ctx.evidence_windows)}), ctx)[1])
+    .add_step(
+        "log",
+        lambda ctx: (
+            ctx.extras.update({"n": len(ctx.evidence_windows)}), ctx
+        )[1],
+    )
     .with_retriever()
     .with_reasoner()
     .with_memory_gate()
@@ -68,10 +74,12 @@ for step_name, ctx in pipe.intermediates:
 Each `with_*` method appends one stage and returns `self` for chaining;
 `add_step` inserts an arbitrary callable that receives and returns a
 `PipelineContext` (a mutable state bag with an `extras` dict for custom data).
-After `run`, `pipe.intermediates` holds a `(step_name, context)` snapshot after
-every step, so intermediate evidence counts, scores, and traces are inspectable
-without re-running the pipeline. `scripts/run_pipeline.py` exercises this path
-end-to-end and writes the intermediate-step trace to `output/data/`.
+After `run`, `pipe.intermediates` returns defensive deep copies of the
+`(step_name, context)` snapshots, so inspection cannot mutate the recorded trace.
+Partial chains intentionally retain absent-stage state; constructing
+`HarnessOutput` afterward is not another runtime step. The offline Compiler
+remains the additional architectural stage, not part of `with_all_stages()`.
+`scripts/run_pipeline.py` writes this composition trace to `output/data/`.
 
 ## Resource Safety and Context-Manager Cleanup {#sec:op-resource-safety}
 
@@ -122,22 +130,90 @@ behind the one-method `LMClient` protocol:
   raise `OllamaError`; the adapter emits no empty answer on error. The
   `is_available()` method offers a best-effort liveness probe. The adapter is
   opt-in and the default core leaves it unused.
-- **`configure_openrouter(model, api_key)`** — configure the harness to use an
-  OpenRouter-hosted model via the OpenRouter chat completions API. The model is
-  controlled by the `THALIA_OPENROUTER_MODEL` environment variable; the API key is
-  read from `THALIA_OPENROUTER_API_KEY`. The current recorded aggregate uses
- `{{RESULT_OPENROUTER_MODEL}}`.
-  This adapter is opt-in and raises on failure, preserving the error state.
+- **`OpenRouterLM(model=..., api_key=...)`** — the direct `LMClient` adapter
+  in `src.llm`, using the OpenRouter chat-completions endpoint without DSPy.
+  An omitted key is read from `THALIA_OPENROUTER_API_KEY`; missing credentials,
+  transport failures, and malformed completion content raise `OpenRouterError`.
+  Pass `model=` explicitly to select the provider model.
+- **`configure_openrouter(model=..., api_key=...)`** — the separate optional
+  `src.dspy_runtime` function configures global DSPy state through
+  `dspy.LM` and litellm. It does not inject an LM into `AutoHarness`.
 
-Both are validated against a real HTTP server spun up in the test process — the
-adapter's request construction and response parsing are exercised for real, with
-no mocks.
+The direct Ollama/OpenRouter adapters have real in-process HTTP-server tests for
+request construction and response parsing; those tests are not live-provider
+quality checks and do not establish the DSPy configuration function's behavior.
+Live neural DSPy tests require an explicit opt-in in addition to their SDK,
+server, and model prerequisites; generation does not occur during collection.
+Optional DSPy test classes skip when the SDK is absent.
+
+```bash
+THALIA_LIVE_TESTS=1 \
+  uv run --project . --extra dev python -m pytest \
+  tests/test_dspy_runtime.py -k TestRealNeuralDspy
+```
 
 The adapter boundary is narrow on purpose. A frontier API, local inference server,
 or evaluation wrapper only needs to implement `complete(prompt: str) -> str`.
 Everything else — evidence selection, citation construction, memory gating,
 configuration, and artifact generation — remains unchanged. This is what lets the
 deterministic manuscript distinguish method validation from model performance.
+
+## Optional Common Backend Benchmark {#sec:op-backend-benchmark}
+
+`BenchmarkBackend(name, provider, model, lm, generation_options,
+model_observation)` describes a real caller-supplied `LMClient` and public
+metadata. `run_backend_benchmark(backends, per_category=..., seed=...,
+limit=..., config=...)` supplies the same seeded, category-round-robin cohort
+to every backend. It prepends extractive when absent, rejects `verify=True`,
+and uses a fresh context-managed `AutoHarness` per example. One completion
+attempt per row preserves an observable failure denominator.
+
+```bash
+# Baseline + explicitly selected local model; no DSPy prerequisite.
+uv run --project . python scripts/run_backend_benchmark.py \
+  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+  --output output/data/backend_local.json
+
+# Optional paid/network path; process environment key required.
+uv run --project . python scripts/run_backend_benchmark.py \
+  --ollama-model gemma3:4b --openrouter-model tencent/hy3-preview \
+  --allow-cloud --per-category 2 --seed 0 --timeout 120 --max-tokens 512 \
+  --output output/data/backend_local_cloud.json
+```
+
+Both model flags are repeatable. Without them the CLI runs only extractive;
+neither credentials nor `--allow-cloud` alone select cloud. `--limit` caps the
+round-robin cohort; `--per-category` and `--seed` define it. The CLI uses default
+`HarnessConfig`; custom configuration is a Python API input, not a CLI
+`--config` option. Python OpenRouter selection also requires explicit
+`allow_cloud=True`. Callers remain responsible for authorized behavior of custom
+clients whose network use cannot be inferred from the protocol.
+
+`validate_backend_benchmark(payload)` checks schema, planned identity, prompt
+agreement, accounting, finite scores/times, recomputed token-F1 and summaries,
+and report fingerprints. Honest incomplete evidence remains valid diagnostic
+input. `write_backend_benchmark(payload, path)` atomically writes complete
+reports to the requested destination and incomplete reports to an `.incomplete`
+sidecar, preserving a previous complete file. The CLI prints the actual path and
+returns nonzero for incomplete runs. A preserved older file is not a fresh success.
+
+The separate artifact records each requested backend/example, null answer and
+score on failure, error class only, model/options, dataset/config/content/prompt
+identity, and runtime provenance. Summaries expose requested/completed/failed
+counts and successful-only F1 and latency means/quantiles; null summaries mean
+no successful rows, not zero performance. Failed backends are not complete paired
+estimates. No retained empirical aggregate or publication claim is promoted.
+
+`build_dashboard.py --backend-benchmark PATH` validates and displays this optional
+artifact offline; otherwise it reads the default benchmark path only if present.
+Missing/incomplete state is explicit. Timing is observed end-to-end harness
+execution, not token throughput, price, or a production service-level guarantee.
+Network, serving, cold-start, caching, hardware, and sequential order effects
+remain uncontrolled. Matched identity permits finite descriptive comparison;
+quality or cloud/local superiority requires a separate adjudicated design.
+The detailed schema and short Claim-Evidence Audit are in
+`docs/backend_benchmark.md`.
+
 
 ## Persistent Multi-Turn Sessions {#sec:op-session}
 
@@ -171,7 +247,8 @@ For real haystacks, the same CLI exposes the opt-in adaptive Inspector controls:
 uv run --project . --extra dev python scripts/run_query.py \
   --query "What is the wifi password?" \
   --session-file long_session.txt \
-  --adaptive-windows --adaptive-window-ratio {{CONFIG_ADAPTIVE_RATIO}} --json
+  --adaptive-windows --adaptive-window-ratio {{CONFIG_ADAPTIVE_RATIO}} \
+  --json
 ```
 
 Flags cover the configuration knobs (`--top-k`, `--max-windows`, `--max-evidence`,
@@ -179,6 +256,20 @@ Flags cover the configuration knobs (`--top-k`, `--max-windows`, `--max-evidence
 `--session-file`, and `--json` for machine-readable output. The result reports the
 answer, detected task category, delivery mode, and the cited source indices —
 making the harness's evidence-grounding inspectable from the shell.
+
+## Optional SDK Cache Trust Boundary {#sec:op-cache-trust}
+
+The optional DSPy stack retains an unresolved third-party pickle-cache
+advisory. THALIA's SDK configurators disable persistent disk caching before
+configuring a backend; in-memory caching remains available. This prevents
+those helpers from replaying persisted SDK entries, not a patch to the
+dependency or an authentication guarantee for existing cache files. Callers
+that configure DSPy independently must disable persistent caching before
+model calls and must not load untrusted/shared caches. The SDK-free query
+and common-backend commands do not import DSPy or use its cache. The
+[security policy](https://github.com/docxology/thalia/blob/v{{CURRENT_RELEASE_VERSION}}/SECURITY.md)
+records the advisory and boundary; release validation is not security
+certification.
 
 ## Extension Points and Replacement Lanes {#sec:op-extension-matrix}
 

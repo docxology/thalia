@@ -89,6 +89,27 @@ class TestOllamaLM:
         with pytest.raises(OllamaError, match="failed"):
             lm.complete("x")
 
+    @pytest.mark.parametrize("body", [[], None, "not an object", 42])
+    def test_non_object_response_raises(self, ollama_server, body):
+        url, state = ollama_server
+        state["generate"] = body
+        with pytest.raises(OllamaError, match="missing 'response'"):
+            OllamaLM(host=url, timeout=5).complete("x")
+
+    @pytest.mark.parametrize("content", [None, 42, [], {}, "", " \n "])
+    def test_invalid_completion_raises(self, ollama_server, content):
+        url, state = ollama_server
+        state["generate"] = {"response": content}
+        with pytest.raises(OllamaError, match="non-empty text"):
+            OllamaLM(host=url, timeout=5).complete("x")
+
+    @pytest.mark.parametrize("metadata", [{"done": False}, {"done": True, "done_reason": "length"}])
+    def test_incomplete_generation_raises(self, ollama_server, metadata):
+        url, state = ollama_server
+        state["generate"] = {"response": "partial answer", **metadata}
+        with pytest.raises(OllamaError, match="did not complete"):
+            OllamaLM(host=url, timeout=5).complete("x")
+
     def test_is_available_true(self, ollama_server):
         url, _ = ollama_server
         assert OllamaLM(host=url, timeout=5).is_available() is True
@@ -153,3 +174,21 @@ class TestOpenRouterLM:
         ).respond_with_json({"choices": [{"message": {"content": "ok"}}]})
         lm = OpenRouterLM(api_key="test-key-sent", api_base=httpserver.url_for(""), timeout=5)
         assert lm.complete("x") == "ok"
+
+    @pytest.mark.parametrize("content", [None, 42, [], {}, "", " \n "])
+    def test_invalid_completion_raises(self, httpserver, content):
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"choices": [{"message": {"content": content}}]}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        with pytest.raises(OpenRouterError, match="non-empty text"):
+            lm.complete("x")
+
+    @pytest.mark.parametrize("finish_reason", ["length", "content_filter", "tool_calls"])
+    def test_incomplete_generation_raises(self, httpserver, finish_reason):
+        httpserver.expect_request("/chat/completions", method="POST").respond_with_json(
+            {"choices": [{"message": {"content": "partial answer"}, "finish_reason": finish_reason}]}
+        )
+        lm = OpenRouterLM(api_key="test-key", api_base=httpserver.url_for(""), timeout=5)
+        with pytest.raises(OpenRouterError, match="did not complete"):
+            lm.complete("x")

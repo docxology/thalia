@@ -206,10 +206,13 @@ and external-benchmark tiers. Five findings organize the discussion.
   selection differences; the slack budget supplies an equality reference. The
   metric-construct audit separates answer token-F1, the blended support proxy,
   source-index precision/recall, reachability, and efficiency.
-- **Model transfer changes the outcome.** The local backend comparison and the
-  external {{RESULT_LME_BENCHMARK}} slice show model dependence. The extractive LM
-  bounds token-F1 in the deterministic lane, while the neural backend changes
-  answer behavior under recorded host and model settings.
+- **Model transfer changes the outcome.** The historical full-context local DSPy
+  comparison and the external {{RESULT_LME_BENCHMARK}} slice separately show model
+  dependence under their recorded settings. Neither is a matched cloud/local
+  ranking. The common `AutoHarness` benchmark is a separate measurement interface,
+  with optional finite observations in [@sec:eval-common-backends], not empirical
+  proof from capability alone. Extractive defaults still bound deterministic
+  answer token-F1.
 - **The clearest current difference is lexical cited-excerpt/source exposure.** The
   integrity screen shows that the recorded cited excerpts contain the supplied gold
   value under the injection probes, while the poisoning endpoint remains equal

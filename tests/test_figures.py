@@ -97,9 +97,25 @@ class TestExtendedFigures:
         path = plot_method_ablation(tmp_path / "ablation.png")
         assert path.exists() and path.stat().st_size > 0
 
-    def test_backend_comparison(self, tmp_path):
-        from src.evaluation.schemas import NeuralEvalPayload, NeuralEvalRow
+    @pytest.mark.parametrize("interval_backends", [(), ("extractive",), ("neural",), ("extractive", "neural")])
+    def test_backend_comparison(self, tmp_path, interval_backends):
+        from xml.etree import ElementTree
+
+        from src.evaluation.schemas import NeuralEvalPayload, NeuralEvalRow, StatisticalSummaryPayload
+        from src.evaluation.statistics import bootstrap_mean
         from src.figures import plot_backend_comparison
+        from src.figure_style import plt
+
+        summaries = {
+            name: StatisticalSummaryPayload.from_json(
+                bootstrap_mean(values, resamples=20, seed=17).to_dict()
+            )
+            for name, values in (
+                ("extractive", [0.0, 0.8, 0.62]),
+                ("neural", [0.77, 0.4, 0.67]),
+            )
+            if name in interval_backends
+        }
 
         data = NeuralEvalPayload(
             model="gemma3:4b",
@@ -111,9 +127,15 @@ class TestExtendedFigures:
                 NeuralEvalRow(category="single_session", extractive_f1=0.8, neural_f1=0.4),
                 NeuralEvalRow(category="temporal", extractive_f1=0.62, neural_f1=0.67),
             ),
+            extractive_statistics=summaries.get("extractive"),
+            neural_statistics=summaries.get("neural"),
         )
-        path = plot_backend_comparison(data, tmp_path / "backend.png")
+        with plt.rc_context({"svg.fonttype": "none"}):
+            path = plot_backend_comparison(data, tmp_path / "backend.svg")
         assert path.exists() and path.stat().st_size > 0
+        text = " ".join(ElementTree.parse(path).getroot().itertext()).lower()
+        assert ("interval" in text) == bool(interval_backends)
+        assert ("95%" in text) == bool(interval_backends)
 
     def test_bottleneck(self, tmp_path):
         from src.evaluation.schemas import BottleneckAdaptive, BottleneckNeuralRow, BottleneckPayload, BottleneckRankingModes

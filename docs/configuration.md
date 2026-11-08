@@ -70,3 +70,30 @@ cfg4 = load_config("config/harness.yaml")   # delegates to HarnessConfig.from_ya
 
 `save_config` is a thin wrapper that ensures the parent directory exists and writes
 the output of `to_yaml()` — it does not contain its own serialisation logic.
+
+## Provider selection is separate
+
+Harness-field precedence does not select a provider. Direct `LMClient` adapters
+are supplied as `AutoHarness(config=cfg, lm=...)`:
+
+```python
+from src.harness import AutoHarness
+from src.llm import OllamaLM, OpenRouterLM
+
+with AutoHarness(config=cfg, lm=OllamaLM(model="gemma3:4b")) as harness:
+    result = harness.forward(query="...", session_history="...")
+# Explicit cloud alternative:
+# OpenRouterLM(model="tencent/hy3-preview")
+```
+
+`OpenRouterLM` reads `THALIA_OPENROUTER_API_KEY` from the process environment
+unless `api_key=` is supplied. There is no `THALIA_OPENROUTER_MODEL` selection
+contract; use `model=` or the common benchmark's `--openrouter-model`.
+Do not place keys in generation options or committed configuration.
+`configure_openrouter(model=..., api_key=...)` is a separate optional **global
+DSPy** configuration function, not an `AutoHarness` adapter.
+
+The [common benchmark](backend_benchmark.md) documents its independent CLI
+backend/model, generation, configuration, and output controls. A key alone never
+opts its CLI into cloud calls. Live latency and generations lie outside the
+deterministic-core guarantee.

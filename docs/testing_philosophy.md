@@ -7,14 +7,17 @@ core is reproducible, while optional live-model adapters are explicitly model-de
 
 No `unittest.mock`, `MagicMock`, or `mocker.patch`. Tests use real computation:
 real BM25/embeddings, a real SQLite `EpisodicStore`, real temp files for figures,
-and a **real in-process HTTP server** for the Ollama adapter. Selecting a real
-fallback path by setting a real attribute (e.g. `store.fts_available = False` to
-exercise the `LIKE` branch) is allowed — it chooses a real branch. Faking a call
-boundary is forbidden.
+and **real in-process HTTP servers** for direct Ollama/OpenRouter adapters and
+common benchmark provider behavior. Selecting a real fallback path by setting a
+real attribute (e.g. `store.fts_available = False` to exercise `LIKE`) is allowed;
+faking a call boundary is forbidden. Loopback behavior tests do not establish
+live-provider quality or availability.
 
-Coverage on `src/` is gated at 90% (`pyproject.toml`); the live suite runs well
-above it. Exit code 0 alone is not proof — confirm tests collected > 0 and the
-coverage floor met.
+Coverage on `src/` is gated at 90% (`pyproject.toml`). Current counts and coverage
+belong in finished machine reports, not an undated pass assertion. Exit code 0
+alone is not proof — confirm collection and the coverage floor. Optional DSPy
+classes skip without the SDK. Neural DSPy generation additionally requires
+`THALIA_LIVE_TESTS=1` and server/model availability; collection never generates.
 
 ## 2. Executable invariants
 
@@ -34,6 +37,15 @@ validator checks `data/claim_ledger.yaml` structure, safe anchors, declared JSON
 fields, and strict formalism claim-artifact resolution. Source-only manuscript
 generation remains valid before `output/` exists; the release-time validator owns
 the generated-artifact check.
+
+The optional common benchmark uses its own
+`validate_backend_benchmark(payload)` before writing or dashboard consumption.
+It rebuilds the seeded plan, verifies complete backend/example accounting,
+prompt/dataset/config/content identity, finite score/time bounds, recomputed
+token-F1 and summaries, and report fingerprints. It accepts honest incomplete
+diagnostics, which remain non-promotable as complete comparisons. A structurally
+valid artifact does not authenticate a provider, prove quality, or establish
+production readiness; see [`backend_benchmark.md`](backend_benchmark.md).
 
 ## 4. Golden regression
 

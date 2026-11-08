@@ -81,7 +81,7 @@
   serialises a harness result to a plain dict; `cli.output_to_dict` delegates to it.
 - **`py.typed`** — empty PEP 561 marker file at `src/py.typed`; tells type-checkers
   such as mypy and pyright that the package ships inline type annotations.
-- **`__version__`** — the package version string (`"0.1.0"`) exported from
-  `src/__init__.py`; importable as `from src import __version__`.
+- **`__version__`** — the package version string exported from `src/__init__.py`
+  and matched to `pyproject.toml`; importable as `from src import __version__`.
 - **`turn_count`** — read-only property on `Session` returning the number of turns
   recorded in the underlying episodic store for the current session.

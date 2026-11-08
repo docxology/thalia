@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thalia"
-version = "0.1.0"
+version = "0.2.0"
 description = "Typed Harness with Analytical Lexical-Integrated Architecture: a DSPy + Hermes auto-harness"
 readme = "README.md"
 license = "MIT"
@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
 ]
 requires-python = ">=3.11"
@@ -37,11 +38,11 @@ dependencies = [
     "numpy>=1.24.0",
     "matplotlib>=3.7.0",
     "pyyaml>=6.0",
-    # TOML reader for provenance/manuscript-variable gates. tomllib is stdlib on
-    # Python >= 3.11; tomli is the identical-API backport for 3.10 (the declared
-    # minimum). Pure-Python, offline — does not touch the deterministic core.
-    "tomli>=2.0 ; python_version < '3.11'",
 ]
+
+[project.scripts]
+thalia = "src.cli:main"
+thalia-benchmark = "src.benchmark_cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -53,10 +54,12 @@ dev = [
     "mypy>=1.10.0",
     "ruff>=0.14.0",
     "dspy>=3.2.1",
+    "filelock>=4.2.1",
 ]
 
 neural = [
     "dspy>=3.2.1",
+    "filelock>=4.2.1",
 ]
 
 [project.urls]

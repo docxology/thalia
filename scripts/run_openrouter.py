@@ -5,8 +5,9 @@ Configures dspy with an OpenRouter-hosted model (default
 ``tencent/hy3-preview``), runs the same ``dspy.Predict`` program
 over the demo dataset, and writes the comparison to ``output/data/``.
 
-The API key is read from the ``THALIA_OPENROUTER_API_KEY`` environment variable
-or a ``.env`` file in the project root. Logic lives in :mod:`src.dspy_runtime`.
+The API key is read from the ``THALIA_OPENROUTER_API_KEY`` environment variable.
+This is a DSPy smoke diagnostic, not a comparable local/cloud benchmark.
+Logic lives in :mod:`src.dspy_runtime`.
 """
 
 from __future__ import annotations
@@ -22,18 +23,14 @@ for _path in (PROJECT_ROOT, PROJECT_ROOT / "src", PROJECT_ROOT.parent.parent):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-# Load .env if present
-env_path = PROJECT_ROOT / ".env"
-if env_path.exists():
-    for line in env_path.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
-
 
 def main() -> int | str:
     """Run the real OpenRouter prediction and write the result JSON."""
+    # Check if the API key is configured before making any calls.
+    api_key = os.environ.get("THALIA_OPENROUTER_API_KEY", "")
+    if not api_key:
+        print("[skip] THALIA_OPENROUTER_API_KEY not set; export the variable.")
+        return 0
     from src.dspy_runtime import (
         DEFAULT_OPENROUTER_MODEL,
         build_dataset,
@@ -42,11 +39,6 @@ def main() -> int | str:
         qa_metric,
     )
 
-    # Check if the API key is configured before making any calls.
-    api_key = os.environ.get("THALIA_OPENROUTER_API_KEY", "")
-    if not api_key:
-        print("[skip] THALIA_OPENROUTER_API_KEY not set; create a .env file or export the variable.")
-        return 0
 
     _CTX = "User: my wifi password is bluefish42\nAssistant: noted\nThe cat is grey."
     _Q = "What is the wifi password?"
@@ -59,8 +51,8 @@ def main() -> int | str:
         dataset = build_dataset()
         score = sum(qa_metric(ex, program(**ex.inputs())) for ex in dataset)
     except Exception as exc:
-        print(f"[skip] OpenRouter API error: {exc}")
-        return 0
+        print(f"[error] OpenRouter diagnostic failed: {type(exc).__name__}", file=sys.stderr)
+        return 1
 
     result = {
         "openrouter_model": DEFAULT_OPENROUTER_MODEL,

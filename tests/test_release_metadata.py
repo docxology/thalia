@@ -1,17 +1,14 @@
-"""Tests for source-controlled public-release metadata (real files, no mocks)."""
+"""Tests for distinct current-release and historical-archive identities."""
 
 import json
+import tomllib
 from datetime import date
 from pathlib import Path
 
 import yaml
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10 uses the declared backport
-    import tomli as tomllib
-
 from src import __version__
+from src.manuscript_variables import _load_archived_release_doi
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -24,20 +21,38 @@ def test_citation_metadata_is_parseable_and_matches_package() -> None:
     assert metadata["type"] == "software"
     assert metadata["version"] == __version__
     assert metadata["license"] == "MIT"
-    assert metadata["doi"] == "10.5281/zenodo.21763245"
+    assert "doi" not in metadata
     assert metadata["repository-code"] == "https://github.com/docxology/thalia"
+    assert metadata["url"] == f"{metadata['repository-code']}/releases/tag/v{__version__}"
     assert metadata["authors"]
     assert metadata["title"]
     assert metadata["abstract"]
-    assert date.fromisoformat(str(metadata["date-released"])) == date(2026, 8, 2)
+    date.fromisoformat(str(metadata["date-released"]))
 
 
-def test_release_checklist_keeps_license_and_doi_as_explicit_gates() -> None:
-    checklist = (PROJECT_ROOT / "docs" / "release_readiness.md").read_text()
+def test_current_release_identity_is_distinct_from_archived_doi() -> None:
+    citation = yaml.safe_load((PROJECT_ROOT / "CITATION.cff").read_text())
+    zenodo = json.loads((PROJECT_ROOT / ".zenodo.json").read_text())
+    assert "doi" not in zenodo
+    assert zenodo["version"] == __version__
+    assert date.fromisoformat(zenodo["publication_date"]) == citation["date-released"]
+    identities = [
+        item["identifier"]
+        for item in zenodo["related_identifiers"]
+        if item["relation"] == "isIdenticalTo"
+    ]
+    assert identities == [citation["url"]]
+    archived_doi = _load_archived_release_doi()
+    assert archived_doi not in identities
+    assert archived_doi in (PROJECT_ROOT / "docs" / "release_receipt.md").read_text()
 
-    assert "THALIA `v0.1.0` is publicly released" in checklist
-    assert "MIT applies to THALIA's authored source code" in checklist
-    assert "10.5281/zenodo.21763245" in checklist
+
+def test_manuscript_identifies_current_release_without_claiming_archive_doi() -> None:
+    config = yaml.safe_load((PROJECT_ROOT / "docs" / "manuscript" / "config.yaml").read_text())
+    citation = yaml.safe_load((PROJECT_ROOT / "CITATION.cff").read_text())
+    assert config["paper"]["version"] == __version__
+    assert date.fromisoformat(config["paper"]["date"]) == citation["date-released"]
+    assert not config["publication"]["doi"]
 
 
 def test_mit_metadata_is_consistent_across_package_and_archive_files() -> None:
@@ -52,10 +67,4 @@ def test_mit_metadata_is_consistent_across_package_and_archive_files() -> None:
     zenodo = json.loads((PROJECT_ROOT / ".zenodo.json").read_text())
     assert zenodo["license"] == "MIT"
     assert zenodo["upload_type"] == "software"
-    assert zenodo["version"] == __version__
-    assert zenodo["doi"] == "10.5281/zenodo.21763245"
     assert zenodo["creators"]
-    assert any(
-        item["identifier"] == "https://github.com/docxology/thalia"
-        for item in zenodo["related_identifiers"]
-    )

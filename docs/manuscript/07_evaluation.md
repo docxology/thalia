@@ -3,9 +3,13 @@
 The evaluation uses distinct evidence tiers. A fixed
 LongMemEval-style dataset, a deterministic extractive language model, and a
 composite metric computed in pure Python provide the reproducible contract tier.
-Recorded Ollama/OpenRouter rows and the external LongMemEval slice provide
-model-dependent transfer diagnostics. The goal is to validate the *machinery* and
-state the estimand and evidence boundary for each tier.
+Historical full-context DSPy local rows, a separate legacy OpenRouter provider
+diagnostic, and the external LongMemEval slice provide distinct model-dependent
+evidence. They are not one matched local/cloud cohort. The common backend runner
+supplies a full-harness interface with complete/failure accounting; optional
+recorded observations are reported separately in [@sec:eval-common-backends].
+The goal is to validate the *machinery* and state the estimand and boundary for
+each tier.
 
 This spine preserves the stable evaluation anchor and the two scope boundaries called out by the project guide. The renderer places the adjacent `07a_` through `07e_` files beneath this heading as evaluation subsections, so the table of contents presents one coherent evaluation branch.
 

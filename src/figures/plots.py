@@ -7,7 +7,7 @@ from typing import Any
 
 from matplotlib.lines import Line2D
 
-from ..config import DEFAULT_CONFIDENCE_LEVEL, HarnessConfig
+from ..config import HarnessConfig
 from ..compiler.metrics import ACCURACY_WEIGHT, EFFICIENCY_WEIGHT, GROUNDING_WEIGHT
 from ..evaluation import (
     RetrieverComparison,
@@ -442,11 +442,11 @@ def plot_method_ablation(output_path: str | Path) -> Path:
 
 
 def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) -> Path:
-    """Per-example extractive vs real neural Reasoner token-F1.
+    """Finite paired extractive vs full-context DSPy token-F1 diagnostic.
 
-    The comparison uses paired example-level points because each backend produces
-    an outcome for the same retained question. Data comes from
-    ``data/neural_eval.json``.
+    Each point is one retained question from ``data/neural_eval.json``. The legacy
+    neural diagnostic uses full-context DSPy Predict, not the AutoHarness path.
+    It is separate from the common-harness backend benchmark.
     """
     path = _prepare(output_path)
     rows = sorted(data.rows, key=lambda r: (r.neural_f1 - r.extractive_f1, r.category))
@@ -471,16 +471,14 @@ def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) ->
         linewidth=0.5,
         s=56,
         marker="s",
-        label=f"neural ({data.model})",
+        label=f"full-context DSPy ({data.model})",
     )
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=0, ha="center", fontsize=8)
     ax.set_ylabel("Token-F1 vs gold answer")
     ax.set_xlabel("Paired example index (category code below index; n={})".format(data.n))
     ax.set_ylim(0, 1)
-    summary = data.extractive_statistics or data.neural_statistics
-    confidence = int(summary.confidence * 100) if summary else int(DEFAULT_CONFIDENCE_LEVEL * 100)
-    ax.set_title(f"Paired backend observations by example (n={data.n})")
+    ax.set_title(f"Retained paired extractive / full-context DSPy diagnostic (n={data.n})")
     me, mn = data.mean_extractive_f1, data.mean_neural_f1
     ax.axhline(me, color=PALETTE["muted"], linestyle=":", linewidth=1.0, zorder=0)
     ax.axhline(mn, color=PALETTE["semantic"], linestyle=":", linewidth=1.0, zorder=0)
@@ -500,11 +498,11 @@ def plot_backend_comparison(data: NeuralEvalPayload, output_path: str | Path) ->
             color=PALETTE["semantic"],
             alpha=0.10,
             zorder=0,
-            label=f"neural {int(data.neural_statistics.confidence * 100)}% descriptive interval",
+            label=f"DSPy {int(data.neural_statistics.confidence * 100)}% descriptive interval",
         )
     ax.annotate(
-        f"mean token-F1 | extractive {me:.3f} | neural {mn:.3f}\n"
-        f"bands: {confidence}% descriptive intervals",
+        f"mean token-F1 | extractive {me:.3f} | DSPy {mn:.3f}"
+        + ("\nShaded bands: recorded descriptive intervals" if data.extractive_statistics or data.neural_statistics else ""),
         (0.02, 0.95),
         xycoords="axes fraction",
         ha="left",

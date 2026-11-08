@@ -8,6 +8,7 @@ Agent- and reader-facing documentation hub. Start with [`quickstart.md`](quickst
 | [`architecture.md`](architecture.md) | The five stages, data flow, module boundaries |
 | [`methods.md`](methods.md) | Algorithms and formulae (BM25, RRF, MMR, verification, recursion) |
 | [`configuration.md`](configuration.md) | `HarnessConfig`, files, `THALIA_*` env, CLI precedence |
+| [`backend_benchmark.md`](backend_benchmark.md) | Common local/cloud harness benchmark, validator, artifact contract, and evidence audit |
 | [`testing_philosophy.md`](testing_philosophy.md) | Zero-Mock policy, invariants, golden regression |
 | [`glossary.md`](glossary.md) | Terms used across code and manuscript |
 | [`provenance_p0.md`](provenance_p0.md) | Frozen, adjudicated provenance-confirmation protocol and promotion boundary |

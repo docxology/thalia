@@ -7,3 +7,8 @@ parsing, completion formatting, qa_metric; default endpoints for local
 Ollama and OpenRouter (`ENV_OPENROUTER_KEY` for the key). `live_eval.py`
 — live evaluation harness. Stage metrics come from `compiler.metrics`
 (e.g. token_f1).
+
+`configure`, `configure_ollama`, and `configure_openrouter` disable persistent
+DSPy caching before configuring a backend; in-memory caching remains available.
+Do not replay untrusted pickle caches. The unresolved optional DiskCache advisory
+and direct-SDK boundary are documented in [`../../SECURITY.md`](../../SECURITY.md).

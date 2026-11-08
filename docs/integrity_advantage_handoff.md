@@ -316,7 +316,7 @@ uv run --project . --extra dev python scripts/run_compiler_generalization.py
 uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/generate_figures.py
 uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
-uv run --project ../template python scripts/render_pdf_external.py --validate
+uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 ```
 
 For the next experiment cycle:

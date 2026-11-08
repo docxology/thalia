@@ -263,6 +263,31 @@ seed counts. Together they validate composition, path hygiene, reproducibility,
 dispersion, and paired method comparisons; they do not claim population-level
 performance or reproduce learned-dense-retrieval results.
 
+### Common backend observations
+
+`src.evaluation.backend_benchmark` composes the existing `LMClient`, seeded
+`build_research_dataset`, `AutoHarness`, `token_f1`, and latency quantile helper.
+It does not substitute a DSPy program or full-context prompt for the harness.
+Examples are round-robin ordered across task categories before an optional limit;
+each backend sees the same selected examples and a fresh context-managed
+harness per example. Harness `verify` is disabled so a row has one completion
+attempt, not hidden retries or verification re-answers.
+
+The schema validator rebuilds the seeded plan, checks dataset/config/content
+identity and prompt agreement, recomputes answer token-F1 and successful-row
+summaries, and rejects missing/duplicate matrix cells, invalid counts, nonfinite
+metrics/times, and report-fingerprint drift. Failed rows remain present with
+null answer/score and only an error class. An incomplete backend's mean is a
+successful-only diagnostic, not a complete paired estimate. This structural
+consistency check does not authenticate a provider or adjudicate answer quality.
+
+Recorded latency is sequential observed end-to-end harness time, including local
+work, transport, inference, and cleanup. It is not per-token throughput or cost,
+and cache, cold starts, hardware, and provider scheduling are uncontrolled.
+Historical DSPy local measurements and the legacy cloud aggregate are distinct
+cohorts, not inputs to a backend ranking. See
+[`backend_benchmark.md`](backend_benchmark.md) for commands and the claim-evidence audit.
+
 ### Statistical estimands and uncertainty
 
 The continuous estimand is the mean composite over the finite generated task
@@ -293,8 +318,8 @@ model-dependent evidence tiers remain separate.
 explicitly ordered, inspectable chain. Where `AutoHarness.forward` is a single
 opaque call, a `Pipeline` is a list of `PipelineStep` objects executed in
 insertion order. After `run()` returns, every intermediate context is available
-via `pipeline.intermediates` — a list of `(step_name, PipelineContext)` snapshots,
-one per step.
+via `pipeline.intermediates` — defensive deep copies of the
+`(step_name, PipelineContext)` snapshots, one per step.
 
 ```python
 from src.pipeline import Pipeline
@@ -341,3 +366,9 @@ The mutable state bag threaded through the chain. Initial fields are `query` and
 `session_history`; each stage enriches it (e.g. `evidence_windows`, `ranked_evidence`,
 `answer`, `consolidation_action`). Custom steps may stash arbitrary data in
 `ctx.extras` without interfering with built-in stage fields.
+
+`HarnessOutput` is constructed after the step loop and is not another stage.
+Partial pipelines preserve absent-stage state rather than fabricating completed
+steps. Use the context-manager protocol to close internally created stores;
+caller-supplied stores remain caller-owned. The offline Compiler is the fifth
+architectural stage but is never appended by `with_all_stages()`.

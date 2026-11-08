@@ -15,18 +15,21 @@ inputs only; they do not execute code or autonomous agents.
 
 ## Committed aggregate measurements (`data/*.json`)
 
-These small JSON files are **committed** measurement aggregates from the gated
-experiments. They are the recorded outputs that the figures (`scripts/generate_figures.py`)
-and manuscript tokens (`src/manuscript_variables.py`) read, so the manuscript renders
-and the integrity tests pass on a fresh clone without re-running Ollama or downloading
-the benchmark. Each is regenerable via its recorder script:
+These small JSON files are **committed** historical measurement aggregates from
+gated experiments. Figures (`scripts/generate_figures.py`) and manuscript tokens
+(`src/manuscript_variables.py`) consume them offline. Their presence is not a
+claim that every release gate needs no other generated artifact or benchmark.
+Preserve the retained cohorts; a new live run is new evidence, not an automatic
+promotion or guaranteed reproduction of historical generations.
 
-- `neural_eval.json` — extractive-vs-neural token-F1 (`scripts/run_neural_eval.py`, needs Ollama)
+- `neural_eval.json` — extractive-vs-neural full-context **DSPy** token-F1 diagnostic (`scripts/run_neural_eval.py`, needs Ollama); not an AutoHarness runtime measurement.
+- `openrouter_eval.json` — legacy finite, non-adjudicated cloud diagnostic with limited provenance and undefined pass threshold. `scripts/run_openrouter.py` writes a different DSPy smoke artifact and cannot regenerate this aggregate.
 - `learned_retrieval.json` — learned dense embedder vs surrogate (`scripts/run_learned_retrieval.py`, needs Ollama)
 - `injection_eval.json` — context-poisoning resistance (`scripts/run_injection_probe.py`)
 - `integrity_advantage.json` — endpoint-level integrity-advantage screen with
   paired statistics, source/code hashes, native units, and promotion status
-  (`scripts/analyze_integrity_advantage.py`; run after compiler generalization)
+  (`scripts/analyze_integrity_advantage.py`; run after compiler generalization
+  and any deliberately refreshed live source aggregates)
 - `longmemeval_results.json` — external LongMemEval_S answer token-F1, citation-support proxy, session reachability, and CIs (`scripts/run_longmemeval.py`)
 - `longmemeval_bottleneck.json` — separate evidence-exposure/citation-support/answer token-F1 bottleneck diagnostics plus adaptive fix (`scripts/run_longmemeval_bottleneck.py`)
 
@@ -34,6 +37,20 @@ The planned P0 provenance-confirmation lane intentionally has no committed
 aggregate yet. Its raw condition rows, blinded expert packets, adjudications,
 and report remain external until an accepted, hash-revalidated certificate is
 explicitly promoted; see [`../docs/provenance_p0.md`](../docs/provenance_p0.md).
+
+## Optional common backend benchmark
+
+`scripts/run_backend_benchmark.py` writes a separate observational artifact
+under `output/data/` or a caller-selected path. It compares `LMClient` adapters
+through one `AutoHarness` configuration and seeded research cohort without DSPy.
+It never overwrites these retained empirical JSON files. Cloud calls require
+explicit selection and consent. Complete outputs use the requested path;
+incomplete diagnostics use an `.incomplete` sidecar and leave a previous complete
+output intact. Do not mistake that previous file for a fresh completed run.
+Validate artifacts with `validate_backend_benchmark` before consumption; the
+dashboard does so automatically. See
+[`../docs/backend_benchmark.md`](../docs/backend_benchmark.md) for the full
+schema, latency caveats, and evidence boundaries.
 
 ## THALIA v2 campaign lanes
 

@@ -16,6 +16,11 @@ PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m p
   --junitxml=output/reports/pytest.xml --cov-fail-under=90
 ```
 
+The project Python pin is 3.13. Live neural DSPy tests additionally require
+`THALIA_LIVE_TESTS=1`, an installed DSPy SDK, and the local server/model.
+They do not generate at collection time; optional DSPy classes skip without the
+SDK. Offline HTTP loopback tests do not require a provider key.
+
 ## Run a query
 
 ```bash
@@ -47,6 +52,23 @@ with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
 `Session` (and `EpisodicStore`) implement the context-manager protocol so the
 SQLite connection is always closed, even on exception.
 
+
+## Compare backends through the same harness
+
+The [common backend benchmark](backend_benchmark.md) accepts extractive,
+Ollama, and explicitly selected OpenRouter `LMClient` backends. It uses identical
+seeded research examples and harness configuration, fresh state per example,
+separate output artifacts, and explicit complete/incomplete accounting.
+Cloud is never selected just because a credential is present. Read the guide
+before invoking cloud models; context is sent to the provider and may incur cost.
+The dashboard can display the validated optional artifact without model calls.
+
+`run_openrouter.py` is instead an optional direct-DSPy smoke diagnostic. It reads
+only the process environment key `THALIA_OPENROUTER_API_KEY` (not `.env`), prints
+a skip with no artifact when absent, and returns nonzero on runtime/model errors.
+Its success output is `output/data/openrouter_result.json`, not the retained
+`data/openrouter_eval.json` and not a matched backend benchmark.
+
 ## Regenerate artifacts
 
 ```bash
@@ -63,6 +85,8 @@ uv run --project . --extra dev python scripts/run_compiler_generalization.py \
   --per-category 10 \
   --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 \
   --gepa-iterations 4
+# Any deliberately refreshed live evidence must be collected/reviewed BEFORE
+# the source-bound integrity screen below. Offline builds retain data/*.json.
 uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/run_pipeline.py
 uv run --project . --extra dev python scripts/generate_figures.py
@@ -75,13 +99,18 @@ uv run --project . --extra dev python scripts/validate_artifacts.py
 # Re-render the PDF and validate output (run LAST, once every artifact above is fresh)
 # Optional external integration; requires a populated ../template checkout. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --project ../template python scripts/render_pdf_external.py --validate
+uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 ```
 
 The PDF compiler and THALIA's local artifact checks are separable from the
 template-side output-structure check. The adapter reports that external
 boundary explicitly when optional template output directories are absent; it
 never turns that condition into a fabricated local pass.
+The template environment must already be provisioned under its own runtime
+policy. Its current hydration admission requires Python 3.14 or newer, whereas
+THALIA's tested development pin is Python 3.13. The sequence above hydrates and
+validates in THALIA first, then renders those exact files with the existing
+template runtime. Never skip hydration after changing manuscript inputs.
 
 `run_harness_eval.py` also runs the seeded sample-size audit. Its accounting is
 written to `output/reports/evaluation_accounting.json` and its deterministic

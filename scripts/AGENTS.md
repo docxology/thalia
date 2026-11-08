@@ -20,19 +20,22 @@ tested); if you are tempted to compute something here, it belongs in `src/`.
    `main()`, never at import time).
 4. **Print output paths.** Every produced artifact path is printed to stdout
    for manifest collection.
-5. **Determinism.** Artifacts are byte-identical on repeated runs; JSON is
-   serialised with `indent=2, sort_keys=True`.
+5. **Determinism.** Fixed-input offline algorithms are deterministic within their
+   runtime envelope; live generations and observed latency are not. Rendering
+   byte identity also depends on dependencies/fonts/platform. JSON convention:
+   `indent=2, sort_keys=True`.
 6. **Fail loudly / fail closed.** Never silence `SystemExit` from coverage,
    crossref, or numeric-lint checks; `validate_artifacts.py` refuses missing,
    mutated, or unsafe manifest entries and runs after the final generator.
 
-## Inventory (35 scripts; delegation map in [README.md](README.md))
+## Inventory (delegation map in [README.md](README.md))
 
 | Role | Scripts | Gate |
 |---|---|---|
 | Deterministic generators + query CLI | `00_preflight.py`, `run_harness_eval.py`, `run_compiler.py`, `run_pipeline.py`, `run_seed_sensitivity.py`, `run_compiler_generalization.py`, `analyze_integrity_advantage.py`, `generate_figures.py`, `z_generate_manuscript_variables.py`, `run_demo.py`, `build_dashboard.py`, `run_query.py` | `dev` extra |
 | Validators / frozen-protocol promoters (fail-closed) | `validate_artifacts.py`, `freeze_quality_protocol.py`, `analyze_quality.py`, `promote_quality_report.py`, `analyze_production_readiness.py`, `promote_production_readiness.py`, `freeze_provenance_p0.py`, `build_provenance_p0_packets.py`, `analyze_provenance_p0.py`, `promote_provenance_p0.py` | `dev` extra |
 | Neural opt-in recorders / campaigns | `run_dspy.py`, `run_neural_eval.py`, `run_learned_retrieval.py`, `run_injection_probe.py`, `run_longmemeval.py`, `run_longmemeval_bottleneck.py`, `run_research_campaign.py`, `run_bottleneck_campaign.py`, `run_quality_campaign.py`, `run_production_readiness.py`, `run_openrouter.py` | `neural` extra + live model/network |
+| Common backend observations | `run_backend_benchmark.py` | No DSPy prerequisite; Ollama/cloud only when selected; cloud explicit |
 | External helpers | `get_longmemeval.sh` (benchmark download + validation), `render_pdf_external.py` (optional `../template` PDF) | bash / template project |
 
 ## Gotchas
@@ -56,6 +59,13 @@ tested); if you are tempted to compute something here, it belongs in `src/`.
 - **Large external data.** `get_longmemeval.sh` downloads ~277 MB into
   `data/longmemeval/`; the benchmark is validated before its `.partial` file is
   moved into place and is never committed.
+- **Live tests are explicit.** Neural DSPy generation tests require
+  `THALIA_LIVE_TESTS=1`; SDK classes skip without DSPy. Collection must never
+  trigger live generation. `run_openrouter.py` reads the process environment
+  only, skips without a key (no artifact), and fails nonzero on model errors.
+- **Source-bound order.** Any intentionally refreshed live evidence precedes
+  `analyze_integrity_advantage.py`; downstream figures/tokens/dashboard and
+  validators run after the last evidence mutation. Preserve historical cohorts.
 - **Zero-Mock.** No `unittest.mock`/`MagicMock` in scripts or tests; use real
   data, real SQLite, and real temp files.
 - **Keep `scripts/` clean.** No `__pycache__/`, `.DS_Store`, or deprecated

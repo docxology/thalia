@@ -32,8 +32,20 @@ Public API surface and invariants for the THALIA implementation. Import via the
   file < env < flag precedence.
 - `load_config(path, apply_env=True)`, `save_config(config, path)`,
   `apply_env_overrides(config)` — `THALIA_*` env vars map to config fields.
-- LM adapters: `CallableLM(fn)`, `OllamaLM(model?, host?, timeout?)` (raises
-  `OllamaError`, never silent), both satisfy `LMClient`.
+- LM adapters: `CallableLM(fn)`, `OllamaLM(model?, host?, timeout?, options?)`
+  (raises `OllamaError`), `OpenRouterLM(model?, api_base?, api_key?, timeout?,
+  temperature?, max_tokens?)` (raises `OpenRouterError`); all satisfy `LMClient`.
+  OpenRouter reads the process environment key `THALIA_OPENROUTER_API_KEY`
+  when omitted; select the model explicitly, not through a model env variable.
+- Common observations: `src.evaluation.backend_benchmark` composes backend
+  specifications with the same seeded research cohort and `AutoHarness`;
+  fresh state per example, one attempt (`verify=False`), complete/failure
+  accounting, validator, and isolated complete/incomplete outputs. See
+  [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md).
+  This lane has no DSPy prerequisite and never auto-selects cloud.
+- Installed commands: `thalia = src.cli:main` and
+  `thalia-benchmark = src.benchmark_cli:main`; both accept `argv` and return a
+  process status. Benchmark output paths are caller-relative, not package-relative.
 
 ## Stage contracts
 

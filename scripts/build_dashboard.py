@@ -2,12 +2,13 @@
 """Thin orchestrator: build the static HTML results dashboard.
 
 Generates the figures, computes the evaluation metrics and invariant results, and
-writes a self-contained ``output/dashboard.html`` that embeds them. Rendering and
-analysis live in ``src/``; this script only orchestrates and handles I/O.
+writes an offline ``output/dashboard.html`` asset bundle with companion figures.
+Rendering and analysis live in ``src/``; this script handles orchestration and I/O.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 import json
@@ -24,8 +25,23 @@ from src.invariants import all_invariants  # noqa: E402
 from src.provenance import load_verification_summary, write_artifact_manifest, write_verification_summary  # noqa: E402
 
 
-def main() -> Path:
-    """Generate figures, gather metrics + invariants, and write the dashboard."""
+def main(argv: list[str] | None = None) -> Path:
+    """Generate an offline dashboard, optionally including backend observations."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--backend-benchmark",
+        type=Path,
+        help="Common-harness benchmark JSON (default: output/data/backend_benchmark.json if present).",
+    )
+    args = parser.parse_args([] if argv is None else argv)
+    backend_path = args.backend_benchmark or PROJECT_ROOT / "output" / "data" / "backend_benchmark.json"
+    backend_benchmark = None
+    if args.backend_benchmark is not None or backend_path.exists():
+        backend_benchmark = json.loads(backend_path.read_text(encoding="utf-8"))
+        # Reject invalid supplied evidence before generating any artifacts.
+        from src.evaluation.backend_benchmark import validate_backend_benchmark
+
+        validate_backend_benchmark(backend_benchmark)
     # Generate figures into output/figures/ (reuse the figures orchestrator).
     import importlib.util
 
@@ -103,6 +119,7 @@ def main() -> Path:
         demo=demo,
         quality_status=quality_status,
         production_status=production_status,
+        backend_benchmark=backend_benchmark,
     )
     write_artifact_manifest(PROJECT_ROOT)
     # The dashboard itself is an artifact, so refresh the summary once more and
@@ -119,6 +136,7 @@ def main() -> Path:
             demo=demo,
             quality_status=quality_status,
             production_status=production_status,
+            backend_benchmark=backend_benchmark,
         )
     write_artifact_manifest(PROJECT_ROOT)
     print(str(output_path))
@@ -126,4 +144,4 @@ def main() -> Path:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
