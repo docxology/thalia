@@ -257,6 +257,20 @@ Flags cover the configuration knobs (`--top-k`, `--max-windows`, `--max-evidence
 answer, detected task category, delivery mode, and the cited source indices —
 making the harness's evidence-grounding inspectable from the shell.
 
+## Optional SDK Cache Trust Boundary {#sec:op-cache-trust}
+
+The optional DSPy stack retains an unresolved third-party pickle-cache
+advisory. THALIA's SDK configurators disable persistent disk caching before
+configuring a backend; in-memory caching remains available. This prevents
+those helpers from replaying persisted SDK entries, not a patch to the
+dependency or an authentication guarantee for existing cache files. Callers
+that configure DSPy independently must disable persistent caching before
+model calls and must not load untrusted/shared caches. The SDK-free query
+and common-backend commands do not import DSPy or use its cache. The
+[security policy](https://github.com/docxology/thalia/blob/v{{CURRENT_RELEASE_VERSION}}/SECURITY.md)
+records the advisory and boundary; release validation is not security
+certification.
+
 ## Extension Points and Replacement Lanes {#sec:op-extension-matrix}
 
 The intended extension points are stable and narrow:

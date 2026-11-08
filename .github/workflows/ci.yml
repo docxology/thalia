@@ -182,6 +182,38 @@ jobs:
           cd "$THALIA_ISOLATED_ENV"
           "$THALIA_ISOLATED_ENV/venv/bin/python" -I -c \
             'import importlib.util; assert importlib.util.find_spec("dspy") is None; import src.compiler.metrics; print("installed core import ok")'
+      - name: Exercise installed neural extra and persistent-cache boundary
+        run: |
+          wheel="$(find dist -name '*.whl' -print -quit)"
+          uv pip install --python "$THALIA_ISOLATED_ENV/venv/bin/python" "$GITHUB_WORKSPACE/$wheel[neural]"
+          cd "$THALIA_ISOLATED_ENV"
+          "$THALIA_ISOLATED_ENV/venv/bin/python" -I - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+          from packaging.version import Version
+
+          import dspy
+          from src.dspy_runtime import build_program, configure
+
+          assert Version(version("filelock")) >= Version("4.2.1")
+          request = {"model": "release-probe", "prompt": "source-owned synthetic cache request"}
+          persisted = {"answer": "untrusted persisted answer"}
+          dspy.configure_cache(enable_memory_cache=False, disk_cache_dir=str(Path("cache").resolve()))
+          disk_cache = dspy.cache
+          try:
+              disk_cache.put(request, persisted)
+              assert disk_cache.get(request) == persisted
+              configure()
+              assert dspy.cache.get(request) is None
+              answer = build_program()(
+                  context="The wifi password is bluefish42.",
+                  question="What is the wifi password?",
+              )
+              assert "bluefish42" in answer.answer
+          finally:
+              disk_cache.disk_cache.close()
+          print("Installed neural extra: patched filelock, no persistent-cache replay, real extractive prediction")
+          PY
       - name: Fetch the pinned manuscript injection SDK outside the project
         run: |
           sdk="$(mktemp -d "$RUNNER_TEMP/thalia-template-sdk.XXXXXX")"

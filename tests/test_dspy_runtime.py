@@ -104,6 +104,41 @@ class TestPureAdapterHelpers:
 
 
 @pytest.mark.skipif(not DSPY_AVAILABLE, reason="requires the optional DSPy extra")
+class TestPersistentCacheBoundary:
+    @pytest.mark.parametrize("configurator", ["configure", "configure_ollama", "configure_openrouter"])
+    def test_configuring_backend_does_not_replay_persistent_cache(self, tmp_path, configurator):
+        import dspy
+        from src.dspy_runtime import runtime
+
+        previous_cache, previous_lm = dspy.cache, dspy.settings.lm
+        disk_cache = None
+        request = {"model": "cache-boundary-test", "prompt": "source-owned synthetic request"}
+        persisted = {"answer": "untrusted persisted answer"}
+        current = {"answer": "current in-memory answer"}
+        try:
+            dspy.configure_cache(
+                enable_disk_cache=True, enable_memory_cache=False, disk_cache_dir=str(tmp_path / "cache"),
+            )
+            disk_cache = dspy.cache
+            disk_cache.put(request, persisted)
+            # No memory cache: a hit here proves the fixture actually persisted.
+            assert disk_cache.get(request) == persisted
+            kwargs = {} if configurator == "configure" else {"api_base": "http://127.0.0.1:1"}
+            if configurator == "configure_openrouter":
+                kwargs["api_key"] = "public-noncredential-test-value"
+            getattr(runtime, configurator)(**kwargs)  # Construction only; no model requests.
+            assert dspy.cache.get(request) is None
+            dspy.cache.put(request, current)
+            assert dspy.cache.get(request) == current
+            assert disk_cache.get(request) == persisted
+        finally:
+            if disk_cache is not None:
+                disk_cache.disk_cache.close()
+            dspy.cache = previous_cache
+            dspy.configure(lm=previous_lm)
+
+
+@pytest.mark.skipif(not DSPY_AVAILABLE, reason="requires the optional DSPy extra")
 class TestLiveEvaluationAccounting:
     def test_balanced_subset_is_capacity_aware_and_deterministic(self):
         from collections import Counter

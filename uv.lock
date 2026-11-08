@@ -2874,6 +2874,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "dspy" },
+    { name = "filelock" },
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "pytest" },
@@ -2884,12 +2885,15 @@ dev = [
 ]
 neural = [
     { name = "dspy" },
+    { name = "filelock" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "dspy", marker = "extra == 'dev'", specifier = ">=3.2.1" },
     { name = "dspy", marker = "extra == 'neural'", specifier = ">=3.2.1" },
+    { name = "filelock", marker = "extra == 'dev'", specifier = ">=4.2.1" },
+    { name = "filelock", marker = "extra == 'neural'", specifier = ">=4.2.1" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100.0" },
     { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },

@@ -53,11 +53,17 @@ class AnswerFromContext(_dspy.Signature):
     answer: str = _dspy.OutputField(desc="The grounded answer span.")
 
 
+def _configure_backend(lm: Any) -> Any:
+    """Do not replay persistent, pickle-backed SDK cache entries."""
+    _dspy.configure_cache(enable_disk_cache=False)
+    _dspy.configure(lm=lm)
+    return lm
+
+
 def configure(lm: LMClient | None = None) -> Any:
-    """Configure dspy globally with the real ExtractiveLM-backed adapter."""
+    """Configure the extractive adapter and disable persistent SDK caching."""
     backend = ExtractiveDSPyLM(lm=lm)
-    _dspy.configure(lm=backend)
-    return backend
+    return _configure_backend(backend)
 
 
 def configure_ollama(
@@ -66,10 +72,9 @@ def configure_ollama(
     temperature: float = 0.0,
     max_tokens: int = 512,
 ) -> Any:
-    """Configure dspy with a real neural LLM via ``dspy.LM`` → litellm → Ollama."""
+    """Configure dspy.LM → LiteLLM → Ollama without persistent SDK caching."""
     lm = _dspy.LM(model=f"ollama_chat/{model}", api_base=api_base, api_key="", temperature=temperature, max_tokens=max_tokens)
-    _dspy.configure(lm=lm)
-    return lm
+    return _configure_backend(lm)
 
 
 def configure_openrouter(
@@ -79,7 +84,7 @@ def configure_openrouter(
     temperature: float = 0.0,
     max_tokens: int = 1024,
 ) -> Any:
-    """Configure dspy with a real neural LLM via dspy.LM → litellm → OpenRouter."""
+    """Configure dspy.LM → LiteLLM → OpenRouter without persistent SDK caching."""
     key = api_key or os.environ.get(ENV_OPENROUTER_KEY, "")
     if not key:
         raise RuntimeError(
@@ -93,8 +98,7 @@ def configure_openrouter(
         temperature=temperature,
         max_tokens=max_tokens,
     )
-    _dspy.configure(lm=lm)
-    return lm
+    return _configure_backend(lm)
 
 
 def build_program() -> Any:

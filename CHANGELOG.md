@@ -53,6 +53,15 @@ remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
   manuscript integrity checks; valid Bash continuations are no longer rejected
   by a documentation substring test.
 
+### Security
+
+- Integrated Dependabot's `filelock` 4.2.1 repair for the reported local locking
+  advisories; the compatible lock selects LiteLLM 1.103.10 with DSPy 3.2.1.
+- Disabled persistent DSPy caching in THALIA-owned configurators, with real
+  disk-to-memory transition regressions. The unpatched DiskCache pickle advisory
+  remains explicitly documented in [the security policy](SECURITY.md); this is
+  mitigation at the owned boundary, not a dependency fix or security certificate.
+
 ### Validation
 
 - The authoritative local suite, static checks, deterministic artifact gates,
