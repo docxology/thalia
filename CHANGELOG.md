@@ -36,6 +36,12 @@ remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 - Separate finite local method diagnostics from historical cloud/DSPy data,
   expert quality, P0 confirmation, and production acceptance throughout use
   guidance and the manuscript.
+- Reject malformed configuration YAML as argparse status 2 without exposing
+  its contents, and preserve argument isolation when the manuscript generator
+  is called as an imported orchestrator.
+- Remove duplicated token/default-count and presentation-wording pins from
+  manuscript tests; retain typed fail-closed boundaries and exact hydration
+  checks against real generated artifacts.
 
 ### Validation
 

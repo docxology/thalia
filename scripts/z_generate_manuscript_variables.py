@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -31,8 +32,8 @@ from src.manuscript_variables import generate_variables  # noqa: E402
 from src.provenance import write_artifact_manifest  # noqa: E402
 
 
-def main(argv: list[str] | None = None) -> Path:
-    """Generate source-bound variables, optionally selecting a benchmark report."""
+def main(argv: Sequence[str] = ()) -> Path:
+    """Generate variables without consuming an importing caller's arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--benchmark-report", type=Path,
@@ -107,4 +108,4 @@ def main(argv: list[str] | None = None) -> Path:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

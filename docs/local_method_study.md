@@ -51,7 +51,7 @@ thalia-benchmark \
   --seed 0 --seed 1 --seed 2 --per-category 4 \
   --num-ctx 8192 --max-tokens 1024 --timeout 120 \
   --reference-method full_context --n-boot 2000 --analysis-seed 0 \
-  --output output/data/local_method_study.json
+  --output output/data/backend_benchmark.json
 ```
 
 No `--limit` or cloud option is part of this plan. Record the actual printed
@@ -96,11 +96,23 @@ printed sidecar if incomplete:
 
 ```bash
 uv run --project . --extra dev python scripts/build_dashboard.py \
-  --backend-benchmark output/data/local_method_study.json
+  --backend-benchmark output/data/backend_benchmark.json
 uv run --project . --extra dev python \
   scripts/z_generate_manuscript_variables.py \
-  --benchmark-report output/data/local_method_study.json
+  --benchmark-report output/data/backend_benchmark.json
 ```
+
+When an external template renderer is available, preserve this explicit report
+selection rather than asking it to hydrate again from the optional default:
+
+```bash
+uv run --project . --extra dev python scripts/render_pdf_external.py \
+  --skip-manuscript-hydration --validate
+```
+
+The skip flag is appropriate only after the fresh, explicit hydration above.
+The publication owner separately qualifies the pinned renderer source and
+checks exact source substitution before rendering.
 
 Measured manuscript values come only from validated generated observation and
 comparison tokens. Never transcribe scores, timings, or confidence limits into
