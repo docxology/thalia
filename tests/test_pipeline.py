@@ -32,10 +32,7 @@ class TestVersion:
         assert isinstance(__version__, str)
 
     def test_version_matches_pyproject(self):
-        try:
-            import tomllib  # Python >= 3.11
-        except ModuleNotFoundError:  # Python 3.10
-            import tomli as tomllib  # type: ignore[import-not-found]
+        import tomllib
 
         pyproject = PROJECT_ROOT / "pyproject.toml"
         data = tomllib.loads(pyproject.read_text())

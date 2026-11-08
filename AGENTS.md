@@ -105,7 +105,9 @@ uv run --project . --extra dev python scripts/validate_artifacts.py
 # fresh, or the PDF silently ships stale figures/tokens — see PUBLICATION_READINESS.md)
 # Optional external template integration; ../template must be populated. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --project ../template python scripts/render_pdf_external.py --validate
+uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
+# Use only after fresh hydration + exact injection validation above. The
+# provisioned template runtime has independent Python admission requirements.
 
 # Run a query (configurable: file < THALIA_* env < CLI flags)
 uv run --project . --extra dev python scripts/run_query.py \

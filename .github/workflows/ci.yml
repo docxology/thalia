@@ -14,7 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.11", "3.12", "3.13", "3.15" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1 (reviewed upstream commit)
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python@v7.0.0 (reviewed upstream commit)
@@ -25,6 +27,11 @@ jobs:
           enable-cache: true
       - name: Install locked development environment
         run: uv sync --project . --locked --extra dev
+      - name: Verify selected matrix runtime
+        run: >-
+          uv run --project . --extra dev python -c
+          'import os, sys; expected = tuple(map(int, os.environ["UV_PYTHON"].split(".")));
+          assert sys.version_info[:2] == expected, (sys.version, expected)'
       - name: Verify lockfile
         run: uv lock --project . --check
       - name: Check tracked-file whitespace
@@ -76,6 +83,8 @@ jobs:
     name: Packaging and deterministic artifacts
     runs-on: ubuntu-latest
     needs: tests
+    env:
+      UV_PYTHON: "3.13"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1 (reviewed upstream commit)
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python@v7.0.0 (reviewed upstream commit)
@@ -95,19 +104,84 @@ jobs:
           unzip -l "$wheel" | grep -q 'src/harness.py'
           unzip -l "$wheel" | grep -q 'licenses/LICENSE'
           unzip -p "$wheel" '*/METADATA' | grep -Eq '^(License-Expression: MIT|License: MIT)$'
-      - name: Install wheel in an isolated environment and import it
+      - name: Exercise installed benchmark and query commands without DSPy
         run: |
           wheel="$(find dist -name '*.whl' -print -quit)"
-          isolated="$(mktemp -d)"
+          isolated="$(mktemp -d "$RUNNER_TEMP/thalia-installed.XXXXXX")"
           uv venv --python 3.13 "$isolated/venv"
           uv pip install --python "$isolated/venv/bin/python" "$GITHUB_WORKSPACE/$wheel"
+          printf 'THALIA_ISOLATED_ENV=%s\n' "$isolated" >> "$GITHUB_ENV"
+          unset PYTHONPATH
           cd "$isolated"
-          "$isolated/venv/bin/python" -c 'import src; import src.harness; print(src.__file__)'
+          "$isolated/venv/bin/thalia-benchmark" --per-category 1 --limit 6 --seed 7
+          "$isolated/venv/bin/thalia" \
+            --query "What is the wifi password?" \
+            --session-history "User: my wifi password is bluefish42" \
+            --json > query.json
+          "$isolated/venv/bin/python" -I - <<'PY'
+          import importlib.metadata
+          import importlib.util
+          import json
+          import math
+          import sys
+          from pathlib import Path
+
+          import src
+          from src.cli import run_query
+          from src.evaluation.backend_benchmark import (
+              build_benchmark_backends,
+              run_backend_benchmark,
+              validate_backend_benchmark,
+              write_backend_benchmark,
+          )
+          from src.signatures import TaskCategory
+
+          assert Path(src.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+          assert src.__version__ == importlib.metadata.version("thalia")
+          assert importlib.util.find_spec("dspy") is None
+          cli_report = json.loads(Path("output/data/backend_benchmark.json").read_text())
+          api_report = run_backend_benchmark(
+              build_benchmark_backends(), per_category=1, limit=6, seed=7,
+          )
+          api_path = write_backend_benchmark(api_report, Path("api-benchmark.json"))
+          assert json.loads(api_path.read_text()) == api_report
+          for report in (cli_report, api_report):
+              validate_backend_benchmark(report)
+              assert report["status"] == "complete"
+              assert report["n_examples"] == len(report["examples"]) == len(report["rows"]) == 6
+              assert len({row["example_id"] for row in report["rows"]}) == 6
+              assert {row["category"] for row in report["rows"]} == {category.value for category in TaskCategory}
+              assert len(report["backends"]) == 1
+              backend = report["backends"][0]
+              assert backend["provider"] == backend["name"] == "extractive"
+              assert (backend["n_requested"], backend["n_completed"], backend["n_failed"]) == (6, 6, 0)
+              assert all(row["status"] == "complete" and row["error_class"] is None for row in report["rows"])
+              assert all(len(row["prompt_fingerprints"]) == 1 for row in report["rows"])
+              assert math.isclose(backend["mean_token_f1"], sum(row["token_f1"] for row in report["rows"]) / 6)
+          for field in ("examples", "cohort", "config_fingerprint", "dataset_fingerprint"):
+              assert cli_report[field] == api_report[field]
+          assert [
+              (row["answer"], row["prompt_fingerprints"]) for row in cli_report["rows"]
+          ] == [
+              (row["answer"], row["prompt_fingerprints"]) for row in api_report["rows"]
+          ]
+          query = json.loads(Path("query.json").read_text())
+          assert "bluefish42" in query["answer"]
+          assert query["citations"]
+          api_query = run_query(
+              "What is the wifi password?",
+              session_history="User: my wifi password is bluefish42",
+          )
+          assert query["answer"] == api_query["answer"]
+          assert query["citations"] == api_query["citations"]
+          assert importlib.util.find_spec("dspy") is None
+          print("Installed CLI/API: six offline observations each, accounting and query verified")
+          PY
       - name: Verify deterministic core import without DSPy
-        run: >-
-          uv run --no-project --isolated
-          --with numpy --with matplotlib --with pyyaml --with tomli
-          python -c 'import src.compiler.metrics; print("core import ok")'
+        run: |
+          cd "$THALIA_ISOLATED_ENV"
+          "$THALIA_ISOLATED_ENV/venv/bin/python" -I -c \
+            'import importlib.util; assert importlib.util.find_spec("dspy") is None; import src.compiler.metrics; print("installed core import ok")'
       - name: Fetch the pinned manuscript injection SDK outside the project
         run: |
           sdk="$(mktemp -d "$RUNNER_TEMP/thalia-template-sdk.XXXXXX")"

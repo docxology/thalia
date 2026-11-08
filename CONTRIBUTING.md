@@ -6,11 +6,20 @@ between implemented diagnostics and promoted scientific claims.
 
 ## Development setup
 
-Use Python 3.10 or newer and `uv`:
+Use Python 3.11–3.14 and `uv`. Python 3.13 is the checkout default and the
+recommended development runtime. Python 3.15 is not qualified for the optional
+development environment because its PyO3-based dependencies cannot build there.
 
 ```bash
-uv sync --project . --extra dev
+export UV_PYTHON=3.13
+uv sync --project . --locked --extra dev
 ```
+
+To qualify another supported runtime, set `UV_PYTHON` to that version before
+syncing and running the checks. This overrides `.python-version`; CI sets it
+separately for every matrix job and asserts the selected interpreter. The
+external manuscript injection SDK has its own locked Python 3.14 environment,
+selected explicitly with `--python 3.14`, independent of the THALIA runtime.
 
 Run the authoritative checks before opening a pull request:
 
@@ -28,6 +37,18 @@ For manuscript or evaluation changes, also regenerate the affected artifacts,
 run `scripts/validate_artifacts.py`, and render the PDF/HTML last. Do not
 hand-edit generated tokens, figures, dashboards, or reports as a substitute
 for fixing their producer.
+
+CI also installs the built wheel into a fresh environment outside the checkout,
+without DSPy, and executes both installed commands: `thalia-benchmark` produces
+six offline extractive observations with validated accounting, and `thalia`
+answers a supplied query with citations. It exercises the benchmark and query
+Python APIs from that installed environment as well; import-only or wheel-name
+checks are not a substitute.
+
+Before merging or releasing, gate all five `THALIA CI` checks: `Python 3.11`,
+`Python 3.12`, `Python 3.13`, `Python 3.14`, and
+`Packaging and deterministic artifacts`. The packaging check depends on the
+entire test matrix and retains deterministic artifact regeneration/validation.
 
 ## Project contracts
 

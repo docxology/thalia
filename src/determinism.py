@@ -24,6 +24,9 @@ _CORE_ALLOWLIST = {
     # Production probes measure live latency and operational controls; they are
     # an external readiness lane, not deterministic harness business logic.
     Path("src/evaluation/production_runner.py"),
+    # Common-backend timing is optional observed harness latency, not a
+    # deterministic headline or part of the core inference path.
+    Path("src/evaluation/backend_benchmark.py"),
 }
 _CORE_ALLOWLIST_PREFIXES = (
     "src/dspy_runtime/",

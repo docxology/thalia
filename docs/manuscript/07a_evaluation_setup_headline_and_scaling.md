@@ -54,8 +54,9 @@ Answer token-F1 ({{RESULT_ACCURACY}}) is bounded because the *deterministic*
 extractive LM returns a whole transcript line, such as an assistant confirmation,
 while the annotation contains a minimal span. Token-F1 against the terse gold string measures lexical
 agreement with the annotation. Adjudicated semantic correctness is a separate
-outcome. This behaviour belongs to the selected Reasoner and metric; [@sec:eval-neural]
-tests the model boundary directly while holding the other stages fixed.
+outcome. This behaviour belongs to the selected Reasoner and metric;
+[@sec:eval-neural] reports a separate full-context DSPy model diagnostic, not
+a controlled runtime-stage comparison.
 
 ### Scaling, Uncertainty, and Inferential Limits {#sec:eval-scaling}
 
@@ -69,9 +70,10 @@ descriptive bootstrap interval of {{RESULT_LARGE_COMPOSITE_CI}}, and [@fig:scali
 per-category answer token-F1 with bootstrap intervals — the first view of the harness with
 measured dispersion across category rows. The caveat is explicit: this set is
 *realistic-but-synthetic* (templated entities; observational transcripts form a
-separate tier), so it measures the machinery's scaling and variance. An external benchmark slice
-is the natural next step. What it buys is statistical shape: the strongest and weakest
-task categories show visible dispersion (the middle categories overlap). This is a
+separate tier), so it measures the machinery's scaling and variance. The retained
+external benchmark slice is reported in the following transfer section. The
+synthetic audit adds statistical shape: the strongest and weakest task categories
+show visible dispersion (the middle categories overlap). This is a
 descriptive pattern with no significance estimand, and it adds structure the
 {{RESULT_NUM_EXAMPLES}}-example diagnostic could only hint at.
 

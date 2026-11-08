@@ -32,8 +32,9 @@ Every generated `{{…}}` placeholder in this manuscript is emitted by
 and configuration. Configuration tokens (`CONFIG_*`), headline results
 (`RESULT_COMPOSITE`, `RESULT_ACCURACY`, …), the retrieval comparison
 (`RESULT_*_COMPOSITE`), and the compiled optimum (`RESULT_COMPILED_*`) all derive
-from the same functions the tests exercise. A drift between prose and code surfaces
-as a missing or changed token, exposing narrative drift.
+from the same functions the tests exercise. Coverage detects missing tokens and
+source-value drift, but does not detect every stale qualitative interpretation
+or validate the scientific meaning of a metric; those require a claim-evidence audit.
 
 The token gate is deliberately independent of the PDF renderer. The generator
 checks manuscript coverage first; optional injection into `output/manuscript/`
@@ -44,9 +45,12 @@ number must have a source in the live variable map.
 ## Ordered Artifact Regeneration {#sec:repro-regenerate}
 
 ```bash
-# 1. Tests + coverage gate (>= {{CONFIG_COV_GATE}}% on src/; warnings are strict)
-PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
-  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+# 1. Tests + coverage gate (>= {{CONFIG_COV_GATE}}% on src/;
+# warnings are strict)
+PYTHONWARNINGS=error::ResourceWarning \
+  uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing \
+  --cov-report=json:output/reports/coverage.json \
   --junitxml=output/reports/pytest.xml --cov-fail-under={{CONFIG_COV_GATE}}
 
 # 2. Evaluation bundle -> output/data/eval_results.json
@@ -63,51 +67,70 @@ uv run --project . --extra dev python scripts/run_compiler.py
 
 # 4. Pre-registered finite sensitivity and held-out compiler aggregates
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
-uv run --project . --extra dev python scripts/run_compiler_generalization.py \
+uv run --project . --extra dev python \
+  scripts/run_compiler_generalization.py \
   --per-category 10 \
   --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 \
   --gepa-iterations 4
 
-# 5. Endpoint-specific integrity screen -> data/integrity_advantage.json
-uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
+# 5. Optional live-source refresh, only when deliberately collecting a
+# NEW cohort.
+# Preserve retained data/*.json; use recorder-specific isolated outputs.
+# These commands contact live models and are NOT offline build
+# prerequisites:
+# scripts/run_neural_eval.py, scripts/run_learned_retrieval.py,
+# scripts/run_injection_probe.py, scripts/run_longmemeval.py,
+# scripts/run_longmemeval_bottleneck.py (each with its documented output
+# options).
+# A direct DSPy smoke diagnostic is separate:
+# uv run --project . --extra neural python scripts/run_dspy.py
 
-# 6. Pipeline trace -> output/data/pipeline_result.json
+# 6. After all intended evidence-source changes, refresh the source-bound
+# screen.
+uv run --project . --extra dev python \
+  scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/run_pipeline.py
 
-# 7. Real DSPy run + optional neural / learned-embedder measurements.
-uv run --project . --extra neural python scripts/run_dspy.py
-uv run --project . --extra neural python scripts/run_neural_eval.py
-uv run --project . --extra neural python scripts/run_learned_retrieval.py
-uv run --project . --extra neural python scripts/run_injection_probe.py
-uv run --project . --extra neural python scripts/run_longmemeval.py
-uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py
-
-# 8. Figures -> output/figures/*.png  (reads committed aggregates)
+# 7. Figures -> output/figures/*.png  (reads committed aggregates)
 uv run --project . --extra dev python scripts/generate_figures.py
 
-# 9. Manuscript variables -> output/data/manuscript_variables.json
-uv run --project . --extra dev python scripts/z_generate_manuscript_variables.py
+# 8. Manuscript variables -> output/data/manuscript_variables.json
+uv run --project . --extra dev python \
+  scripts/z_generate_manuscript_variables.py
 
-# 10. Demo, dashboard, then artifact hashes + required-output completeness
+# 9. Demo, dashboard, then artifact hashes + required-output completeness
 uv run --project . --extra dev python scripts/run_demo.py
 uv run --project . --extra dev python scripts/build_dashboard.py
 uv run --project . --extra dev python scripts/validate_artifacts.py
+
+# 10. Optional external render: an already-provisioned template runtime is
+# required.
+# THALIA hydration above is fresh and exact; use render-only mode because
+# template hydration admission independently requires Python >=3.14.
+uv run --no-sync --project ../template python \
+  scripts/render_pdf_external.py \
+  --skip-manuscript-hydration --validate
 ```
 
-The deterministic-core paths in the evaluation, pipeline, figure, and validation
-steps are bit-reproducible on any host; the test step also exercises optional
-live-service tests when those services are available. The live-recorder step is the
-component **outside** the bit-reproducible envelope: it calls recorded
-local models (model `{{RESULT_NEURAL_MODEL}}`, temperature {{RESULT_NEURAL_TEMPERATURE}}
-[@gemma2025gemma3], and embedder `{{RESULT_EMBED_MODEL}}` with task prefixes
-[@nussbaum2024nomic]), so its numbers
-reproduce *on a host serving the same model tags*. Cross-host byte identity depends
-on machine and Ollama-version agreement. The recorder JSONs carry model metadata — requested
-model, resolved tag, digest when Ollama reports one, generation options, embedding
-query/document prefixes, benchmark SHA-256/size where applicable, and runtime
-Python/platform provenance. If an optional service is unavailable, the tracked
-aggregate is preserved; isolated output paths can be used to record the skip
-without rewriting committed evidence.
+The offline build consumes retained model-dependent aggregates without contacting
+a model. If live evidence is intentionally refreshed, collect and review those
+sources **before** the integrity screen, then regenerate figures, tokens,
+dashboard, manifests, and validation in that order. A later source mutation makes
+the earlier fingerprint-bound screen stale. A quick smoke grid must not replace
+the publication-size deterministic audit.
+
+Deterministic algorithms reproduce results for fixed inputs and a compatible
+runtime; this is not a promise that figures, PDFs, or validation metadata are
+byte-identical on every host. Dependency versions, fonts, renderer, Python,
+SQLite, and platform details can affect serialized or rendered artifacts.
+Live calls to `{{RESULT_NEURAL_MODEL}}` [@gemma2025gemma3] and
+`{{RESULT_EMBED_MODEL}}` [@nussbaum2024nomic] are outside that envelope.
+Matching tags and temperature {{RESULT_NEURAL_TEMPERATURE}} are insufficient
+to guarantee repeat generations: resolved model weights, serving versions,
+hardware, options, and provider behavior also matter. Recorder-specific
+metadata should be inspected rather than assumed uniform across legacy files.
+Preserve the retained aggregate when a prerequisite is absent or a live run
+fails; a skip message is not automatically a machine-readable skip receipt.
 
 The deterministic research audit evaluates {{RESULT_AUDIT_UNIQUE_N}} unique synthetic examples and
 {{RESULT_AUDIT_METHOD_N}} method rows across {{RESULT_AUDIT_STRATA_COUNT}} strata,
@@ -116,13 +139,30 @@ and {{RESULT_AUDIT_SEED_COUNT}} fixed seeds. Its JSONL ledger has one example/me
 sequence numbers and complete failure/fingerprint fields, while the event stream
 repeats dataset/config identity per sample and contains no wall-clock fields.
 
-The tracked `data/openrouter_eval.json` is a committed normalized OpenRouter
-aggregate used only when present; the canonical local pipeline leaves it
-unchanged. The current live smoke recorder is `scripts/run_openrouter.py`, which
-writes `output/data/openrouter_result.json` and requires the environment variable
-`THALIA_OPENROUTER_API_KEY` to be set to a valid OpenRouter API key. Like all
-recorder outputs, an unavailable key is recorded as an isolated skip and the tracked
-aggregate remains unchanged; OpenRouter rows contribute only when available.
+The historical `data/openrouter_eval.json` is not regenerated by the local
+pipeline or by `scripts/run_openrouter.py`. The latter is a direct DSPy smoke
+diagnostic that writes `output/data/openrouter_result.json` only on success.
+It reads `THALIA_OPENROUTER_API_KEY` from the process environment, does not load
+`.env`, and has no model-selection environment-variable contract. An absent key
+prints a skip and returns success without writing null rows or a skip artifact;
+a model/runtime error returns nonzero. An older output can therefore remain
+after a skipped or failed invocation and is not proof of a fresh success.
+
+The installed `thalia` command provides the query entry point through
+`src.cli:main`; `scripts/run_query.py` remains the source-checkout bootstrap.
+Neither installed query nor benchmark use requires a checkout-relative script
+path. Runtime configuration and explicit live-model selection retain their
+documented precedence and network boundaries.
+
+For matched full-harness observations, use the installed `thalia-benchmark`
+command (or the source-checkout bootstrap `scripts/run_backend_benchmark.py`)
+with explicit backend selections and a new `--output` path
+([@sec:op-backend-benchmark]). The default output is
+`output/data/backend_benchmark.json` relative to the caller's working directory,
+not inside the installed package. Its complete/incomplete artifact accounting is
+separate from the smoke recorder. The dashboard validates this optional input;
+`validate_artifacts.py` remains the separate manifest/required-output gate.
+Neither structural validation nor a complete benchmark is scientific promotion.
 
 ## Provenance from Source to Rendered Output {#sec:repro-provenance}
 
@@ -143,14 +183,23 @@ executable harness it describes.
 
 ## Public archive and release identity {#sec:repro-release}
 
-The source release and rendered manuscript are archived as one reproducibility
-package at [Zenodo](https://doi.org/{{ZENODO_DOI}}).
+The current software identity is **v{{CURRENT_RELEASE_VERSION}}**, with the
+versioned [GitHub release URL]({{CURRENT_RELEASE_URL}}). This version has no
+assigned Zenodo DOI; neither this manuscript nor its metadata claims a new
+archive publication.
 
-**Release DOI:** [{{ZENODO_DOI}}](https://doi.org/{{ZENODO_DOI}}).
+The historical **v0.1.0** source release and rendered manuscript are archived as
+one reproducibility package at
+[Zenodo](https://doi.org/{{ARCHIVED_RELEASE_DOI}}).
+**Archived v0.1.0 DOI:**
+[{{ARCHIVED_RELEASE_DOI}}](https://doi.org/{{ARCHIVED_RELEASE_DOI}}).
+That DOI is loaded from the current metadata's historical `isNewVersionOf`
+relation; it does not identify v{{CURRENT_RELEASE_VERSION}} or its regenerated
+manuscript. The immutable receipt is `docs/release_receipt.md`.
 
 The canonical development history is maintained in the
-[public GitHub repository](https://github.com/docxology/thalia). The DOI is a
-release identifier, not evidence of model-quality, integrity-advantage, or
+[public GitHub repository](https://github.com/docxology/thalia). Release
+availability is not evidence of model-quality, integrity-advantage, or
 production-readiness claims. The archived package intentionally excludes raw
 answers, private external-volume records, credentials, and model weights; those
 lanes remain separately documented and gated.
@@ -175,3 +224,13 @@ semantic lane is a deterministic sub-word surrogate. Learned dense retrieval is
 a separate plug-in point. The bibliography records primary or official URLs where
 available; source-reported empirical claims retain their source status. A local
 aggregate explicitly records any THALIA replication.
+
+The common backend benchmark is a finite diagnostic of the same harness and
+seeded cohort under selected clients, not a general model ranking. Its synthetic
+examples and automatic support/answer metrics cannot replace expert correctness
+or faithfulness labels; successful schema/accounting validation does not change
+that boundary. Recorded latency includes harness and client overhead, and
+provider availability, model revisions, host hardware, and warm-up affect live
+observations. No v{{CURRENT_RELEASE_VERSION}} DOI, accepted expert-quality
+certificate, P0 integrity confirmation, or independent production certificate
+is asserted by this release.

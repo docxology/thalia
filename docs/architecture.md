@@ -19,8 +19,8 @@ session history + query
 - **`src/routing.py`** — `classify_task` (orchestration-level task routing).
 - **`src/signatures/`** — typed stage contracts (`stages.py`) and payload dataclasses (`payloads.py`).
 - **`src/module.py`** — `Module`/`Prediction` and the `LMClient` protocol with the
-  deterministic `ExtractiveLM` default. **The only model-calling code is the
-  Reasoner.**
+  deterministic `ExtractiveLM` default. In the runtime harness, the Reasoner owns
+  model calls. Optional DSPy diagnostics are a separate full-context path.
 - **`src/retrieval/`** — `lexical` (BM25/grep), `semantic` (hashing-embedding
   surrogate), `fusion` (weighted RRF), `mmr` (diversity re-ranking).
 - **`src/stages/`** — one module per runtime stage.
@@ -28,14 +28,21 @@ session history + query
 - **`src/compiler/`** — `metrics`, `mipro`, `gepa`.
 - **`src/pipeline.py`** — `Pipeline`/`PipelineStep`/`PipelineContext`: the same four
   runtime stages as `AutoHarness` exposed as a composable, inspectable chain.
-  Callers can omit stages, insert custom steps, and read per-step intermediates via
-  `pipeline.intermediates` after `run()`.
+  Callers can omit stages, insert custom steps using `PipelineContext.extras`,
+  and read defensive deep-copy snapshots via `pipeline.intermediates` after
+  `run()`. Output construction is not an additional step.
 - **Operability** — `config` (load/save/env), `llm` (real adapters), `harness`,
   `session` (persistence), `cli`, plus `evaluation`, `figures`, `dashboard`,
   `invariants`, `manuscript_variables`, and `formalism_traceability` (the
   machine-checked bridge from equations to code, tests, and artifacts).
 - **`src/py.typed`** — PEP 561 marker; downstream type-checkers treat the package as
   typed without additional configuration.
+- **`src/evaluation/backend_benchmark.py`** — optional observational orchestration
+  of caller-supplied `LMClient` backends through the same `AutoHarness`, seeded
+  dataset, metric, and configuration; fresh state per example and explicit
+  complete/failure accounting. It neither changes stages nor requires DSPy.
+  The dashboard consumes a validated artifact offline; see
+  [`backend_benchmark.md`](backend_benchmark.md).
 
 ## Invariants the architecture preserves
 

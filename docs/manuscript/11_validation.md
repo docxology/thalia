@@ -63,20 +63,28 @@ those fail, the manuscript's methodological claims are no longer true.
 ## Zero-Mock Test Suite {#sec:val-tests}
 
 Every test uses real computation — real BM25/embeddings, a real SQLite episodic
-store, real temporary files, and a real in-process HTTP server for the Ollama
-adapter (no `unittest.mock`, no `MagicMock`). Coverage on `src/` is gated at
-{{CONFIG_COV_GATE}}% and the live suite runs well above it. Selecting a real fallback path (for example
-toggling `fts_available` to exercise the `LIKE` search branch) is permitted because
-it chooses a real branch, so the test exercises the production boundary.
+store, real temporary files, and real in-process HTTP servers for direct model
+adapters (no `unittest.mock`, no `MagicMock`). Coverage on `src/` is gated at
+{{CONFIG_COV_GATE}}%; current counts and outcomes belong in a completed run's
+reports, not an undated readiness assertion. Selecting a real fallback path
+(for example toggling `fts_available` to exercise the `LIKE` search branch)
+is permitted because it exercises a real production branch.
 
-The {{CONFIG_COV_GATE}}% gate covers the **deterministic core**. The optional real-DSPy and neural
-paths (`src/dspy_runtime/`, the `dspy.Predict`/`BootstrapFewShot` glue, and the
-real Gemma-via-Ollama backend) are exercised by genuine, `DSPY_AVAILABLE`- and
-model-availability-gated tests (`tests/test_dspy_runtime.py::TestRealDspyRuntime`,
-`TestRealNeuralDspy`) that run real dspy objects and a real model when present and
-skip cleanly otherwise — so they sit *outside* the coverage gate by construction;
-their real tests run when the dependencies are available. The gated figure shown in [@sec:eval-neural] is produced
-from their recorded output.
+The {{CONFIG_COV_GATE}}% gate covers the **deterministic core**. Optional real-DSPy
+tests require the SDK and skip without it. `TestRealNeuralDspy` additionally
+requires explicit opt-in through `THALIA_LIVE_TESTS`, model availability, and the local server;
+dependency presence alone is not consent to generation. Neural calls do not run
+during collection. These gated integration paths sit outside the deterministic
+coverage envelope. The historical local figure in [@sec:eval-neural] reads a
+retained DSPy full-context diagnostic, not a test-time run receipt.
+
+The common backend benchmark has a separate artifact-consistency boundary:
+`validate_backend_benchmark` rebuilds its seeded plan, checks all requested
+backend/example cells, prompt agreement and fingerprints, and recomputes
+token-F1 and successful-only summaries. Failed rows remain explicit, and the
+dashboard renders incomplete reports as diagnostics, not complete comparisons.
+This validator is neither a live-provider success claim nor a quality,
+scientific-promotion, or production-readiness gate.
 
 The suite is intentionally organized by responsibility: retrieval files test
 lexical, semantic, fusion, MMR, expansion, and recall; stage files test Inspector,

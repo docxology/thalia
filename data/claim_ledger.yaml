@@ -2,7 +2,7 @@ claims:
   - claim_id: num-stages
     kind: number
     value: 5
-    source: src/harness.py AutoHarness composes 4 runtime stages + 1 compiler
+    source: THALIA architecture has 4 AutoHarness runtime stages plus the offline Compiler (src/compiler/)
     source_tier: project_source
     freshness: active
     artifact_path: src/harness.py
@@ -53,8 +53,8 @@ claims:
     artifact_value_tolerance: 0.0005
   - claim_id: pipeline-composable-stages
     kind: number
-    value: 5
-    source: src/pipeline.py Pipeline.with_all_stages (inspector + retriever + reasoner + memory_gate + output)
+    value: 4
+    source: src/pipeline.py Pipeline.with_all_stages (inspector + retriever + reasoner + memory_gate; HarnessOutput is constructed after the steps)
     source_tier: project_source
     freshness: active
     artifact_path: src/pipeline.py

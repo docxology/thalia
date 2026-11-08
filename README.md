@@ -10,33 +10,32 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21763245.svg)](https://doi.org/10.5281/zenodo.21763245)
+> **Current version:** v0.2.0 (2026-11-08), identified by its versioned
+> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.2.0).
+> Source metadata is not evidence that the release has been published: the
+> publisher must verify the exact tag, assets, and candidate checks.
+> See the [v0.2.0 release notes](docs/releases/v0.2.0.md) and
+> [release controls](docs/release_readiness.md). Generated outputs are gitignored
+> and must be regenerated from this version before packaging.
 
-> **Status:** public v0.1.0 research release, rendered only when
-> explicitly requested through the template pipeline. Runnable
-> and covered by the strict local test gate; generated outputs are gitignored. "In-progress"
-> describes the project's lifecycle stage (not yet promoted to a public template
-> exemplar), independent of the docs/manuscript/package's own publish-readiness —
-> see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) for the current
-> assessment of whether *this checkout's* code and manuscript are ready to submit.
+> **Historical archive only:** the immutable **v0.1.0** source and manuscript
+> are archived at
+> [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
+> That DOI does **not** identify v0.2.0; no new Zenodo publication or DOI is
+> asserted. The old commit, checksums, and gates remain recorded unchanged in
+> [`docs/release_receipt.md`](docs/release_receipt.md).
 
-> **Release identity:** MIT-licensed source and the rendered manuscript are
-> archived in the public Zenodo record
-> [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245), with the
-> canonical source at [github.com/docxology/thalia](https://github.com/docxology/thalia).
-
-> **Public release:** v0.1.0 is public on GitHub at the annotated `v0.1.0` tag
-> and archived at the DOI above. The exact commit, file checksums, validation
-> gates, and release boundary are recorded in
-> [`docs/release_receipt.md`](docs/release_receipt.md). This release authority
-> does not promote model-quality, integrity-advantage, or production-readiness
-> claims; those remain separately gated in [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md).
+> **Scientific scope:** software availability and complete benchmark accounting
+> do not promote model-quality, integrity-advantage, or production-readiness
+> claims. The dated [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md)
+> separates historical evidence from current-candidate release checks.
 
 ## Status & next actions
 
-- **Current state:** the release/readiness snapshot above is generated from this
-  checkout; verify it, don't trust it — see [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md)
-  (dated assessment with the commands it ran) and [`docs/release_readiness.md`](docs/release_readiness.md).
+- **Version boundary:** v0.2.0 adds installed query/benchmark commands and the
+  optional common-backend diagnostic; historical checks do not certify this
+  candidate. See [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) and
+  [`docs/release_readiness.md`](docs/release_readiness.md).
 - **What to do next:** the canonical backlog is [`tasks.yaml`](tasks.yaml)
   ("task + Gantt source of truth", managed by the projects/taskboard server).
   Read its `status:` fields for open work (`todo` / `in_progress` / `blocked`);
@@ -46,8 +45,9 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 
 ## What THALIA is
 
-THALIA is five composable stages that turn an unstructured LLM agent into a
-declarative, inspectable, evidence-grounded, compiler-optimizable pipeline:
+THALIA has five architectural stages: four composable request-time stages and
+the offline Compiler. Together they form a declarative, inspectable,
+evidence-grounded, compiler-optimizable pipeline:
 
 1. **Inspector** (Stage 0) — Loads session history as external state into a REPL
    environment, greps for query-anchored evidence, and emits compact evidence
@@ -95,8 +95,9 @@ The evaluation makes two honest scope boundaries explicit:
   (so the lexical-vs-dense *magnitude* of the agentic-search study is not
   reproduced locally — only the *direction* is).
 
-Recorded measurements include: a held-out before/after optimizer
-comparison, a finite context-poisoning probe with equal recorded poisoning rates
+Recorded measurements include an **extractive-backed** held-out DSPy optimizer
+diagnostic (automatic metric, not a neural optimization or quality result), a
+finite context-poisoning probe with equal recorded poisoning rates
 and a lexical cited-excerpt/source-exposure proxy, an external
 LongMemEval_S benchmark run with descriptive bootstrap intervals, and a bottleneck localisation
 showing that, in the retained long-context slice, Inspector context-narrowing —
@@ -135,7 +136,33 @@ digest check.
 Production readiness is a separate operational gate covering latency, cost,
 privacy, rollback, monitoring, drift, and red-team evidence.
 
+The optional [common backend benchmark](docs/backend_benchmark.md) composes
+caller-supplied `LMClient` implementations with the same `AutoHarness`,
+configuration, metric, and seeded examples. Local Ollama and explicitly selected
+OpenRouter models can be measured together, with isolated outputs, complete/failure
+accounting, and observed harness latency. This capability does not promote a
+cloud/local winner, model quality, or production readiness. The historical
+`data/neural_eval.json` full-context DSPy cohort and
+`data/openrouter_eval.json` provider diagnostic remain separate, incomparable
+cohorts; `run_openrouter.py` is a third, direct-DSPy smoke recorder.
+
 ## Quick start
+
+Install the package to use its commands from any working directory:
+
+```bash
+pip install .
+thalia --query "What is the wifi password?" \
+  --session-history "User: my wifi password is bluefish42" --json
+thalia-benchmark --help
+```
+
+`thalia` and `thalia-benchmark` require no checkout-relative script path.
+The benchmark defaults to `output/data/backend_benchmark.json` under the
+caller's working directory, never the installed package. The offline extractive
+baseline is available without a model SDK; live backends require their declared
+server or credentials and explicit selection. The source-checkout scripts below
+remain thin entry-point bootstraps.
 
 ```bash
 # From the repository root.
@@ -160,6 +187,8 @@ uv run --project . --extra dev python scripts/run_compiler_generalization.py \
   --per-category 10 \
   --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 \
   --gepa-iterations 4
+# If deliberately refreshing live evidence, collect/review isolated live outputs
+# BEFORE the fingerprint-bound integrity screen below; otherwise retain data/*.json.
 uv run --project . --extra dev python scripts/analyze_integrity_advantage.py
 uv run --project . --extra dev python scripts/run_pipeline.py
 uv run --project . --extra dev python scripts/generate_figures.py
@@ -181,15 +210,13 @@ uv run --project . --extra dev python scripts/freeze_quality_protocol.py --help
 uv run --project . --extra dev python scripts/promote_quality_report.py --help
 uv run --project . --extra dev python scripts/analyze_production_readiness.py --help
 uv run --project . --extra dev python scripts/promote_production_readiness.py --help
-uv run --project . --extra dev python scripts/run_seed_sensitivity.py
-uv run --project . --extra dev python scripts/run_compiler_generalization.py
 
 # Re-render the PDF and validate output (run LAST, after every artifact above is
 # fresh — the PDF embeds the figures/tokens generated by the steps above and
 # goes stale silently if this step is skipped).
 # Optional external integration: requires the sibling template checkout. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --project ../template python scripts/render_pdf_external.py --validate
+uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 ```
 
 PDF rendering is an optional external integration. The standalone adapter
@@ -197,6 +224,13 @@ removes its temporary project link on exit; the sibling template may still
 report its optional-directory output-structure check as a non-fatal warning.
 The local PDF, manuscript, figure, token, and artifact checks remain the
 authoritative THALIA gates.
+
+The sibling environment must already satisfy its own runtime prerequisites.
+THALIA's tested development pin is Python 3.13, while current template hydration
+admission requires Python 3.14 or newer. The recipe first hydrates and validates
+the manuscript in THALIA, then uses the provisioned template environment without
+resynchronizing it. Render-only mode is valid only after exact injection passes;
+any manuscript/evidence change requires hydration and validation again.
 
 ## The five stages
 
@@ -243,28 +277,53 @@ for step_name, ctx in pipe.intermediates:
     print(step_name, ctx.extras)
 ```
 
+`with_all_stages()` appends the four runtime stages, not an output or Compiler
+step. `intermediates` returns defensive deep-copy snapshots; custom data belongs
+in `PipelineContext.extras`. Partial chains do not pretend omitted stages ran.
+Use `with Pipeline(...) as pipe:` when it owns a store; caller-supplied stores
+remain caller-owned.
+
 ## Operate it
 
 ```bash
-# One-shot query from the shell (text or --json); flags/env/file all configure it.
-uv run --project . --extra dev python scripts/run_query.py \
+# Installed query command (text or --json); flags/env/file all configure it.
+thalia \
   --query "What is the wifi password?" \
   --session-history "User: my wifi password is bluefish42" --json
-THALIA_TOP_K=4 uv run --project . --extra dev python scripts/run_query.py --query "..." --config config/harness.yaml
-uv run --project . --extra dev python scripts/run_query.py --query "..." --adaptive-windows --adaptive-window-ratio 5
+THALIA_TOP_K=4 thalia --query "..." --config config/harness.yaml
+thalia --query "..." --adaptive-windows --adaptive-window-ratio 5
 ```
 
+```bash
+# Optional common AutoHarness lane: baseline + a local model, isolated output.
+thalia-benchmark \
+  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+  --output output/data/backend_local.json
+# Cloud additionally requires --openrouter-model MODEL --allow-cloud.
+# Selected failures return nonzero and print an .incomplete.json sidecar path.
+uv run --project . --extra dev python scripts/build_dashboard.py \
+  --backend-benchmark output/data/backend_local.json
+```
+
+The [benchmark guide](docs/backend_benchmark.md) covers repeated model selection,
+caller-supplied clients/configuration, validator, complete/incomplete artifact
+schema, privacy/cost boundaries, and latency caveats. The manuscript's optional
+table reads validated default benchmark evidence; an absent artifact is reported
+as not recorded rather than fabricated or pooled with historical cohorts.
+
 ```python
-# Run these snippets from the standalone THALIA root so `src` is importable.
+# Available after package installation or from the standalone THALIA root.
 # Configure: file < env (THALIA_*) < explicit override
 from src.config import load_config, default_config
 config = load_config("config/harness.yaml").with_(top_k=4)
 
 # Real LM: wrap any callable, or call a local Ollama server (stdlib only)
-from src.llm import CallableLM, OllamaLM
+from src.llm import CallableLM, OllamaLM, OpenRouterLM
 from src.harness import AutoHarness
-AutoHarness(config=config, lm=CallableLM(lambda prompt: my_model(prompt)))
-# AutoHarness(lm=OllamaLM(model="gemma3:4b"))  # opt-in; raises on failure, never silent
+# Use `with AutoHarness(...) as harness:` for deterministic store cleanup.
+# lm=CallableLM(my_model), lm=OllamaLM(model="gemma3:4b"), or explicitly:
+# lm=OpenRouterLM(model="tencent/hy3-preview")  # process-env key; cloud opt-in
+# Adapter failures raise; a failed call is not an empty successful answer.
 
 # Persistent multi-turn session (survives process restart; context-manager safe)
 from src.session import Session
@@ -313,6 +372,15 @@ serving a small Gemma, `configure_ollama()` wires `dspy.LM` → litellm → Olla
 ollama pull gemma3:4b
 uv run --project . --extra neural python scripts/run_dspy.py   # adds a real gemma3:4b answer
 ```
+
+Direct DSPy smoke programs do not execute the complete `AutoHarness`.
+`run_openrouter.py` requires the process environment key
+`THALIA_OPENROUTER_API_KEY` and does not load `.env`; missing credentials print a
+skip without an artifact, while runtime/model failures return nonzero. It does
+not regenerate `data/openrouter_eval.json`. To compare direct adapters through
+the runtime harness instead, use the [common benchmark](docs/backend_benchmark.md).
+Live neural DSPy tests require `THALIA_LIVE_TESTS=1`; optional SDK tests skip
+without DSPy, and collection never performs neural generation.
 
 The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic engine
 (honestly labelled "-style"), distinct from this real-dspy path.
@@ -366,9 +434,9 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
 
 ## License and release metadata
 
-The THALIA source code is licensed under the [MIT License](LICENSE). Citation
-and archive metadata, including the release DOI, are maintained in
-[`CITATION.cff`](CITATION.cff) and `.zenodo.json`. MIT
+The THALIA source code is licensed under the [MIT License](LICENSE). Current
+version/tag metadata and the explicitly historical archive relation are maintained
+in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.2.0 has no assigned DOI. MIT
 covers this project's code and does not by itself grant redistribution rights
 for external benchmark data, model weights, raw answers, credentials, or other
 third-party artifacts. The current release boundary is tracked in

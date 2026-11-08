@@ -146,9 +146,11 @@ Four design contributions define that boundary:
 - **A deterministic core with replacement lanes.** BM25/grep, hashing-based
   retrieval, weighted reciprocal-rank fusion, SQLite/FTS5 state, and bounded
   MIPRO/GEPA-style search run offline. A one-method LM protocol and a stable
-  embedding interface allow genuine neural/DSPy backends and learned retrieval to
-  be evaluated under the same stage contracts. The default extractive LM and
-  hashing semantic lane remain explicitly labelled as bounded evidence tiers.
+  embedding interface support neural backends and learned retrieval under the
+  runtime stage contracts. The common backend benchmark composes selected
+  clients with one seeded cohort and fresh `AutoHarness` state; optional DSPy
+  full-context diagnostics remain a separate path. Extractive and hashing
+  defaults retain their bounded evidence tiers.
 - **Source-bound research infrastructure.** Generated variables, formal anchors,
   claim-ledger bindings, figure metadata, artifact manifests, and rendering checks
   connect code, evidence, prose, and publication outputs. The resulting package
@@ -174,8 +176,8 @@ The results answer RQ1--RQ3; RQ4 remains a release decision boundary:
   changes neural answer token-F1 from {{RESULT_BN_NEURAL_ACC_LO}} to
   {{RESULT_BN_ADAPTIVE_ACC}} on that slice, providing a targeted context-policy
   result with no general performance estimate.
-- **Model substitution changes the result.** In the retained local comparison,
-  {{RESULT_NEURAL_MODEL}} changes mean token-F1 from
+- **Model substitution changes the result.** In the retained full-context
+  local DSPy diagnostic, {{RESULT_NEURAL_MODEL}} changes mean token-F1 from
   {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}}, with paired
   difference {{RESULT_NEURAL_PAIRED_DELTA}} and descriptive interval
   {{RESULT_NEURAL_PAIRED_CI}}. On the external {{RESULT_LME_BENCHMARK}} slice,

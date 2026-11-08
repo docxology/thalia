@@ -38,28 +38,42 @@ thalia/
 +-- src/
 |   +-- signatures/                  # framework, payloads, stage contracts
 |   +-- routing.py                   # classify_task
-|   +-- evaluation/                  # datasets, experiments, quality, production, bundles
-|   +-- module.py                    # Module / Prediction / LMClient / ExtractiveLM
+|   +-- evaluation/                  # datasets, experiments, quality,
+|                                   # production, bundles, backend benchmarks
+|   +-- module.py                    # Module / Prediction / LMClient /
+|                                   # ExtractiveLM
 |   +-- config.py                    # HarnessConfig + load/save/env overrides
-|   +-- llm.py                       # real LM adapters (CallableLM, OllamaLM)
-|   +-- harness.py                   # AutoHarness (composes the {{CONFIG_NUM_RUNTIME_STAGES}} runtime stages)
-|   +-- recall.py                    # read-only memory recall (episodic + MEMORY.md)
+|   +-- llm.py                       # CallableLM, OllamaLM, OpenRouterLM
+|   +-- harness.py                   # AutoHarness (composes the
+|                                   # {{CONFIG_NUM_RUNTIME_STAGES}} runtime stages)
+|   +-- recall.py                    # read-only memory recall
+|                                   # (episodic + MEMORY.md)
 |   +-- session.py                   # persistent multi-turn Session
-|   +-- cli.py                       # query CLI (run_query, arg parsing, Inspector diagnostics)
+|   +-- cli.py                       # query CLI (run_query, arg parsing,
+|                                   # Inspector diagnostics)
 |   +-- demo.py                      # deterministic demo artifact builder
-|   +-- provenance.py                # verification, figure, and artifact registries
-|   +-- figures/                     # deterministic figure generators (plots, diagrams, manifest)
-|   +-- dashboard.py                 # self-contained static HTML dashboard renderer
+|   +-- provenance.py                # verification, figure, and artifact
+|                                   # registries
+|   +-- figures/                     # deterministic figure generators
+|                                   # (plots, diagrams, manifest)
+|   +-- dashboard.py                 # offline HTML asset-bundle renderer
 |   +-- invariants.py                # executable runtime invariants
 |   +-- manuscript_variables.py      # generated-token map
-|   +-- retrieval/                   # lexical / semantic / fusion / mmr / expansion
-|   +-- stages/                      # inspector / retriever / reasoner / memory_gate
+|   +-- retrieval/                   # lexical / semantic / fusion /
+|                                   # mmr / expansion
+|   +-- stages/                      # inspector / retriever / reasoner /
+|                                   # memory_gate
 |   +-- memory/                      # episodic_store / consolidation
 |   +-- compiler/                    # metrics / mipro / gepa
-+-- skills/                          # thalia-{inspector,retriever,reasoner,memory-gate,compiler,session}/SKILL.md
-+-- scripts/                         # thin orchestrators (eval, compile, figures, dashboard, preflight, tokens, run_query)
++-- skills/                          # thalia-{inspector,retriever,reasoner,
+|                                    # memory-gate,compiler,session,
+|                                    # pipeline}/SKILL.md
++-- scripts/                         # thin orchestrators (eval, compile,
+|                                    # figures, dashboard, preflight, tokens,
+|                                    # run_query)
 +-- tests/                           # Zero-Mock suite, one file per module
-+-- docs/manuscript/                      # this document (sections 00-11, 99) + config/preamble/refs
++-- docs/manuscript/                  # this document (sections 00-12, 99)
+                                     # + config/preamble/refs
 ```
 
 ## Stage, Signature, Skill, and Test Map {#sec:ref-map}

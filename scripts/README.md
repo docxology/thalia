@@ -21,6 +21,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `analyze_provenance_p0.py` | Validates P0 ledgers, frozen rubric, packets, and statistics without promoting | `src.evaluation.provenance_p0` | `dev` |
 | `analyze_quality.py` | Double-annotation/adjudication check and fail-closed quality report (agreement, calibration, paired comparisons) | `src.evaluation.quality` | `dev` |
 | `build_dashboard.py` | `output/dashboard.html` static diagnostics dashboard; refreshes the artifact manifest last | `src.dashboard`, `src.evaluation`, `src.provenance` | `dev` |
+| `run_backend_benchmark.py` | Isolated common-`AutoHarness` extractive/local/explicit-cloud observations, validated complete artifact or incomplete sidecar; nonzero on failures | `src.benchmark_cli` → `src.evaluation.backend_benchmark` | `uv run --project . python scripts/run_backend_benchmark.py` (no DSPy prerequisite) |
 | `build_provenance_p0_packets.py` | Builds blinded expert packets, separate blind key, and sealed blinding manifest from external raw rows | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_provenance_p0.py` | Freezes a reviewed P0 protocol with canonical digest and owner-declared margins | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_quality_protocol.py` | Records the post-pilot rubric, estimand, thresholds, and provenance before confirmation | `src.evaluation.quality` | `dev` |
@@ -29,7 +30,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `promote_production_readiness.py` | Promotes only an accepted, digest-valid operational readiness certificate | `src.evaluation.production_readiness` | `dev` |
 | `promote_provenance_p0.py` | Promotes only an accepted, evidence-rebuilt, promotion-eligible P0 certificate | `src.evaluation.provenance_p0` | `dev` |
 | `promote_quality_report.py` | Promotes only a digest-valid, threshold-passing quality certificate into committed evidence | `src.evaluation.quality` | `dev` |
-| `render_pdf_external.py` | Optional PDF render/validate through the sibling `../template` checkout (temporary exact link, removed on exit) | `src.manuscript_integrity` + template `infrastructure` | `uv run --project ../template python scripts/render_pdf_external.py --validate` |
+| `render_pdf_external.py` | Optional PDF render/validate after fresh hydration and exact injection validation (temporary exact link, removed on exit) | `src.manuscript_integrity` + provisioned template `infrastructure` | `uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate` |
 | `run_bottleneck_campaign.py` | Matched max-window/adaptive Gemma campaign plus separate ranking diagnostics to an external root | `src.evaluation.campaign`, `src.evaluation.longmemeval` | `neural` |
 | `run_compiler.py` | `output/data/compile_result.json` (MIPRO + GEPA traces) | `src.compiler`, `src.harness` | `dev` |
 | `run_compiler_generalization.py` | Isolated train/held-out generalization aggregate; explicit seed lists supported | `src.evaluation` | `dev` |
@@ -40,8 +41,8 @@ caller-selected external root), and prints produced paths to stdout.
 | `run_learned_retrieval.py` | Surrogate-vs-learned dense-embedding recall@1 comparison | `src.retrieval.learned` | `neural` |
 | `run_longmemeval.py` | LongMemEval_S answer token-F1/citation-support/session-reachability + CIs; resumable | `src.evaluation.longmemeval` | `neural` |
 | `run_longmemeval_bottleneck.py` | Ranking-vs-Inspector recall, max_windows sweep, adaptive fix; preserves last aggregate on live failure | `src.evaluation.longmemeval` | `neural` |
-| `run_neural_eval.py` | Real extractive-vs-neural token-F1 measurement into `data/neural_eval.json` | `src.dspy_runtime` (`evaluate_backends`) | `neural` |
-| `run_openrouter.py` | Real OpenRouter-hosted neural run over the demo dataset (lazy `src` import; needs `THALIA_OPENROUTER_API_KEY`) | `src.dspy_runtime` (`configure_openrouter`) | `neural` |
+| `run_neural_eval.py` | Historical extractive-vs-neural full-context DSPy token-F1 diagnostic into `data/neural_eval.json`; not AutoHarness | `src.dspy_runtime` (`evaluate_backends`) | `neural` |
+| `run_openrouter.py` | Direct full-context DSPy smoke diagnostic into `output/data/openrouter_result.json`; process-env key required, no `.env` loading; skip/no artifact without key, nonzero on runtime/model failure | `src.dspy_runtime` (`configure_openrouter`, `build_program`) | `neural` |
 | `run_pipeline.py` | `output/data/pipeline_result.json` composable-Pipeline trace with intermediates | `src.pipeline` | `dev` |
 | `run_production_readiness.py` | Staged local-service operational probes for one pinned profile | `src.evaluation.production_runner` | `neural` |
 | `run_quality_campaign.py` | Model-quality runner for the pilot or frozen confirmatory phase (raw observations + blinded packets) | `src.evaluation.quality_runner`, `src.evaluation.llm_judge` | `neural` |
@@ -64,6 +65,53 @@ the root [AGENTS.md](../AGENTS.md) command block) rather than the quick smoke
 defaults; both aggregates record their exact size and seed grids in JSON, so no
 result counts are copied manually into manuscript prose.
 
+An intentional live-source refresh precedes `analyze_integrity_advantage.py`,
+not follows it. Keep old measured cohorts intact and review isolated new outputs
+before changing retained evidence. Any later source mutation requires rerunning
+the integrity screen and its downstream figures/tokens/dashboard/manifest gates.
+
+## Common backend observations
+
+An installed release wheel provides the same CLI without a checkout or DSPy:
+
+```bash
+python -m pip install /path/to/thalia-0.2.0-py3-none-any.whl
+thalia-benchmark --per-category 2 --seed 0 --limit 6
+```
+
+Use the wheel downloaded from the GitHub release; this is not a PyPI publication
+claim. The installed command calls `src.benchmark_cli:main`; the source
+orchestrator below bootstraps the repository and imports that same entry point.
+Source examples assume the repository root:
+
+```bash
+uv run --project . python scripts/run_backend_benchmark.py \
+  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+  --output output/data/backend_local.json
+# Cloud requires both explicit model selection and consent:
+uv run --project . python scripts/run_backend_benchmark.py \
+  --ollama-model gemma3:4b --openrouter-model tencent/hy3-preview \
+  --allow-cloud --per-category 2 --seed 0 --timeout 120 --max-tokens 512 \
+  --output output/data/backend_local_cloud.json
+uv run --project . --extra dev python scripts/build_dashboard.py \
+  --backend-benchmark output/data/backend_local_cloud.json
+```
+
+Model flags are repeatable. The benchmark requires no DSPy SDK, includes the
+extractive baseline, and defaults to `output/data/backend_benchmark.json`
+relative to the caller's current working directory, not the package directory.
+Explicit relative output paths are caller-relative too; absolute paths are
+used unchanged.
+It records failures rather than skipping selected backends; incomplete runs
+return nonzero and print an `.incomplete.json` sidecar path, leaving the requested
+complete destination intact. An old destination is not a new success receipt.
+Use the printed sidecar path to display failure diagnostics. Credentials alone
+never invoke cloud. Full CLI/API, schema, validator, comparison and latency
+boundaries: [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md).
+
+Live neural DSPy tests separately require `THALIA_LIVE_TESTS=1`; optional DSPy
+classes skip without the SDK, and collection does not perform generation.
+
 After a completed strict test/JUnit/coverage run, run `run_demo.py` (or
 `build_dashboard.py`) once to refresh `verification_summary.json` from those
 finished machine reports, then reconcile the `test-count` and `test-coverage`
@@ -73,6 +121,9 @@ incomplete or failing run.
 The PDF render/validate step belongs to the external template checkout and is
 optional for this standalone project; `render_pdf_external.py` fails closed if
 `../template` is absent.
+Freshly hydrate with THALIA's interpreter and pass exact injection validation
+before using render-only mode. The provisioned template runtime has independent
+Python admission requirements; `--no-sync` does not install or reconfigure it.
 
 See [CONVENTIONS.md](CONVENTIONS.md) and [AGENTS.md](AGENTS.md).
 

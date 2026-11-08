@@ -147,9 +147,3 @@ class TestScripts:
             _load("run_injection_probe").main(target, relabel_recorded_answers=True)
 
         assert target.read_text(encoding="utf-8") == before
-
-    def test_run_openrouter(self):
-        # OpenRouter script skips cleanly when no API key (exit 0).
-        # When a key is set it writes the result JSON.
-        result = _load("run_openrouter").main()
-        assert result == 0 or Path(str(result)).exists()

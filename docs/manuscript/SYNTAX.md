@@ -31,6 +31,17 @@ Figure slugs: `thalia_cover`, `thalia_overview`, `foundations_map`, `memory_life
 `backend_comparison`, `paraphrase_retrieval`, `injection_resistance`,
 `longmemeval`, `bottleneck`.
 
+## Code listings
+
+Keep code lines within 80 displayed columns, allowing for generated tokens.
+Use shell backslash continuations, Python parenthesized continuations, and
+indented continuations in plaintext diagrams. Preserve every argument and value.
+The project preamble disables only `fvextra` automatic line wrapping: that
+mechanism produced unbalanced paragraph hooks with the installed tagged-PDF
+stack. Tagging and native diagnostics remain enabled; authored line breaks keep
+the examples readable without relying on that incompatible wrapping path.
+
+
 ## Tables
 
 Pipe tables with a label line where cross-referenced; reference with `[@tbl:slug]`.

@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from src import __version__
 from src.config import default_config
 from src.manuscript_variables import generate_variables
 
@@ -47,7 +48,9 @@ EXPECTED_TOKENS = {
     "RESULT_INTEGRITY_COMPILER_ADJ_P",
     "RESULT_INTEGRITY_NEURAL_DELTA",
     "RESULT_INTEGRITY_NEURAL_ADJ_P",
-    "ZENODO_DOI",
+    "CURRENT_RELEASE_VERSION",
+    "CURRENT_RELEASE_URL",
+    "ARCHIVED_RELEASE_DOI",
 }
 
 
@@ -115,16 +118,85 @@ class TestGenerateVariables:
         variables = generate_variables(default_config())
         assert variables["CONFIG_TOP_K"] == "8"
 
-    def test_zenodo_doi_is_loaded_from_source_metadata(self):
-        assert generate_variables()["ZENODO_DOI"] == "10.5281/zenodo.21763245"
+    def test_current_and_archived_identities_are_source_bound(self):
+        import src.manuscript_variables as mv
 
-    def test_invalid_zenodo_doi_fails_closed(self, monkeypatch, tmp_path):
+        metadata = json.loads(mv._ZENODO_METADATA_PATH.read_text())
+        archived = next(
+            item["identifier"]
+            for item in metadata["related_identifiers"]
+            if item["relation"] == "isNewVersionOf"
+        )
+        variables = generate_variables()
+        assert variables["ARCHIVED_RELEASE_DOI"] == archived
+        assert variables["CURRENT_RELEASE_VERSION"] == __version__
+        assert variables["CURRENT_RELEASE_URL"] == (
+            f"https://github.com/docxology/thalia/releases/tag/v{__version__}"
+        )
+
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            {},
+            [],
+            {"related_identifiers": None},
+            {"related_identifiers": [None]},
+            {"related_identifiers": [{"relation": "isIdenticalTo", "scheme": "doi"}]},
+        ],
+    )
+    def test_missing_archive_relation_fails_closed(self, monkeypatch, tmp_path, metadata):
         import src.manuscript_variables as mv
 
         path = tmp_path / ".zenodo.json"
-        path.write_text("{}", encoding="utf-8")
+        path.write_text(json.dumps(metadata), encoding="utf-8")
+        monkeypatch.setattr(mv, "_ZENODO_METADATA_PATH", path)
+        with pytest.raises(ValueError, match="exactly one archived release DOI"):
+            mv.generate_variables()
+
+    @pytest.mark.parametrize("identifier", [None, 42, "", "not-a-doi", "10.5281/has whitespace"])
+    def test_invalid_archived_doi_fails_closed(self, monkeypatch, tmp_path, identifier):
+        import src.manuscript_variables as mv
+
+        metadata = {
+            "related_identifiers": [
+                {"relation": "isNewVersionOf", "scheme": "doi", "identifier": identifier}
+            ]
+        }
+        path = tmp_path / ".zenodo.json"
+        path.write_text(json.dumps(metadata), encoding="utf-8")
         monkeypatch.setattr(mv, "_ZENODO_METADATA_PATH", path)
         with pytest.raises(ValueError, match="valid DOI"):
+            mv.generate_variables()
+
+    @pytest.mark.parametrize("change", ["duplicate", "wrong_scheme"])
+    def test_ambiguous_or_non_doi_archive_fails_closed(self, monkeypatch, tmp_path, change):
+        import src.manuscript_variables as mv
+
+        metadata = json.loads(mv._ZENODO_METADATA_PATH.read_text())
+        archive = next(
+            item for item in metadata["related_identifiers"] if item["relation"] == "isNewVersionOf"
+        )
+        if change == "duplicate":
+            metadata["related_identifiers"].append(dict(archive))
+        else:
+            archive["scheme"] = "url"
+        path = tmp_path / ".zenodo.json"
+        path.write_text(json.dumps(metadata), encoding="utf-8")
+        monkeypatch.setattr(mv, "_ZENODO_METADATA_PATH", path)
+        with pytest.raises(ValueError, match="archived release"):
+            mv.generate_variables()
+
+    @pytest.mark.parametrize("contents", [None, "{", b"\xff"])
+    def test_unreadable_archive_metadata_fails_closed(self, monkeypatch, tmp_path, contents):
+        import src.manuscript_variables as mv
+
+        path = tmp_path / ".zenodo.json"
+        if isinstance(contents, str):
+            path.write_text(contents, encoding="utf-8")
+        elif isinstance(contents, bytes):
+            path.write_bytes(contents)
+        monkeypatch.setattr(mv, "_ZENODO_METADATA_PATH", path)
+        with pytest.raises(ValueError, match="metadata is unreadable"):
             mv.generate_variables()
 
     def test_deterministic(self):

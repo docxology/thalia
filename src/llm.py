@@ -8,6 +8,7 @@ the harness *genuinely* usable with a real model while preserving the one-method
   function) as an LM. Trivially real and testable.
 * :class:`OllamaLM` — call a local Ollama server over HTTP via the standard
   library (no third-party dependency). Opt-in; never invoked by the default core.
+* :class:`OpenRouterLM` — call the cloud chat-completions API with an explicit key.
 
 Failures are raised, never silently swallowed: a broken model call must surface,
 not degrade into an empty answer.
@@ -95,9 +96,14 @@ class OllamaLM:
                 body = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise OllamaError(f"Ollama request to {self.host} failed: {exc}") from exc
-        if "response" not in body:
-            raise OllamaError(f"Ollama response missing 'response' field: {body!r}")
-        return str(body["response"]).strip()
+        if not isinstance(body, dict) or "response" not in body:
+            raise OllamaError("Ollama response missing 'response' field")
+        if body.get("done") is False or body.get("done_reason") == "length":
+            raise OllamaError("Ollama generation did not complete")
+        content = body["response"]
+        if not isinstance(content, str) or not content.strip():
+            raise OllamaError("Ollama response must contain non-empty text")
+        return content.strip()
 
     def is_available(self) -> bool:
         """Best-effort liveness probe of the Ollama server (False on any error)."""
@@ -114,7 +120,7 @@ class OllamaError(RuntimeError):
 
 
 DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-DEFAULT_OPENROUTER_MODEL = "openrouter/tencent/hy3-preview"
+DEFAULT_OPENROUTER_MODEL = "tencent/hy3-preview"
 ENV_OPENROUTER_KEY = "THALIA_OPENROUTER_API_KEY"
 
 
@@ -190,9 +196,16 @@ class OpenRouterLM:
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise OpenRouterError(f"OpenRouter request failed: {exc}") from exc
         try:
-            return str(body["choices"][0]["message"]["content"]).strip()
+            choice = body["choices"][0]
+            content = choice["message"]["content"]
+            finish_reason = choice.get("finish_reason")
         except (KeyError, IndexError, TypeError) as exc:
-            raise OpenRouterError(f"OpenRouter response missing expected fields: {body!r}") from exc
+            raise OpenRouterError("OpenRouter response missing expected fields") from exc
+        if finish_reason not in (None, "stop"):
+            raise OpenRouterError("OpenRouter generation did not complete")
+        if not isinstance(content, str) or not content.strip():
+            raise OpenRouterError("OpenRouter response must contain non-empty text")
+        return content.strip()
 
     def is_available(self) -> bool:
         """True when an API key is configured (no network probe; caller controls cost)."""

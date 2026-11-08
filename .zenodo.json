@@ -3,8 +3,8 @@
   "description": "THALIA is an executable research harness for long-context memory systems. It combines typed stage contracts, inspectable context selection, evidence-preserving episodic state, lexical-first retrieval, and bounded compiler search with source-bound evaluation and reproducible artifact checks. The deterministic results are finite diagnostic evidence; model-quality, integrity-advantage, and production-readiness claims remain separately gated.",
   "upload_type": "software",
   "license": "MIT",
-  "version": "0.1.0",
-  "doi": "10.5281/zenodo.21763245",
+  "version": "0.2.0",
+  "publication_date": "2026-11-08",
   "creators": [
     {
       "name": "Friedman, Daniel Ari"
@@ -18,8 +18,14 @@
   ],
   "related_identifiers": [
     {
-      "identifier": "https://github.com/docxology/thalia",
+      "identifier": "https://github.com/docxology/thalia/releases/tag/v0.2.0",
       "relation": "isIdenticalTo",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "10.5281/zenodo.21763245",
+      "relation": "isNewVersionOf",
+      "scheme": "doi",
       "resource_type": "software"
     }
   ]

@@ -43,10 +43,16 @@ class InspectorSignature(Signature):
     """Inspect session history as external state.
     Use code execution (peek / grep / partition) to filter evidence before
     forwarding selected windows to the Reasoner."""
-    session_history: str = InputField("Raw session transcript (arbitrarily long).")
+    session_history: str = InputField(
+        "Raw session transcript (arbitrarily long)."
+    )
     query: str = InputField("Current task or question.")
-    evidence_windows: list = OutputField("Compact snippets filtered from history.")
-    metadata: InspectorMetadata = OutputField("Grep patterns, indices, confidence.")
+    evidence_windows: list = OutputField(
+        "Compact snippets filtered from history."
+    )
+    metadata: InspectorMetadata = OutputField(
+        "Grep patterns, indices, confidence."
+    )
 ```
 
 This is the harness's defence against context rot: downstream stages see only
@@ -83,12 +89,22 @@ class RetrieverSignature(Signature):
     """Rank evidence using hybrid lexical + semantic search.
     Prefer lexical anchors for literal witnesses; semantic fallback for
     paraphrases. Apply weighted RRF and sparse context budgeting."""
-    evidence_windows: list = InputField("Windows emitted by the Inspector.")
+    evidence_windows: list = InputField(
+        "Windows emitted by the Inspector."
+    )
     query: str = InputField("Current task or question.")
-    task_category: TaskCategory = InputField("Detected task category.")
-    context_budget_tokens: int = InputField("Max tokens for inline injection.")
-    ranked_evidence: list = OutputField("Top-k evidence after RRF fusion.")
-    delivery_mode: DeliveryMode = OutputField("inline if within budget, else file_based.")
+    task_category: TaskCategory = InputField(
+        "Detected task category."
+    )
+    context_budget_tokens: int = InputField(
+        "Max tokens for inline injection."
+    )
+    ranked_evidence: list = OutputField(
+        "Top-k evidence after RRF fusion."
+    )
+    delivery_mode: DeliveryMode = OutputField(
+        "inline if within budget, else file_based."
+    )
 ```
 
 ## Stage 2 — Reasoner: Typed Answer Generation {#sec:stage-reasoner}
@@ -120,13 +136,26 @@ class ReasonerSignature(Signature):
     Deterministic code handles selection and routing; the model handles only
     judgment. Typed outputs prevent downstream parsing failures."""
     query: str = InputField("Current task or question.")
-    ranked_evidence: list = InputField("Ranked evidence from the Retriever.")
-    task_category: TaskCategory = InputField("Detected task category.")
-    memory_context: MemorySnapshot = InputField("Frozen MEMORY/USER snapshot (read-only).")
-    reasoning_trace: str = OutputField("Auditable routing and evidence-use trace; hidden reasoning is excluded.")
+    ranked_evidence: list = InputField(
+        "Ranked evidence from the Retriever."
+    )
+    task_category: TaskCategory = InputField(
+        "Detected task category."
+    )
+    memory_context: MemorySnapshot = InputField(
+        "Frozen MEMORY/USER snapshot (read-only)."
+    )
+    reasoning_trace: str = OutputField(
+        "Auditable routing and evidence-use trace; "
+        "hidden reasoning is excluded."
+    )
     answer: str = OutputField("Final answer or action.")
-    evidence_citations: list = OutputField("Raw source windows cited.")
-    requires_consolidation: bool = OutputField("True for knowledge-update tasks or explicit memory cues.")
+    evidence_citations: list = OutputField(
+        "Raw source windows cited."
+    )
+    requires_consolidation: bool = OutputField(
+        "True for knowledge-update tasks or explicit memory cues."
+    )
 ```
 
 ## Stage 3 — Memory Gate: Episodic-First Consolidation {#sec:stage-memory}
@@ -147,17 +176,30 @@ append-only store plus source-cited delta preserve both recall and auditability.
 ```python
 class MemoryGateSignature(Signature):
     """Episodic-first memory management.
-    Always write the raw episode. Consolidation requires requires_consolidation
-    plus a criterion (novel task, session end, explicit request).
-    Summaries are derived artifacts; raw episodes remain intact."""
+    Always write the raw episode. Consolidation requires
+    requires_consolidation plus a criterion (novel task, session end,
+    explicit request). Summaries are derived artifacts; raw episodes
+    remain intact."""
     query: str = InputField("Current task or question.")
     answer: str = InputField("The produced answer.")
-    evidence_citations: list = InputField("Citations from the Reasoner.")
-    requires_consolidation: bool = InputField("Reasoner's consolidation flag.")
-    session_episode_count: int = InputField("Episodes currently recorded in the store.")
-    episodic_entry: EpisodicEntry = OutputField("Raw turn record to append.")
-    consolidation_action: str = OutputField("none | append_memory | update_memory.")
-    memory_delta: str = OutputField("Delta to MEMORY.md if consolidating, else ''.")
+    evidence_citations: list = InputField(
+        "Citations from the Reasoner."
+    )
+    requires_consolidation: bool = InputField(
+        "Reasoner's consolidation flag."
+    )
+    session_episode_count: int = InputField(
+        "Episodes currently recorded in the store."
+    )
+    episodic_entry: EpisodicEntry = OutputField(
+        "Raw turn record to append."
+    )
+    consolidation_action: str = OutputField(
+        "none | append_memory | update_memory."
+    )
+    memory_delta: str = OutputField(
+        "Delta to MEMORY.md if consolidating, else ''."
+    )
 ```
 
 ## Stage 4 — Compiler: Bounded Search and Evolution {#sec:stage-compiler}

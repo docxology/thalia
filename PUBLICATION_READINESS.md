@@ -1,11 +1,45 @@
 # THALIA — Publication-Readiness Assessment
 
-_Review refreshed 2026-08-02. The local source, deterministic package, enlarged
-finite-set audit, manuscript injection, generated artifacts, PDF, and HTML
-render gates pass. Stronger claims about model quality, true-source recovery,
-integrity, or production readiness remain unpromoted._
+_Release identity updated 2026-11-08 for v0.2.0. The current GitHub release target
+is [v0.2.0](https://github.com/docxology/thalia/releases/tag/v0.2.0); no Zenodo
+publication or DOI is assigned to this version. Historical checks below do not
+certify the current candidate or assert that the GitHub target is published._
 
-## Current evidence
+## Current software capability and release boundary
+
+v0.2.0 adds an optional common-backend benchmark using the same `AutoHarness`,
+configuration, metric, and seeded synthetic examples. It supports an offline
+extractive baseline, caller-supplied clients, local Ollama models, and explicitly
+selected/authorized OpenRouter models without requiring DSPy for this lane.
+Fresh per-example state, failure accounting, complete/incomplete output
+separation, and validation make runs inspectable; they do not establish a
+general model ranking, answer quality, or production readiness.
+
+Installed commands are `thalia` (query) and `thalia-benchmark` (benchmark).
+The benchmark's default output is `output/data/backend_benchmark.json` relative
+to the caller's working directory, not the installed package. The source
+scripts remain thin bootstraps. Retained DSPy/provider diagnostic cohorts are
+not silently pooled with this lane.
+
+The manuscript includes this capability and its limitations. Its regenerated
+page count, tagged-PDF structure, HTML, slides, and exact source substitution
+must be checked after the v0.2.0 metadata changes; older renders and earlier
+test results are not source-current release receipts. The publisher must
+record the current candidate checks, exact tag/commit, asset inventory, and
+checksums before announcing release completion. See
+[`docs/release_readiness.md`](docs/release_readiness.md) and
+[`docs/releases/v0.2.0.md`](docs/releases/v0.2.0.md).
+
+The v0.1.0 DOI and [`docs/release_receipt.md`](docs/release_receipt.md) remain
+immutable historical authority only. The current citation identifies v0.2.0
+on GitHub; the old DOI is retained as an `isNewVersionOf` relation.
+
+## Historical evidence (2026-08-02, v0.1.0 boundary)
+
+The recorded local source, deterministic package, enlarged finite-set audit,
+manuscript injection, generated-artifact, PDF, and HTML gates passed at that
+boundary. Stronger claims about model quality, true-source recovery, integrity,
+or production readiness remained unpromoted.
 
 - **Executable package:** the authoritative strict suite collected 854 tests,
   passed 847, skipped 7 optional live-model tests, and recorded 90.49% `src/`
@@ -61,15 +95,15 @@ The generic template metadata remains separate from the THALIA-owned overlay;
 without widening the generic template schema. Generated `output/` artifacts
 remain local/ignored and are not a public release by themselves.
 
-## Publication decision
+## Scientific publication boundary
 
-The checkout is conditionally ready for submission as a narrowly scoped typed
-harness, methods, and reproducibility paper, provided the manuscript retains
-its current evidence tiers and limitations. It is not ready for publication
-as a broad model-quality, true-source-recovery, integrity-advantage, or
-production-readiness result.
+The methods-paper assessment remains conditional on preserving the evidence
+tiers and limitations below. Software-release authorization does not authorize
+a broad model-quality, true-source-recovery, integrity-advantage, or
+production-readiness claim. A new benchmark interface and refreshed rendering
+do not satisfy the independent scientific-promotion gates.
 
-## GitHub and Zenodo release decision
+## Historical GitHub and Zenodo release decision (v0.1.0)
 
 The public `v0.1.0` release is complete. The GitHub repository is public, the
 annotated tag points to commit `ab6543c1b139a6ac4ca0b8a091b588384997bcf9`, and
@@ -102,11 +136,12 @@ evidence ceilings remain unchanged.
    benchmark results, rerun those lanes on the declared host/model versions and
    preserve their independent run receipts; do not fold them into the
    deterministic headline.
-5. **Post-release maintenance:** retain the tag/DOI/bundle as the immutable
-   v0.1.0 authority. For any accepted scientific promotion or new version,
-   regenerate the ledger, figures, dashboard, variables, PDF, and supplementary
-   outputs, then repeat the full test, typing, lint, artifact, and rendering
-   gates against a new exact tag. Reassess redistribution rights before adding
+5. **Versioned software release:** retain the tag/DOI/bundle as the immutable
+   v0.1.0 authority. For v0.2.0, regenerate the ledger, figures, dashboard,
+   variables, PDF, and supplementary outputs, then repeat the full test,
+   typing, lint, artifact, packaging, and rendering gates against the exact
+   candidate before publishing its distinct GitHub tag. No Zenodo action or
+   new DOI is authorized by this release. Reassess redistribution rights before adding
    any external benchmark, model, raw-answer, or annotation artifacts.
 
 Until the independent P0, expert-quality, and production acceptance records

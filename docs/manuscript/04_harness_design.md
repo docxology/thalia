@@ -8,12 +8,18 @@ end-to-end flow:
 
 ```text
 session history + query
-  -> Stage 0  Inspector    RLM-style context narrowing  (peek -> grep -> windows)
-  -> Stage 1  Retriever    lexical-first hybrid + weighted RRF + budgeting
-  -> Stage 2  Reasoner     single-pass reasoning or ReAct-style deterministic read-integrate; typed citations
-  -> Stage 3  MemoryGate   always append raw episode; gated consolidation
+  -> Stage 0  Inspector    RLM-style context narrowing
+                           (peek -> grep -> windows)
+  -> Stage 1  Retriever    lexical-first hybrid + weighted RRF
+                           + budgeting
+  -> Stage 2  Reasoner     single-pass reasoning or ReAct-style
+                           deterministic read-integrate;
+                           typed citations
+  -> Stage 3  MemoryGate   always append raw episode;
+                           gated consolidation
   -> HarnessOutput
-  ~> Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution
+  --> Stage 4 Compiler     (offline) MIPRO search + GEPA
+                           reflective evolution
 ```
 
 The language model is abstracted behind a one-method protocol

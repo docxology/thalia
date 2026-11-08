@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -89,12 +88,12 @@ def default_verification_summary() -> VerificationSummary:
         ),
         coverage_gate=_coverage_gate(),
         render_command=(
-            "EXTERNAL: uv run --project ../template python scripts/render_pdf_external.py "
-            "(requires a populated sibling template checkout)"
+            "EXTERNAL: uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration "
+            "(requires fresh validated hydration and a provisioned sibling template environment)"
         ),
         validation_command=(
-            "EXTERNAL: uv run --project ../template python scripts/render_pdf_external.py --validate "
-            "(requires a populated sibling template checkout)"
+            "EXTERNAL: uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate "
+            "(requires fresh validated hydration and a provisioned sibling template environment)"
         ),
     )
 
@@ -216,7 +215,7 @@ def write_figure_registry(
             "filename": figure_path.name,
             "label": label,
             "caption": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
-            "alt": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
+            "alt_text": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
             "generated_by": "scripts/generate_figures.py",
             "source": "src/figures/",
         }
@@ -393,10 +392,7 @@ def _sha256(path: Path) -> str:
 
 
 def _coverage_gate() -> int:
-    if sys.version_info >= (3, 11):
-        import tomllib
-    else:
-        import tomli as tomllib
+    import tomllib
 
     pyproject = PROJECT_ROOT / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))

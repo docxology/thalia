@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 from dataclasses import replace
+from os.path import relpath
 from pathlib import Path
 from typing import Any, cast
 
@@ -922,9 +923,10 @@ def test_quality_evidence_helpers_resolve_relative_inputs_fail_closed(tmp_path, 
     monkeypatch.chdir(tmp_path)
     from src.evaluation.accounting import file_provenance
 
-    benchmark = Path(__file__).resolve().parents[1] / "data/longmemeval/longmemeval_s.json"
+    benchmark = tmp_path / "benchmark.json"
     benchmark_provenance = file_provenance(benchmark)
-    assert _validate_benchmark_file({**benchmark_provenance, "path": "data/longmemeval/longmemeval_s.json"}) is None
+    relative_path = relpath(benchmark, Path(__file__).resolve().parents[1])
+    assert _validate_benchmark_file({**benchmark_provenance, "path": relative_path}) is None
     assert _validate_pilot_review_binding(replace(protocol, pilot_review_provenance={})) == "pilot review provenance is missing"
 
     observation = _observation(protocol, "pilot", "model-harness", protocol.pilot_ids[0], 0)
@@ -1203,11 +1205,9 @@ def test_quality_provenance_helpers_fail_closed(tmp_path):
     assert _validate_benchmark_file({"path": str(tmp_path / "missing.json")}) == "benchmark_file_missing"
     assert _validate_benchmark_file({"path": str(benchmark), "sha256": "0" * 64, "size_bytes": provenance["size_bytes"]}) == "benchmark_provenance_mismatch"
     assert _validate_benchmark_file(provenance) is None
-    benchmark_provenance = file_provenance(Path("data/longmemeval/longmemeval_s.json"))
     assert _validate_benchmark_file({
-        "path": "data/longmemeval/longmemeval_s.json",
-        "sha256": benchmark_provenance["sha256"],
-        "size_bytes": benchmark_provenance["size_bytes"],
+        **provenance,
+        "path": relpath(benchmark, Path(__file__).resolve().parents[1]),
     }) is None
 
     assert _validate_external_provenance_paths({"protocol_path": str(tmp_path / "no-protocol")}) == ["protocol_path_missing"]

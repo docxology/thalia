@@ -35,9 +35,9 @@ configuration reaches composite {{RESULT_COMPOSITE}} (answer token-F1
 {{RESULT_ACCURACY}}, citation-support proxy {{RESULT_GROUNDING}}, efficiency
 {{RESULT_EFFICIENCY}}). The {{RESULT_NUM_CANDIDATES}}-candidate MIPRO-style search
 ties on this easy set, so its primary result is a complete, auditable trace and
-tie rule. A genuine `dspy.Predict`/`dspy.BootstrapFewShot` path is exercised. In
-the retained {{RESULT_NEURAL_N}}-example local comparison, replacing the
-extractive Reasoner with {{RESULT_NEURAL_MODEL}} changes mean token-F1 from
+tie rule. A genuine `dspy.Predict`/`dspy.BootstrapFewShot` path is exercised with
+the extractive backend. In the retained {{RESULT_NEURAL_N}}-example full-context
+DSPy diagnostic, substituting {{RESULT_NEURAL_MODEL}} changes mean token-F1 from
 {{RESULT_EXTRACTIVE_MEAN_F1}} to {{RESULT_NEURAL_MEAN_F1}} (paired difference
 {{RESULT_NEURAL_PAIRED_DELTA}}, {{CONFIG_CI_LEVEL}}% descriptive interval
 {{RESULT_NEURAL_PAIRED_CI}}). On the external {{RESULT_LME_BENCHMARK}} transfer
@@ -52,8 +52,12 @@ compact-context outputs remain unchanged.
 The paper makes three design contributions: a typed and inspectable contract
 graph; an evidence-preserving runtime that localizes retrieval, narrowing, and
 memory failures; and a source-bound evaluation layer that can be regenerated and
-extended across models, embeddings, and context policies. The results support
-method integrity and diagnostic localization within the declared tiers. Token-F1,
+extended across models, embeddings, and context policies. An optional common
+backend runner separately composes selected local/cloud `LMClient`
+implementations with the same full runtime harness and seeded cohort, retaining
+complete/failure accounting and observed latency; this interface is not itself
+a backend ranking. The results support method integrity and diagnostic
+localization within the declared tiers. Token-F1,
 citation-support overlap, source-index alignment, and reachability remain
 operational diagnostics. Sentence-level factuality, usefulness, calibration,
 causal robustness, general model competence, and production reliability require

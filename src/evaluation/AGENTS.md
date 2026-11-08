@@ -10,6 +10,7 @@ Barrel package: `from src.evaluation import run_full_eval, build_demo_dataset, â
 | [`bundle.py`](bundle.py) | `run_full_eval` â€” JSON bundle for scripts |
 | [`accounting.py`](accounting.py) | Stable fingerprints, per-example/method ledger, deterministic JSONL events, runtime provenance |
 | [`statistics.py`](statistics.py) | IID/stratified/cluster bootstrap, Wilson/exact paired tests, Holm correction, clustered effect sizes, sample planning |
+| [`backend_benchmark.py`](backend_benchmark.py) | Optional sequential `LMClient`/`AutoHarness` observations, backend factory/specifications, seeded matched plan, semantic accounting validator, atomic complete output or incomplete sidecar |
 | [`integrity_advantage.py`](integrity_advantage.py) | Native-unit endpoint screen for provenance, poisoning, retrieval, context, compiler, and neural comparisons with source/code hashes |
 | [`provenance_p0.py`](provenance_p0.py) | Isolated P0 source-record protocol, immutable atomic condition rows, sealed blinded-packet/key evidence, expert adjudication, source-condition tables, strata-aware paired analysis, and explicit promotion; it never upgrades the legacy lexical proxy |
 | [`scaling.py`](scaling.py) | Configurable seeded sample-size research audit, paired method comparisons, complete accounting; quick defaults and enlarged publication grids are recorded separately |
@@ -19,3 +20,15 @@ Barrel package: `from src.evaluation import run_full_eval, build_demo_dataset, â
 | [`production_readiness.py`](production_readiness.py) | Independent operational acceptance schema and metrics for service-level readiness |
 
 Sweeps default to the tight budget (`top_k=2`, `max_evidence=2`) unless `method_ablation(tight_budget=False)`.
+
+Common backend API: `BenchmarkBackend(name, provider, model, lm,
+generation_options={}, model_observation={})`;
+`build_benchmark_backends(*, ollama_models=(), openrouter_models=(), timeout=30.0,
+max_tokens=1024, allow_cloud=False, observe_models=False)` includes extractive;
+`run_backend_benchmark(backends, *, per_category=10, seed=0, limit=None,
+config=None, allow_cloud=False)` rejects verification re-answers.
+`validate_backend_benchmark(payload)` accepts consistent complete or incomplete
+reports and raises `ValueError` otherwise. `write_backend_benchmark(payload,
+path)` returns the actual path, choosing an `.incomplete` sidecar on failure.
+No live rows or timing are promoted as deterministic/quality results. See
+[`../../docs/backend_benchmark.md`](../../docs/backend_benchmark.md).
