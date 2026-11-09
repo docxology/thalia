@@ -204,9 +204,9 @@ Package exactly the verified closure; a later render, verification-summary
 refresh, QA edit, or allowlist change requires another final inventory and both
 gates. Do not reseal measured study JSON. The retained `0.3.0` producer wheel,
 unreleased `41da836` source, and original study fingerprint remain historical
-producer evidence, not a v0.3.1 rerun. Exact patch observations belong in the
-v0.3.1 release manifest rather than inherited test or validation counts.
-The patch supersedes the v0.3.0 supplement defect without replacing its tag or
+producer evidence, not a new run. Exact patch observations belong in the current
+release manifest rather than inherited test or validation counts.
+The patch supersedes the prior supplement defect without replacing its tag or
 assets; it adds no DOI, cloud execution, expert/P0 confirmation, or production
 acceptance.
 

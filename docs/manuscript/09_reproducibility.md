@@ -141,8 +141,8 @@ runtime prerequisites are in `docs/release_artifacts.md`.
 Package precisely that verified closure. Do not prune the worktree after
 validation or refresh manifest-tracked QA, previews, dashboard, manuscript, or
 verification summaries after the final gates. A tracked change requires a new
-final manifest/native/project sequence, not a hand-edited digest. Exact v0.3.1
-outcomes belong in its downloadable release manifest; no earlier release's
+final manifest/native/project sequence, not a hand-edited digest. Exact current
+release outcomes belong in its downloadable manifest; no earlier release's
 validation counts establish the patch's result.
 
 Deterministic algorithms reproduce results for fixed inputs and a compatible
