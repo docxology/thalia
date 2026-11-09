@@ -16,8 +16,7 @@ from pathlib import Path
 from typing import Iterator
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-# Keep publisher identity stable when a source archive has a versioned dirname.
-PROJECT_NAME = "thalia"
+PROJECT_NAME = PROJECT_ROOT.name
 
 for candidate in (PROJECT_ROOT, PROJECT_ROOT / "src"):
     if str(candidate) not in sys.path:

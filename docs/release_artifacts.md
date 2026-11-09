@@ -74,15 +74,17 @@ Ownership is now explicit:
   observations, and asset digests; it is not either artifact inventory.
 
 Finish rendering, browser inspection, QA reports, preview selection, and all
-source/documentation edits before the final freeze. Extract the exact release
-source into a clean staging directory, then add only the supplemental allowlist
-at its original relative paths. Retain committed inputs from the source archive,
-especially `data/integrity_advantage.json`; the supplement alone is not the
-complete project. Do not validate a full worktree and then prune it into a
-different archive.
+source/documentation edits before the final freeze. Create a clean Git checkout
+or worktree at the exact release commit, named `thalia` to match the retained
+`thalia_combined.pdf`, then add only the supplemental allowlist at its original
+relative paths. Native provenance requires a containing Git worktree boundary;
+extracting a source tarball alone does not satisfy that admission requirement.
+Retain committed inputs, especially `data/integrity_advantage.json`; the
+supplement alone is not the complete project. Do not validate a full worktree
+and then prune it into a different archive.
 
 Use already-provisioned runtimes outside the staging tree. Set `THALIA_STAGE`
-to that extracted project root, `THALIA_PYTHON` to an absolute interpreter path
+to that clean Git project root, `THALIA_PYTHON` to an absolute interpreter path
 with THALIA's development dependencies, and `TEMPLATE_ROOT` to the absolute,
 recorded template checkout path. From a shell:
 

@@ -154,11 +154,14 @@ the required committed `data/integrity_advantage.json`, and record QA/preview
 entries that later changed or were excluded. Neither inventory replaces the
 downloadable release manifest.
 
-Finish all render/browser/QA work before freezing THALIA's inventory. Stage the
-exact source archive plus only the intended supplemental allowlist, preserving
-relative paths and committed inputs. With the current directory set to this
-clean staged project root, `THALIA_PYTHON` an absolute provisioned THALIA
-interpreter outside it, and `TEMPLATE_ROOT` an absolute provisioned template root:
+Finish all render/browser/QA work before freezing THALIA's inventory. Use a clean
+Git checkout/worktree at the exact release commit, named `thalia` to match the
+retained combined-PDF filename, and overlay only the supplemental allowlist.
+Native provenance requires a Git worktree boundary, not merely an extracted
+tarball. Preserve relative paths and committed inputs. With the current
+directory set to this clean Git project root, `THALIA_PYTHON` an absolute
+provisioned THALIA interpreter outside it, and `TEMPLATE_ROOT` an absolute
+provisioned template root:
 
 ```bash
 set -e
