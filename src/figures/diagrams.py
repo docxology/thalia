@@ -676,12 +676,74 @@ def plot_gepa_evolution_loop(output_path: str | Path) -> Path:
     return path
 
 
+def plot_backend_method_design(output_path: str | Path) -> Path:
+    """Show the implemented method matrix and complete-pair gate, not results."""
+    path = _prepare(output_path)
+    fig, ax = plt.subplots(figsize=(10, 6.4))
+    fig.patch.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_facecolor(_DIAGRAM_PAPER)
+    ax.set_xlim(0, 18)
+    ax.set_ylim(0, 11)
+    ax.axis("off")
+    ax.text(9, 10.6, "Within-model method benchmark: design and analysis gates",
+            ha="center", fontsize=16, fontweight="bold", color=PALETTE["ink"])
+    _box(ax, 0.4, 8.1, 5.2, 1.5,
+         "Seeded synthetic cohort\nexample / category / stratum\nseed and content fingerprints",
+         color=PALETTE["lexical"], fontsize=12)
+    _box(ax, 6.3, 8.1, 5.2, 1.5,
+         "Fix query and typed template\nsame LM within each contrast",
+         color=PALETTE["lexical"], fontsize=12)
+    _box(ax, 12.2, 8.1, 5.2, 1.5,
+         "Backend × method × example\nrotate methods; one attempt",
+         color=PALETTE["lexical"], fontsize=12)
+    _arrow(ax, 5.7, 8.85, 6.2, 8.85)
+    _arrow(ax, 11.6, 8.85, 12.1, 8.85)
+    ax.plot([14.8, 14.8, 3.0], [8.0, 7.6, 7.6], color="#444444", lw=1.8)
+    _arrow(ax, 3.0, 7.6, 3.0, 7.2)
+    _arrow(ax, 8.9, 7.6, 8.9, 7.2)
+    _box(ax, 0.4, 5.6, 5.2, 1.5,
+         "Full context\nall session lines submitted\nretention is not guaranteed",
+         color="#555555", fontsize=12)
+    _box(ax, 6.3, 5.6, 5.2, 1.5,
+         "Harness / lexical / adaptive\nfresh harness; no verifier\nselect, rank and render",
+         color=_COMPILER_PURPLE, fontsize=12)
+    _box(ax, 12.2, 5.6, 5.2, 1.5,
+         "Record every planned cell\nanswer / F1 / time / prompt size\nfailures and fingerprints",
+         color=PALETTE["lexical"], fontsize=12)
+    ax.plot([3.0, 3.0, 11.9, 11.9], [5.5, 5.0, 5.0, 6.0], color="#444444", lw=1.8)
+    _arrow(ax, 11.9, 6.0, 12.1, 6.0)
+    _arrow(ax, 11.6, 6.35, 12.1, 6.35)
+    ax.text(9, 2.05, "Prompt agreement is within each example/method across backends.",
+            ha="center", fontsize=11.5, color=PALETTE["ink"])
+    _arrow(ax, 14.8, 5.5, 14.8, 4.65)
+    _box(ax, 12.2, 2.8, 5.2, 1.7,
+         "Within-backend reference gate\nno reference: no contrast\nincomplete pair: no estimate",
+         color=_COMPILER_PURPLE, fontsize=12)
+    _box(ax, 6.3, 2.8, 5.2, 1.7,
+         "Complete pairs to seed means\nthen equal-weight seed average\nraw pair wins / ties / losses",
+         color=_COMPILER_PURPLE, fontsize=12)
+    _box(ax, 0.4, 2.8, 5.2, 1.7,
+         "Seed-mean descriptive bootstrap\none seed: no interval\nsmall-seed warning retained",
+         color=PALETTE["lexical"], fontsize=12)
+    _arrow(ax, 12.1, 3.65, 11.6, 3.65)
+    _arrow(ax, 6.2, 3.65, 5.7, 3.65)
+    ax.text(9, 1.4, "Counts and success-only summaries remain separate by backend and method.",
+            ha="center", fontsize=11.5, color=PALETTE["ink"])
+    ax.text(9, 0.65, "Design, not measured outcomes; no model-ranking or production claim.",
+            ha="center", fontsize=11.5, color=PALETTE["ink"])
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.98, bottom=0.02)
+    fig.savefig(path, dpi=EXPORT_DPI, facecolor=_DIAGRAM_PAPER)
+    plt.close(fig)
+    return path
+
+
 __all__ = [
     "plot_thalia_cover",
     "plot_thalia_overview",
     "plot_evidence_tier_map",
     "plot_foundations_map",
     "plot_quality_protocol",
+    "plot_backend_method_design",
     "plot_memory_lifecycle",
     "plot_gepa_evolution_loop",
 ]

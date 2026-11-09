@@ -21,7 +21,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `analyze_provenance_p0.py` | Validates P0 ledgers, frozen rubric, packets, and statistics without promoting | `src.evaluation.provenance_p0` | `dev` |
 | `analyze_quality.py` | Double-annotation/adjudication check and fail-closed quality report (agreement, calibration, paired comparisons) | `src.evaluation.quality` | `dev` |
 | `build_dashboard.py` | `output/dashboard.html` static diagnostics dashboard; refreshes the artifact manifest last | `src.dashboard`, `src.evaluation`, `src.provenance` | `dev` |
-| `run_backend_benchmark.py` | Isolated common-`AutoHarness` extractive/local/explicit-cloud observations, validated complete artifact or incomplete sidecar; nonzero on failures | `src.benchmark_cli` → `src.evaluation.backend_benchmark` | `uv run --project . python scripts/run_backend_benchmark.py` (no DSPy prerequisite) |
+| `run_backend_benchmark.py` | Schema-2 backend/method observations and within-backend paired analysis; complete report or incomplete sidecar | `src.benchmark_cli` → `src.evaluation.backend_benchmark` | `uv run --project . python scripts/run_backend_benchmark.py` (no DSPy) |
 | `build_provenance_p0_packets.py` | Builds blinded expert packets, separate blind key, and sealed blinding manifest from external raw rows | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_provenance_p0.py` | Freezes a reviewed P0 protocol with canonical digest and owner-declared margins | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_quality_protocol.py` | Records the post-pilot rubric, estimand, thresholds, and provenance before confirmation | `src.evaluation.quality` | `dev` |
@@ -50,7 +50,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `run_research_campaign.py` | Resumable v2 external-volume campaign tiers; incomplete reports never promoted | `src.evaluation.campaign` | `neural` |
 | `run_seed_sensitivity.py` | Isolated ten-seed finite synthetic sensitivity aggregate | `src.evaluation` | `dev` |
 | `validate_artifacts.py` | Fail-closed validation of the artifact manifest, formalism traceability, and claim ledger | `src.provenance`, `src.manuscript_integrity`, `src.formalism_traceability` | `dev` |
-| `z_generate_manuscript_variables.py` | `output/data/manuscript_variables.json` + token/crossref/numeric/claim-ledger source checks; optional template injection | `src.manuscript_variables`, `src.manuscript_integrity`, `src.provenance`, `src.formalism_traceability` | `dev` |
+| `z_generate_manuscript_variables.py` | Generated tokens and source checks; `--benchmark-report PATH` selects validated benchmark evidence, including incomplete reports | `src.manuscript_variables`, `src.manuscript_integrity`, `src.provenance`, `src.formalism_traceability` | `dev` |
 
 ## Canonical local run order
 
@@ -70,44 +70,61 @@ not follows it. Keep old measured cohorts intact and review isolated new outputs
 before changing retained evidence. Any later source mutation requires rerunning
 the integrity screen and its downstream figures/tokens/dashboard/manifest gates.
 
-## Common backend observations
+## Backend/method observations
 
-An installed release wheel provides the same CLI without a checkout or DSPy:
+Install the wheel downloaded from the versioned v0.3.0 GitHub release into your
+chosen environment; this is not a PyPI publication claim:
 
 ```bash
-python -m pip install /path/to/thalia-0.2.0-py3-none-any.whl
-thalia-benchmark --per-category 2 --seed 0 --limit 6
+python -m pip install /path/to/thalia-0.3.0-py3-none-any.whl
+thalia-benchmark --method full_context --method harness \
+  --seed 0 --seed 1 --per-category 2 \
+  --output output/data/backend_offline.json
 ```
 
-Use the wheel downloaded from the GitHub release; this is not a PyPI publication
-claim. The installed command calls `src.benchmark_cli:main`; the source
-orchestrator below bootstraps the repository and imports that same entry point.
-Source examples assume the repository root:
+The installed command and source bootstrap use `src.benchmark_cli:main` without
+DSPy. Source examples assume the repository root:
 
 ```bash
 uv run --project . python scripts/run_backend_benchmark.py \
-  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+  --ollama-model gemma3:1b --num-ctx 8192 \
+  --method full_context --method harness --method lexical_only \
+  --method adaptive --seed 0 --seed 1 --seed 2 \
+  --per-category 2 --timeout 120 --max-tokens 1024 \
+  --n-boot 2000 --analysis-seed 0 --reference-method full_context \
   --output output/data/backend_local.json
-# Cloud requires both explicit model selection and consent:
-uv run --project . python scripts/run_backend_benchmark.py \
-  --ollama-model gemma3:4b --openrouter-model tencent/hy3-preview \
-  --allow-cloud --per-category 2 --seed 0 --timeout 120 --max-tokens 512 \
-  --output output/data/backend_local_cloud.json
 uv run --project . --extra dev python scripts/build_dashboard.py \
-  --backend-benchmark output/data/backend_local_cloud.json
+  --backend-benchmark output/data/backend_local.json
+uv run --project . --extra dev python \
+  scripts/z_generate_manuscript_variables.py \
+  --benchmark-report output/data/backend_local.json
 ```
 
-Model flags are repeatable. The benchmark requires no DSPy SDK, includes the
-extractive baseline, and defaults to `output/data/backend_benchmark.json`
-relative to the caller's current working directory, not the package directory.
-Explicit relative output paths are caller-relative too; absolute paths are
-used unchanged.
-It records failures rather than skipping selected backends; incomplete runs
-return nonzero and print an `.incomplete.json` sidecar path, leaving the requested
-complete destination intact. An old destination is not a new success receipt.
-Use the printed sidecar path to display failure diagnostics. Credentials alone
-never invoke cloud. Full CLI/API, schema, validator, comparison and latency
-boundaries: [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md).
+Model/method/seed flags repeat. Default selection is extractive, method
+`harness`, seed 0; `--config PATH` supplies base YAML without harness environment
+overrides. Optional positive `--num-ctx` requests Ollama context only, not
+effective context retention. Cloud additionally requires explicit
+`--openrouter-model MODEL --allow-cloud` and an authorized process-environment
+key; a credential alone never invokes cloud.
+
+Schema 2 separates backend metadata from method configs, cell/group summaries,
+paired comparisons and portable producer provenance. Migrate singular Python
+`seed` to `seeds` and run-level `config` to `build_benchmark_methods`; no aliases
+or schema-1 reader remain. Preserve historical release evidence and cohorts.
+
+The default destination is `output/data/backend_benchmark.json` relative to the
+caller's working directory, not the package directory. Selected failures are
+recorded, return nonzero, and print an `.incomplete.json` sidecar path, preserving
+the requested complete destination. Use the actual sidecar in both consumers
+when diagnosing failures; an older complete file is not a new success receipt.
+Any incomplete planned pair suppresses delta/interval; a single seed has no
+interval and small-seed warnings remain visible. Prompt characters are not billed
+tokens; end-to-end timing is not throughput/cost. No retries, benchmark cache,
+model ranking, expert-quality/power claims or scientific promotion.
+
+See [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md) for the
+contract and [`../docs/local_method_study.md`](../docs/local_method_study.md)
+for the declared finite local study plan, not observed results.
 
 Live neural DSPy tests separately require `THALIA_LIVE_TESTS=1`; optional DSPy
 classes skip without the SDK, and collection does not perform generation.

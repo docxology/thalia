@@ -27,7 +27,7 @@ hashable, validated on construction, and serialisable.
 | `adaptive_windows` | false | Scale the Inspector window budget with context size (no-op on compact contexts) |
 | `adaptive_window_ratio` | 5 | When adaptive: keep ~one window per this many session lines |
 
-## Sources and precedence
+## Query configuration sources and precedence
 
 Lowest to highest: **built-in defaults → YAML file → `THALIA_*` environment →
 explicit CLI flags**.
@@ -97,3 +97,34 @@ The [common benchmark](backend_benchmark.md) documents its independent CLI
 backend/model, generation, configuration, and output controls. A key alone never
 opts its CLI into cloud calls. Live latency and generations lie outside the
 deterministic-core guarantee.
+
+## Benchmark configuration is explicit
+
+`thalia-benchmark --config PATH` loads base `HarnessConfig` YAML with
+`apply_env=False`; unlike the query CLI, `THALIA_*` harness overrides are not
+applied. An omitted file uses built-in defaults. `verify=True` is rejected
+before inference to preserve one completion attempt per cell.
+
+Repeat `--method` to select `harness`, `full_context`, `lexical_only`, or
+`adaptive` (default `harness`). The base config applies to harness arms;
+lexical-only sets scoring weights to 1/0 and adaptive enables adaptive windows.
+Full context has no harness config and submits all history through the same
+typed renderer/query. It is not guaranteed provider retention.
+
+Zero-weight scoring lanes do not run or contribute fusion membership/ranks.
+Explicit PRF query expansion remains independent BM25 work, and explicit MMR
+may use semantic representations. A zero semantic scoring weight therefore does
+not promise zero semantic computation for every possible base configuration.
+
+Repeat `--seed` for cohort seeds (default 0); these are not model RNG seeds.
+`--n-boot`, `--analysis-seed`, and `--reference-method` control descriptive paired
+analysis, defaulting to 2000, 0, and `full_context`. If that reference is not
+selected, comparisons are not requested. Optional positive `--num-ctx` requests
+Ollama context only; it is not forwarded to cloud or a retention guarantee.
+`--max-tokens` and `--timeout` remain request controls, not whole-run guarantees.
+
+Python callers use `build_benchmark_methods(names, config=base)` followed by
+`run_backend_benchmark(..., methods=methods, seeds=(...))`. Removed singular
+`seed` and run-level `config` arguments have no compatibility shim. Schema 1 is
+rejected; preserve old evidence and choose a new schema-2 destination. See
+[`backend_benchmark.md`](backend_benchmark.md) for accounting and interpretation.

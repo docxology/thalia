@@ -10,7 +10,9 @@ import pytest
 
 from src.dashboard import render_dashboard_html, write_dashboard
 from src.invariants import InvariantResult
-from src.evaluation.backend_benchmark import BenchmarkBackend, run_backend_benchmark
+from src.evaluation.backend_benchmark import (
+    BenchmarkBackend, build_benchmark_methods, run_backend_benchmark,
+)
 from src.llm import CallableLM
 from src.module import ExtractiveLM
 
@@ -74,7 +76,8 @@ def backend_benchmark():
         ],
         per_category=1,
         limit=2,
-        seed=17,
+        seeds=(17,),
+        methods=build_benchmark_methods(("full_context", "harness")),
     )
 
 
@@ -91,7 +94,8 @@ def incomplete_benchmark():
         ],
         per_category=1,
         limit=2,
-        seed=17,
+        seeds=(17,),
+        methods=build_benchmark_methods(("full_context", "harness")),
     )
 
 
@@ -181,12 +185,18 @@ class TestRender:
         out = render_dashboard_html(METRICS, INVARIANTS, FIGURES, backend_benchmark=backend_benchmark)
         page = DashboardPage(out)
         backend = backend_benchmark["backends"][-1]
+        summary = backend_benchmark["summaries"][-1]
         assert [
-            backend["name"], backend["provider"], backend["model"], "complete", "2", "2", "0",
-            f"{backend['mean_token_f1']:.3f}",
-            f"{backend['p50_latency_seconds']:.3f}",
-            f"{backend['p95_latency_seconds']:.3f}",
+            backend["name"], backend["provider"], backend["model"], summary["method"],
+            "complete", "2", "2", "0", f"{summary['mean_token_f1']:.3f}",
+            f"{summary['mean_latency_seconds']:.3f}", f"{summary['p50_latency_seconds']:.3f}",
+            f"{summary['p95_latency_seconds']:.3f}", f"{summary['mean_prompt_characters']:.3f}",
         ] in page.rows
+        assert "Within-model paired method contrasts" in out
+        assert "Single-seed: interval unavailable" in out
+        assert "not billed tokens" in out
+        assert "same examples" in out and "equal seed weight" in out
+        assert "Category and stratum observations" in out
         assert any(tag == "main" for tag, _ in page.elements)
         assert any(tag == "meta" and attrs.get("name") == "viewport" for tag, attrs in page.elements)
         assert any(
@@ -204,7 +214,8 @@ class TestRender:
         assert backend["model"] not in out
         assert "<public metadata>" not in out and "&lt;public metadata&gt;" in out
         assert backend_benchmark["dataset_fingerprint"] in out
-        assert backend_benchmark["config_fingerprint"] in out
+        assert backend_benchmark["methods"][0]["method_fingerprint"] in out
+        assert backend_benchmark["report_fingerprint"] in out
 
     def test_missing_backend_evidence_is_explicit(self):
         out = render_dashboard_html(METRICS, [], [])
@@ -214,25 +225,55 @@ class TestRender:
     def test_incomplete_backend_keeps_failure_accounting(self, incomplete_benchmark):
         out = render_dashboard_html(METRICS, [], [], backend_benchmark=incomplete_benchmark)
         assert "INCOMPLETE" in out
-        assert ["failing", "callable", "raising", "incomplete", "2", "0", "2", "—", "—", "—"] in DashboardPage(out).rows
-        assert incomplete_benchmark["backends"][0]["status"] == "complete"
-        assert any(row[:4] == ["baseline", "extractive", "ExtractiveLM", "complete"] for row in DashboardPage(out).rows)
+        page = DashboardPage(out)
+        assert ["failing", "callable", "raising", "harness", "incomplete", "2", "0", "2",
+                "—", "—", "—", "—", "—"] in page.rows
+        assert incomplete_benchmark["summaries"][0]["status"] == "complete"
+        assert any(row[:5] == ["baseline", "extractive", "ExtractiveLM", "harness", "complete"]
+                   for row in page.rows)
+        assert "Incomplete: paired estimate suppressed" in out
 
-    @pytest.mark.parametrize("corruption", ["empty", "version", "counts", "latency", "rows"])
+    @pytest.mark.parametrize("corruption", ["empty", "schema1", "version", "counts", "latency", "rows", "comparison", "method", "group"])
     def test_rejects_invalid_backend_evidence(self, backend_benchmark, corruption):
         payload = copy.deepcopy(backend_benchmark)
         if corruption == "empty":
             payload = {}
-        elif corruption == "version":
-            payload["schema_version"] = 999
+        elif corruption in {"version", "schema1"}:
+            payload["schema_version"] = 1 if corruption == "schema1" else 999
         elif corruption == "counts":
-            payload["backends"][0]["n_completed"] += 1
+            payload["summaries"][0]["n_completed"] += 1
         elif corruption == "latency":
-            payload["backends"][0]["p95_latency_seconds"] = float("nan")
+            payload["summaries"][0]["p95_latency_seconds"] = float("nan")
+        elif corruption == "comparison":
+            payload["comparisons"][0]["mean_delta"] = 999
+        elif corruption == "method":
+            payload["methods"][0]["method_fingerprint"] = "0" * 64
+        elif corruption == "group":
+            payload["groups"]["category"][0]["n_completed"] += 1
         else:
             payload["rows"].pop()
         with pytest.raises(ValueError):
             render_dashboard_html(METRICS, [], [], backend_benchmark=payload)
+
+
+    def test_reference_absent_is_not_inferred(self):
+        payload = run_backend_benchmark(
+            [BenchmarkBackend("baseline", "extractive", "ExtractiveLM", ExtractiveLM())],
+            per_category=1, limit=2,
+        )
+        out = render_dashboard_html(METRICS, [], [], backend_benchmark=payload)
+        assert "reference method absent" in out
+        assert "not recorded" in out
+
+    def test_seed_cluster_warning_is_visible(self):
+        payload = run_backend_benchmark(
+            [BenchmarkBackend("baseline", "extractive", "ExtractiveLM", ExtractiveLM())],
+            methods=build_benchmark_methods(("full_context", "harness")),
+            seeds=(0, 1), per_category=1, limit=4, n_boot=10,
+        )
+        out = render_dashboard_html(METRICS, [], [], backend_benchmark=payload)
+        assert "Small-cluster warning" in out
+        assert "equal seed weight" in out
 
 
 class TestWrite:
@@ -249,7 +290,8 @@ class TestWrite:
             tmp_path / "dashboard.html", METRICS, [], [], backend_benchmark=incomplete_benchmark,
         )
         page = DashboardPage(path.read_text(encoding="utf-8"))
-        assert ["failing", "callable", "raising", "incomplete", "2", "0", "2", "—", "—", "—"] in page.rows
+        assert ["failing", "callable", "raising", "harness", "incomplete", "2", "0", "2",
+                "—", "—", "—", "—", "—"] in page.rows
 
     def test_invalid_evidence_does_not_replace_existing_dashboard(self, tmp_path):
         path = tmp_path / "dashboard.html"

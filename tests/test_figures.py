@@ -541,6 +541,17 @@ class TestArchitecturalFigures:
         path = plot_quality_protocol(tmp_path / "quality_protocol.png")
         assert path.exists() and path.stat().st_size > 0
 
+    def test_backend_method_design(self, tmp_path):
+        from src.figures.diagrams import plot_backend_method_design
+        from src.figures.manifest import DIAGRAM_FIGURES, FIGURE_CAPTIONS
+
+        path = plot_backend_method_design(tmp_path / "backend_method_design.png")
+        assert path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+        assert any(spec.stem == "backend_method_design" and spec.label == "fig:backend_method_design"
+                   for spec in DIAGRAM_FIGURES)
+        assert "not observed results" in FIGURE_CAPTIONS["backend_method_design"]
+        assert "incomplete" in FIGURE_CAPTIONS["backend_method_design"]
+
     def test_memory_lifecycle(self, tmp_path):
         from src.figures import plot_memory_lifecycle
 

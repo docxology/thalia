@@ -16,11 +16,13 @@ and [`docs/manuscript/`](docs/manuscript/) for the full design rationale.
 
 1. **Business logic lives in `src/`.** Scripts are thin orchestrators: they handle
    I/O and call `src/` functions. Never implement algorithms in `scripts/`.
-2. **The LM is behind a protocol.** The only model-calling code in the
-   deterministic core is the Reasoner via `src.module.LMClient`. The default
-   `ExtractiveLM` is deterministic. Do not import an LLM SDK in the core. The
-   optional, gated DSPy seams (`src/compiler/gepa.py`, `src/dspy_runtime/`) may
-   import `dspy`, but the core never imports them and never depends on `dspy`.
+2. **The LM is behind a protocol.** In the runtime harness the Reasoner owns
+   model calls via `src.module.LMClient`; default `ExtractiveLM` is deterministic.
+   The benchmark's explicit `full_context` arm calls that same real protocol
+   directly with the typed Reasoner renderer, outside Inspector/Retriever.
+   Do not import an LLM SDK in the core. Optional gated DSPy seams
+   (`src/compiler/gepa.py`, `src/dspy_runtime/`) may import `dspy`; the core does
+   not import or depend on it.
 3. **Raw episodes are never overwritten.** `EpisodicStore` is append-only.
    Consolidation produces a *derived* MEMORY.md delta only, and only when both the
    Reasoner flag and an explicit criterion hold.
@@ -76,16 +78,18 @@ and [`docs/manuscript/`](docs/manuscript/) for the full design rationale.
 ## Commands
 
 ```bash
-# Tests + coverage (authoritative gate; confirm collected > 0 and coverage >= 90%)
-PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
-  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+# Tests + coverage: confirm nonempty collection and coverage >= 90%.
+PYTHONWARNINGS=error::ResourceWarning \
+  uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing \
+  --cov-report=json:output/reports/coverage.json \
   --junitxml=output/reports/pytest.xml --cov-fail-under=90
 
 # Single test
 uv run --project . --extra dev python -m pytest tests/test_harness.py -v
 
 # Regenerate artifacts (thin orchestrators; print output paths)
-uv run --project . --extra dev python scripts/run_harness_eval.py  # 5,550 examples / 16,650 method evaluations + ledger
+uv run --project . --extra dev python scripts/run_harness_eval.py
 uv run --project . --extra dev python scripts/run_compiler.py
 uv run --project . --extra dev python scripts/run_seed_sensitivity.py
 uv run --project . --extra dev python scripts/run_compiler_generalization.py
@@ -105,7 +109,8 @@ uv run --project . --extra dev python scripts/validate_artifacts.py
 # fresh, or the PDF silently ships stale figures/tokens — see PUBLICATION_READINESS.md)
 # Optional external template integration; ../template must be populated. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
+uv run --no-sync --project ../template python \
+  scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 # Use only after fresh hydration + exact injection validation above. The
 # provisioned template runtime has independent Python admission requirements.
 
@@ -117,31 +122,38 @@ uv run --project . --extra dev python scripts/run_query.py \
 # Real DSPy runtime (optional neural/dev extra)
 uv run --project . --extra neural python scripts/run_dspy.py
 
-# Record the real extractive-vs-neural measurement (needs a live Ollama model);
-# writes data/neural_eval.json, which the backend-comparison figure + §07 tokens read
+# Historical DSPy full-context diagnostic; distinct from method benchmarking.
 uv run --project . --extra neural python scripts/run_neural_eval.py
 
-# Other gated recorders (each writes a committed aggregate JSON read by figures + tokens):
-uv run --project . --extra neural python scripts/run_learned_retrieval.py    # learned dense embedder vs surrogate
-uv run --project . --extra neural python scripts/run_injection_probe.py       # context-poisoning resistance + neural row
+# Other gated recorders (committed aggregates read by figures/tokens):
+uv run --project . --extra neural python scripts/run_learned_retrieval.py
+uv run --project . --extra neural python scripts/run_injection_probe.py
 
-# Real LongMemEval_S benchmark (download once, then record); needs Ollama for neural rows:
+# Real LongMemEval_S benchmark; Ollama required for neural rows:
 bash scripts/get_longmemeval.sh
-uv run --project . --extra neural python scripts/run_longmemeval.py            # accuracy/grounding/composite + descriptive bootstrap intervals
-uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py # ranking-vs-Inspector recall, max_windows sweep, adaptive fix
+uv run --project . --extra neural python scripts/run_longmemeval.py
+uv run --project . --extra neural python scripts/run_longmemeval_bottleneck.py
 
-# THALIA v2 external-volume campaign (resumable; incomplete tiers are never promoted)
+# THALIA v2 external campaign; incomplete tiers are never promoted.
 uv run --project . --extra neural python scripts/run_research_campaign.py
 uv run --project . --extra neural python scripts/run_bottleneck_campaign.py
 
-# Exploratory local-LLM protocol diagnostic; it cannot produce the publication certificate.
-uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
+# Exploratory local-LLM diagnostic; not a publication certificate:
+uv run --project . --extra neural python \
+  scripts/run_quality_campaign.py --phase pilot
 uv run --project . --extra dev python scripts/analyze_quality.py --help
 uv run --project . --extra dev python scripts/freeze_quality_protocol.py --help
-uv run --project . --extra neural python scripts/run_quality_campaign.py --phase confirmatory --protocol /path/to/frozen-quality-protocol.json
-uv run --project . --extra dev python scripts/promote_quality_report.py /path/to/quality-report.json data/quality_results.json --acceptance /path/to/quality-acceptance.json
-uv run --project . --extra dev python scripts/analyze_production_readiness.py --help
-uv run --project . --extra dev python scripts/promote_production_readiness.py /path/to/production-report.json data/production_readiness.json --acceptance /path/to/production-acceptance.json
+uv run --project . --extra neural python scripts/run_quality_campaign.py \
+  --phase confirmatory --protocol /path/to/frozen-quality-protocol.json
+uv run --project . --extra dev python scripts/promote_quality_report.py \
+  /path/to/quality-report.json data/quality_results.json \
+  --acceptance /path/to/quality-acceptance.json
+uv run --project . --extra dev python \
+  scripts/analyze_production_readiness.py --help
+uv run --project . --extra dev python \
+  scripts/promote_production_readiness.py \
+  /path/to/production-report.json data/production_readiness.json \
+  --acceptance /path/to/production-acceptance.json
 ```
 
 ## Extension points
@@ -184,3 +196,31 @@ labelled "-style"/"analogue" — not a fake of `dspy`. When `dspy` is installed,
 `src/dspy_runtime/` runs the *real* dspy `Predict`/optimizer; the deterministic
 core and the headline results remain extractive-bounded as documented. Citations marked
 "as provided" in `docs/manuscript/references.bib` come from the commissioning brief.
+
+## Backend/method evidence contract
+
+- Schema 2 separates backend identity, methods, cell summaries, category/stratum
+  groups and within-backend paired comparisons. Schema 1 is rejected; preserve
+  historical release evidence rather than converting it.
+- Use `build_benchmark_methods(..., config=base)` and
+  `run_backend_benchmark(..., methods=methods, seeds=(0, 1, 2))`; singular run-level
+  `seed` and `config` are removed. CLI `--method` and `--seed` repeat; default
+  method is `harness`, default seed is 0. Base `--config` ignores harness env
+  overrides. `--num-ctx` requests Ollama context only.
+- The same typed renderer/query is held fixed across `full_context`, `harness`,
+  `lexical_only`, and `adaptive`, not the selected context. Full submission is
+  not guaranteed provider retention. No benchmark retries/cache or re-answers.
+- Zero-weight scoring lanes do not run or enter fusion. Independently requested
+  BM25 PRF and semantic MMR remain available; do not equate a zero scoring weight
+  with no computation under arbitrary configurations.
+- Preserve partial-pair suppression, single-seed interval suppression and small
+  seed warnings. Prompt characters are not billed tokens; end-to-end timing is
+  not throughput/cost. Complete accounting is not quality/power/promotion.
+- The declared local matrix is a plan in `docs/local_method_study.md`, not an
+  observed receipt. Consumers use validated generated tokens, with explicit
+  report selection via generator `--benchmark-report PATH`. See
+  `docs/backend_benchmark.md` for migration and provenance boundaries.
+- In a file-owned Workflowz wave, workers stop before tests/generators/Git
+  mutations; the integration owner runs the combined gates after source writers
+  stop. Do not reinterpret the command inventory as permission to violate that
+  assignment boundary.

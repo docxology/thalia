@@ -155,39 +155,173 @@ def _load_generated_eval(path: Path, command: str) -> dict:
 
 
 def _backend_benchmark_variables(path: Path) -> dict[str, str]:
-    """Hydrate only validated observations; absence is not a zero measurement."""
+    """Hydrate schema2 evidence only; absence is not a zero measurement."""
     if not path.exists():
         return {
             "BACKEND_BENCHMARK_STATUS": "not recorded",
-            "BACKEND_BENCHMARK_TABLE": "No common-harness backend benchmark is recorded.",
+            "BACKEND_BENCHMARK_TABLE": "No backend × method benchmark is recorded.",
+            "BACKEND_COMPARISON_TABLE": "No within-model paired method contrasts are recorded.",
+            "BACKEND_GROUP_TABLE": "No category or stratum observations are recorded.",
+            "BACKEND_EXPOSURE_TABLE": "No recorded prompt exposure is available.",
+            "BACKEND_BENCHMARK_SCOPE": "No validated method-benchmark artifact was supplied.",
+            "BACKEND_BENCHMARK_PROVENANCE": "Not recorded.",
         }
     from .evaluation.backend_benchmark import validate_backend_benchmark
+    from .evaluation.benchmark_analysis import summarize_prompt_exposure
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     validate_backend_benchmark(payload)
 
     def cell(value: object) -> str:
         text = html.escape(str(value)).replace("\n", " ").replace("\r", " ")
-        return re.sub(r"([\\`*_{}\[\]()!|])", r"\\\1", text)
+        return re.sub(r"([\\`*_{}\[\]()!|$~])", r"\\\1", text)
 
     def number(value: float | None) -> str:
         return "not recorded" if value is None else _fmt(value)
 
-    rows = [
-        "| Provider / model | Status | Requested / completed / failed | Mean token-F1 | p50 / p95 latency (s) |",
-        "|:--|:--|:--|--:|--:|",
-    ]
-    for backend in payload["backends"]:
-        rows.append(
-            f"| {cell(backend['provider'])} / {cell(backend['model'])} "
-            f"| {backend['status']} "
-            f"| {backend['n_requested']} / {backend['n_completed']} / {backend['n_failed']} "
-            f"| {number(backend['mean_token_f1'])} "
-            f"| {number(backend['p50_latency_seconds'])} / {number(backend['p95_latency_seconds'])} |"
+    def table(headings: list[str], rows: list[list[object]]) -> str:
+        return "\n".join(
+            ["| " + " | ".join(headings) + " |", "|" + ":--|" * len(headings)]
+            + ["| " + " | ".join(cell(value) for value in row) + " |" for row in rows]
         )
+
+    backends = {backend["name"]: backend for backend in payload["backends"]}
+    reference = payload["analysis"]["reference_method"]
+    exposure = summarize_prompt_exposure(
+        payload["rows"], methods=[method["name"] for method in payload["methods"]],
+        example_ids=[example["example_id"] for example in payload["examples"]],
+        reference_method=reference,
+    )
+
+    def identity(backend_name: str) -> str:
+        backend = backends[backend_name]
+        return (
+            f"**Backend:** {cell(backend_name)}; **provider:** {cell(backend['provider'])}; "
+            f"**model:** {cell(backend['model'])}."
+        )
+
+    def observation(summary: dict) -> list[object]:
+        return [
+            summary["method"], summary["status"],
+            f"{summary['n_requested']} / {summary['n_completed']} / {summary['n_failed']}",
+            number(summary["mean_token_f1"]),
+            f"{number(summary['mean_latency_seconds'])} / "
+            f"{number(summary['p50_latency_seconds'])} / {number(summary['p95_latency_seconds'])}",
+            number(summary["mean_prompt_characters"]),
+        ]
+
+    headings = [
+        "Method", "Status", "Cases R/C/F", "Mean F1",
+        "Latency (s)", "Mean chars",
+    ]
+    observation_tables = [
+        identity(backend_name) + "\n\n" + table(
+            headings,
+            [observation(summary) for summary in payload["summaries"]
+             if summary["backend"] == backend_name],
+        )
+        for backend_name in backends
+    ]
+    comparison_tables = []
+    for backend_name in backends:
+        comparisons = []
+        for comparison in payload["comparisons"]:
+            if comparison["backend"] != backend_name:
+                continue
+            interval = comparison["interval"]
+            caveat = (
+                "incomplete: paired estimate suppressed" if comparison["status"] != "complete"
+                else "single-seed: interval unavailable" if comparison["n_seed_clusters"] < 2
+                else "small-cluster warning" if interval["small_cluster_warning"]
+                else "descriptive seed-cluster interval"
+            )
+            comparisons.append([
+                comparison["method"],
+                f"{comparison['n_requested_pairs']} / {comparison['n_complete_pairs']}",
+                comparison["n_seed_clusters"],
+                f"{comparison['wins']} / {comparison['ties']} / {comparison['losses']}",
+                number(comparison["mean_delta"]),
+                "not recorded" if interval is None else f"[{number(interval['low'])}, {number(interval['high'])}]",
+                f"{comparison['status']}; {caveat}",
+            ])
+        if comparisons:
+            comparison_tables.append(
+                identity(backend_name) + f" **Reference:** {cell(reference)}.\n\n" + table(
+                    ["Method", "Pairs R/P", "Seeds", "W / T / L",
+                     "Mean delta", "Interval", "Status / limits"],
+                    comparisons,
+                )
+            )
+    group_tables = []
+    for group in ("category", "stratum"):
+        for backend_name in backends:
+            for method in payload["methods"]:
+                selected = [
+                    summary for summary in payload["groups"][group]
+                    if summary["backend"] == backend_name and summary["method"] == method["name"]
+                ]
+                if selected:
+                    group_tables.append(
+                        f"**{group.capitalize()} observations.** " + identity(backend_name)
+                        + f" **Method:** {cell(method['name'])}.\n\n"
+                        + table(
+                            [group.capitalize()] + headings[1:],
+                            [[summary[group].replace("_", " ")] + observation(summary)[1:]
+                             for summary in selected],
+                        )
+                    )
+    scope = (
+        f"Unique seeded example IDs: {payload['n_examples']}; cohort seeds: {payload['cohort']['seeds']}; "
+        f"per category per seed: {payload['cohort']['per_category']}; limit: {payload['cohort']['limit']}; "
+        f"methods: {', '.join(method['name'] for method in payload['methods'])}; "
+        f"reference: {payload['analysis']['reference_method']}; "
+        f"analysis unit: {payload['analysis']['unit']}; "
+        f"resamples: {payload['analysis']['resamples']}; analysis seed: {payload['analysis']['seed']}; "
+        f"confidence: {payload['analysis']['confidence']}. "
+        "Example IDs are not unique submitted inputs. Recorded prompt cases collapse backends for "
+        "each method and example ID, including failed completions with a captured prompt; unobserved "
+        "cases are planned minus recorded. Completion failures remain visible in the observation "
+        "counts. Repeated inputs are not independent new content. A realized prompt group means "
+        "exact per-example submitted-text equivalence across this cohort's complete ordered case "
+        "vector, not equal code, compute, latency, quality, or independent method-quality evidence. "
+        "Missing prompts leave groups unavailable. Missing reference or no recorded prompt pairs "
+        "means no prompt-difference comparison, not a zero quality effect."
+    )
+    provenance = {
+        key: payload[key] for key in (
+            "dataset_fingerprint", "report_fingerprint", "methods", "backends",
+            "runtime_provenance", "producer_provenance", "execution_order",
+        )
+    }
     return {
-        "BACKEND_BENCHMARK_STATUS": payload["status"],
-        "BACKEND_BENCHMARK_TABLE": "\n".join(rows),
+        "BACKEND_BENCHMARK_STATUS": cell(payload["status"]),
+        "BACKEND_BENCHMARK_TABLE": "\n\n".join(observation_tables),
+        "BACKEND_EXPOSURE_TABLE": f"**Prompt reference:** {cell(reference)}.\n\n" + table(
+            ["Method", "Recorded / planned", "Distinct prompts",
+             "Different / paired", "Input group"],
+            [
+                [
+                    row["method"],
+                    f"{row['n_observed_cases']} / {row['n_requested_cases']} "
+                    f"({row['n_requested_cases'] - row['n_observed_cases']} unobserved)",
+                    row["n_unique_prompts"],
+                    f"{row['n_different_from_reference']} / {row['n_compared_to_reference']}"
+                    if row["n_compared_to_reference"] else (
+                        f"— / {row['n_compared_to_reference']} (reference absent)"
+                        if row["n_different_from_reference"] is None
+                        else f"— / {row['n_compared_to_reference']} (no recorded prompt pairs)"
+                    ),
+                    "—" if row["prompt_group"] is None else f"P{row['prompt_group']}",
+                ]
+                for row in exposure
+            ],
+        ),
+        "BACKEND_COMPARISON_TABLE": "\n\n".join(comparison_tables) if comparison_tables else (
+            "Reference method absent or no non-reference method selected: within-model contrasts not recorded."
+        ),
+        "BACKEND_GROUP_TABLE": "\n\n".join(group_tables),
+        "BACKEND_BENCHMARK_SCOPE": cell(scope),
+        "BACKEND_BENCHMARK_PROVENANCE": cell(json.dumps(provenance, sort_keys=True)),
     }
 
 
@@ -196,12 +330,17 @@ def _load_quality_plan() -> dict[str, object]:
     return load_thalia_overlay_section("model_quality")
 
 
-def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
+def generate_variables(
+    config: HarnessConfig | None = None, *, backend_benchmark_path: str | Path | None = None,
+) -> dict[str, str]:
     """Generate the full ``{{TOKEN}} -> value`` map for the manuscript.
 
     Args:
         config: Harness configuration to report and evaluate (defaults to
             :func:`~src.config.default_config`).
+        backend_benchmark_path: Explicit schema2 artifact, including an incomplete
+            diagnostic. Missing explicit paths raise; omission uses the optional
+            default report and never selects an incomplete sibling implicitly.
 
     Returns:
         A dict of string tokens to string values, covering configuration, headline
@@ -627,7 +766,11 @@ def generate_variables(config: HarnessConfig | None = None) -> dict[str, str]:
         }
     )
 
-    variables.update(_backend_benchmark_variables(_BACKEND_BENCHMARK_PATH))
+    if backend_benchmark_path is not None and not Path(backend_benchmark_path).is_file():
+        raise FileNotFoundError(f"selected backend benchmark is missing: {backend_benchmark_path}")
+    variables.update(_backend_benchmark_variables(
+        _BACKEND_BENCHMARK_PATH if backend_benchmark_path is None else Path(backend_benchmark_path)
+    ))
 
     # OpenRouter/Hy3 neural evaluation (cloud backend, tencent/hy3-preview).
     if _OPENROUTER_EVAL_PATH.exists():

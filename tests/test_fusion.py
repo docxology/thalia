@@ -86,6 +86,43 @@ class TestRRFFusion:
         assert dup_fused[2].lexical_rank == 1
 
 
+class TestDisabledLanes:
+    @pytest.mark.parametrize("active_lane", ["lexical", "semantic"])
+    @pytest.mark.parametrize("k", [0, 60])
+    def test_disabled_lane_adds_neither_candidates_nor_ranks(self, active_lane, k):
+        active = [ScoredChunk(7), ScoredChunk(2), ScoredChunk(7), ScoredChunk(9)]
+        # Includes overlap, a disabled-only id, and duplicate ids. None may change
+        # active ranks or contribute even a zero-score candidate.
+        disabled = [ScoredChunk(9), ScoredChunk(1), ScoredChunk(2), ScoredChunk(1)]
+        if active_lane == "lexical":
+            fused = rrf_fuse(active, disabled, k=k, lexical_weight=2.0, semantic_weight=0.0)
+            assert [(c.lexical_rank, c.semantic_rank) for c in fused] == [(0, -1), (1, -1), (2, -1)]
+        else:
+            fused = rrf_fuse(disabled, active, k=k, lexical_weight=0.0, semantic_weight=2.0)
+            assert [(c.lexical_rank, c.semantic_rank) for c in fused] == [(-1, 0), (-1, 1), (-1, 2)]
+        assert _ids(fused) == [7, 2, 9]
+        assert [c.fused_score for c in fused] == [2.0 / (k + rank + 1) for rank in range(3)]
+
+    @pytest.mark.parametrize("active_lane", ["lexical", "semantic"])
+    def test_no_active_candidates_means_empty_result(self, active_lane):
+        disabled = [ScoredChunk(1), ScoredChunk(2)]
+        if active_lane == "lexical":
+            fused = rrf_fuse([], disabled, lexical_weight=1.0, semantic_weight=0.0)
+        else:
+            fused = rrf_fuse(disabled, [], lexical_weight=0.0, semantic_weight=1.0)
+        assert fused == []
+
+    def test_both_disabled_returns_empty_without_changing_fusion_validation(self):
+        assert rrf_fuse([ScoredChunk(1)], [ScoredChunk(2)], lexical_weight=0.0, semantic_weight=0.0) == []
+        with pytest.raises(ValueError, match="k must be non-negative"):
+            rrf_fuse([], [], k=-1, lexical_weight=0.0, semantic_weight=0.0)
+
+    @pytest.mark.parametrize("weights", [(-0.1, 0.0), (0.0, -0.1)])
+    def test_disabled_other_lane_does_not_bypass_negative_weight_validation(self, weights):
+        with pytest.raises(ValueError, match="lane weights must be non-negative"):
+            rrf_fuse([], [], lexical_weight=weights[0], semantic_weight=weights[1])
+
+
 class TestDataclasses:
     def test_scored_chunk_default_score(self):
         assert ScoredChunk(1).score == 0.0

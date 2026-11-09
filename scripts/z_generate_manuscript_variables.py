@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -30,8 +32,14 @@ from src.manuscript_variables import generate_variables  # noqa: E402
 from src.provenance import write_artifact_manifest  # noqa: E402
 
 
-def main() -> Path:
-    """Generate variables, verify manuscript token coverage, and serialise."""
+def main(argv: Sequence[str] = ()) -> Path:
+    """Generate variables without consuming an importing caller's arguments."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--benchmark-report", type=Path,
+        help="Explicit complete or incomplete schema-2 method-benchmark artifact",
+    )
+    args = parser.parse_args(argv)
     template_root = find_template_root(starts=(Path.cwd(), PROJECT_ROOT))
     if template_root is not None and str(template_root) not in sys.path:
         sys.path.insert(0, str(template_root))
@@ -39,7 +47,7 @@ def main() -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     manuscript_dir = PROJECT_ROOT / "docs" / "manuscript"
 
-    variables = generate_variables()
+    variables = generate_variables(backend_benchmark_path=args.benchmark_report)
     validate_claim_ledger(load_claim_ledger(), project_root=PROJECT_ROOT)
     used, missing = verify_token_coverage(variables, manuscript_dir)
     if missing:
@@ -100,4 +108,4 @@ def main() -> Path:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

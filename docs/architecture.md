@@ -6,11 +6,11 @@ fifth (Compiler) operates on the harness offline.
 ```text
 session history + query
   ─► Stage 0  Inspector    grep/peek/partition → compact evidence windows
-  ─► Stage 1  Retriever    BM25 + hashing-embedding → weighted RRF (+ optional MMR) → budget
-  ─► Stage 2  Reasoner     single-pass or ReAct-style routing (+ optional verify) → typed answer + citations
+  ─► Stage 1  Retriever    BM25 + hashing-embedding → weighted RRF → budget
+  ─► Stage 2  Reasoner     routed selection → typed answer + citations
   ─► Stage 3  MemoryGate   always append raw episode; gated consolidation
   ─► HarnessOutput
-  ╌► Stage 4  Compiler     (offline) MIPRO search + GEPA reflective evolution over HarnessConfig
+  ╌► Stage 4  Compiler     offline MIPRO search + GEPA evolution
 ```
 
 ## Module boundaries
@@ -37,12 +37,19 @@ session history + query
   machine-checked bridge from equations to code, tests, and artifacts).
 - **`src/py.typed`** — PEP 561 marker; downstream type-checkers treat the package as
   typed without additional configuration.
-- **`src/evaluation/backend_benchmark.py`** — optional observational orchestration
-  of caller-supplied `LMClient` backends through the same `AutoHarness`, seeded
-  dataset, metric, and configuration; fresh state per example and explicit
-  complete/failure accounting. It neither changes stages nor requires DSPy.
-  The dashboard consumes a validated artifact offline; see
-  [`backend_benchmark.md`](backend_benchmark.md).
+- **`src/evaluation/backend_benchmark.py`** — optional schema-2 backend × method
+  × example orchestration. `BenchmarkMethod` separates context selection from
+  `BenchmarkBackend` identity. Harness arms use fresh context-managed state;
+  `full_context` directly calls the real LM with the same typed Reasoner
+  renderer/query and every history line, bypassing Inspector/Retriever.
+  Methods do not share selected context, and submission is not a provider
+  retention guarantee. One completion attempt, no retries/benchmark cache.
+  Method fingerprints, execution schedule, portable producer provenance,
+  cell/category/stratum summaries and paired seed-mean contrasts are validated
+  before offline dashboard/manuscript consumption. Schema 1 is rejected rather
+  than adapted; historical cohorts stay unchanged. See
+  [`backend_benchmark.md`](backend_benchmark.md) and the declared
+  [`local_method_study.md`](local_method_study.md).
 
 ## Invariants the architecture preserves
 

@@ -38,14 +38,23 @@ fields, and strict formalism claim-artifact resolution. Source-only manuscript
 generation remains valid before `output/` exists; the release-time validator owns
 the generated-artifact check.
 
-The optional common benchmark uses its own
-`validate_backend_benchmark(payload)` before writing or dashboard consumption.
-It rebuilds the seeded plan, verifies complete backend/example accounting,
-prompt/dataset/config/content identity, finite score/time bounds, recomputed
-token-F1 and summaries, and report fingerprints. It accepts honest incomplete
-diagnostics, which remain non-promotable as complete comparisons. A structurally
-valid artifact does not authenticate a provider, prove quality, or establish
-production readiness; see [`backend_benchmark.md`](backend_benchmark.md).
+The optional benchmark's `validate_backend_benchmark(payload)` is a separate
+schema-2 consistency gate before writing or consumer use. It rebuilds all seeded
+cohorts and verifies the exact backend × method × example matrix and schedule,
+method configs, prompt/dataset/content identities, producer-inventory structure,
+finite scores/times, recomputed token-F1, cell/group summaries and paired results.
+Prompt agreement is within example/method across backends, not across methods.
+Schema 1 is rejected; historical artifacts are preserved, never upgraded in place.
+
+Negative controls must cover missing/duplicate cells, schedule/fingerprint drift,
+altered summaries and paired contrasts, incomplete pairs suppressing both delta
+and interval, a single seed suppressing interval, and visible small-seed warnings.
+Real loopback server tests exercise genuine full-context requests, harness-selected
+context, optional Ollama context options, and failures without mocks or live-model
+claims. Honest incomplete diagnostics retain denominators and a sidecar rather
+than replacing the last good destination. Checksums establish consistency, not
+authenticity, expert quality, power, promotion or production readiness. See
+[`backend_benchmark.md`](backend_benchmark.md).
 
 ## 4. Golden regression
 

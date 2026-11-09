@@ -59,7 +59,7 @@ share model/user data through it. The SDK-free `thalia` and `thalia-benchmark`
 commands, including their direct Ollama/OpenRouter clients, neither import
 DSPy nor use its cache.
 
-The v0.2.0 `dev` and `neural` extras require `filelock>=4.2.1`, and the lock
+The current `dev` and `neural` extras require `filelock>=4.2.1`, and the lock
 integrates Dependabot's repair for the reported local filesystem/locking
 advisories. The resolver selects compatible LiteLLM 1.103.10; DSPy remains
 3.2.1. This is a bounded dependency repair, not a claim that all dependencies

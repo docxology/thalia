@@ -11,8 +11,10 @@ runtime prerequisite.
 ```bash
 uv sync --project . --extra dev
 uv run --project . --extra dev python scripts/00_preflight.py
-PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
-  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+PYTHONWARNINGS=error::ResourceWarning \
+  uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing \
+  --cov-report=json:output/reports/coverage.json \
   --junitxml=output/reports/pytest.xml --cov-fail-under=90
 ```
 
@@ -53,15 +55,52 @@ with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
 SQLite connection is always closed, even on exception.
 
 
-## Compare backends through the same harness
+## Compare context-selection methods within a backend
 
-The [common backend benchmark](backend_benchmark.md) accepts extractive,
-Ollama, and explicitly selected OpenRouter `LMClient` backends. It uses identical
-seeded research examples and harness configuration, fresh state per example,
-separate output artifacts, and explicit complete/incomplete accounting.
-Cloud is never selected just because a credential is present. Read the guide
-before invoking cloud models; context is sent to the provider and may incur cost.
-The dashboard can display the validated optional artifact without model calls.
+The installed v0.3.0 wheel provides `thalia-benchmark` without a source checkout
+or DSPy. For source use, replace that command with
+`uv run --project . python scripts/run_backend_benchmark.py`.
+
+```bash
+thalia-benchmark --method full_context --method harness \
+  --method lexical_only --method adaptive \
+  --seed 0 --seed 1 --seed 2 --per-category 2 \
+  --n-boot 2000 --analysis-seed 0 --reference-method full_context \
+  --output output/data/backend_offline.json
+# Add an already-served model for real local inference:
+thalia-benchmark --ollama-model gemma3:1b --num-ctx 8192 \
+  --method full_context --method harness --seed 0 --seed 1 \
+  --per-category 2 --timeout 120 \
+  --output output/data/backend_local.json
+uv run --project . --extra dev python scripts/build_dashboard.py \
+  --backend-benchmark output/data/backend_local.json
+uv run --project . --extra dev python \
+  scripts/z_generate_manuscript_variables.py \
+  --benchmark-report output/data/backend_local.json
+```
+
+Output paths are caller-relative. `--method` and `--seed` repeat; defaults are
+`harness` and seed 0. `--config PATH` loads base YAML without harness environment
+overrides; verification must be disabled. `--num-ctx` is an optional requested
+Ollama context, not guaranteed effective retention. Methods share the typed
+renderer/query, not selected context. Extractive is always included. No retries,
+benchmark response cache, or verification re-answers are performed.
+
+Schema 2 replaces schema 1 with explicit methods, cell/group summaries and paired
+within-backend contrasts. Old Python `seed`/root `config` callers must migrate
+to `seeds`/`build_benchmark_methods`; old artifacts are rejected, not rewritten.
+Preserve historical cohorts. Any missing pair suppresses delta/interval; a
+single seed has no interval and small-seed warnings must remain visible.
+Prompt characters are not billed tokens; end-to-end timing is not throughput or
+cost. This is not expert quality, model ranking, power, or promotion.
+
+Selected model failures return nonzero and print an `.incomplete.json` sidecar,
+preserving the last complete destination. Use that actual sidecar explicitly in
+both consumers; an old complete file is not a new receipt. The
+[benchmark guide](backend_benchmark.md) covers schema/provenance and cloud
+consent. Cloud requires model selection plus `--allow-cloud`, sends prompts
+outside the local process and may incur cost. A key alone never selects cloud.
+The [local method study](local_method_study.md) is a declared plan, not outcomes.
 
 `run_openrouter.py` is instead an optional direct-DSPy smoke diagnostic. It reads
 only the process environment key `THALIA_OPENROUTER_API_KEY` (not `.env`), prints
@@ -96,10 +135,11 @@ uv run --project . --extra dev python scripts/run_demo.py
 uv run --project . --extra dev python scripts/build_dashboard.py
 uv run --project . --extra dev python scripts/validate_artifacts.py
 
-# Re-render the PDF and validate output (run LAST, once every artifact above is fresh)
+# Render LAST, after fresh artifacts; optional external integration.
 # Optional external integration; requires a populated ../template checkout. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
+uv run --no-sync --project ../template python \
+  scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 ```
 
 The PDF compiler and THALIA's local artifact checks are separable from the
@@ -165,7 +205,8 @@ the repository under the caller's external quality root.
 Run the exploratory pilot first:
 
 ```bash
-uv run --project . --extra neural python scripts/run_quality_campaign.py --phase pilot
+uv run --project . --extra neural python \
+  scripts/run_quality_campaign.py --phase pilot
 ```
 
 After the engineering pilot has diagnosed packet and rubric mechanics, obtain

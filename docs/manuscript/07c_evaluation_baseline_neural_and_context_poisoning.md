@@ -107,46 +107,102 @@ diagnostic at `output/data/openrouter_result.json`; and
 `src.llm.OpenRouterLM` implements the `LMClient` interface for the Reasoner.
 The smoke recorder does not regenerate the historical aggregate.
 
-The common benchmark (`src.evaluation.backend_benchmark` and
-`scripts/run_backend_benchmark.py`) uses that last interface to run extractive,
-local Ollama, and explicitly selected OpenRouter backends through the same
-`AutoHarness` configuration and ordered seeded research examples. Fresh
-context-managed harnesses isolate examples. Separate outputs retain backend,
-model, generation options, dataset/config identities, answers, failures, and
-observed end-to-end latency. Complete matched pairs permit descriptive token-F1
-differences; incomplete backends retain successful-only diagnostic summaries
-without promotion to complete comparisons. The validator and dashboard expose
-that distinction. The interface alone is a measurement capability, not empirical
-proof; recorded rows in the following subsection are separate finite observations,
-not a quality/production certificate. Latency includes harness, transport, and
-serving effects; it is neither token throughput nor cost.
+The schema2 method benchmark (`src.evaluation.backend_benchmark` and
+`scripts/run_backend_benchmark.py`) separates **backend identity** from
+**context-policy method**. The built-in methods are `full_context`, `harness`,
+`lexical_only`, and `adaptive`. Full context submits all session lines directly
+to the actual selected LM with `render_signature_prompt(ReasonerSignature, ...)`;
+it does not guarantee provider-side context retention. The harness methods use
+fresh context-managed `AutoHarness` instances, with verification disabled so each
+planned cell submits one completion attempt. Lexical-only changes fusion weights;
+adaptive enables adaptive Inspector windows. Custom named harness configurations
+retain their own validated configuration and method fingerprint.
+
+The query and typed Reasoner template are fixed across methods, while the supplied
+evidence text is selected by each configured context policy; different policy names
+do not guarantee different submitted inputs. The seeded cohort retains
+example/category/stratum/seed identity; a deterministic interleaving precedes any
+global limit. Backends run in outer loops and method order rotates within examples.
+The validator rebuilds the planned backend × method × example matrix, verifies its
+execution schedule, enforces prompt agreement across backends *within* each
+example/method, and recomputes scores, summaries, groups, and paired contrasts.
+[@fig:backend_method_design] records these methodological gates, not results.
+
+![Source-owned method-design flow: seeded research examples cross backend identities and full-context or fresh harness context policies while query and typed Reasoner template remain fixed. One attempted completion per cell feeds a validated matrix. Within-backend reference pairing gates the seed-mean token-F1 contrast: absent references yield no contrast, incomplete planned pairs suppress estimates, single-seed contrasts lack intervals, and small-cluster bootstrap warnings remain explicit. This is a methodological schematic, not a numeric result or quality certificate.](../../output/figures/backend_method_design.png){#fig:backend_method_design width=100%}
+
 Operational commands and the artifact contract are documented in
 `docs/backend_benchmark.md` and [@sec:op-backend-benchmark].
 
-### Optional Common-Harness Observations {#sec:eval-common-backends}
+### Optional Backend × Method Observations {#sec:eval-common-backends}
 
-The following status and table are generated from the validated optional
-`output/data/backend_benchmark.json` artifact, not from the legacy local or cloud
-aggregates. If absent, the manuscript reports that no observation was recorded.
-An incomplete diagnostic is labelled as such and must not be treated as a
-complete paired comparison.
+The following values come only from the validated selected schema2 artifact
+(default `output/data/backend_benchmark.json`), never from the legacy local or
+cloud aggregates. The generator may explicitly select an incomplete artifact;
+absence is reported as not recorded, while schema1 and mutated evidence fail
+closed. No mixed-method backend mean is computed.
 
 **Recorded artifact status:** {{BACKEND_BENCHMARK_STATUS}}
 
+**Recorded scope:** {{BACKEND_BENCHMARK_SCOPE}}
+
+**Recorded prompt exposure by method**
+
+{{BACKEND_EXPOSURE_TABLE}}
+
+These post-run descriptive groups concern only the recorded attempted prompts in
+this cohort, not new experiments, independent content replications, causal effects,
+or model rankings. A shared group is not independent method-quality evidence.
+
 {{BACKEND_BENCHMARK_TABLE}}
 
-The observation unit is a seeded synthetic research example evaluated through
-the same runtime `AutoHarness`, with fresh memory state and matched
-dataset/configuration identity. Counts expose requested/completed/failed rows.
-Token-F1 measures lexical overlap; latency summaries describe successful-row
-end-to-end harness time, including local work, model serving/transport, and
-cleanup. They do not measure token throughput or cost. Sequential execution,
-cold starts, cache state, hardware/load, and provider scheduling limit latency
-comparability; no speed winner is inferred. Any displayed local rows establish
-only a finite observational cohort, not adjudicated answer quality, population
-performance, production readiness, or a comparison with the historical DSPy
-and legacy cloud cohorts. Cloud evidence appears only if explicitly collected;
-local availability or interface support is not a cloud success receipt.
+Backend/provider/model identities precede their compact tables. Case triples are
+requested/completed/failed (R/C/F); pair fractions are requested/paired (R/P);
+W/T/L denotes wins/ties/losses. Latency triples are mean, p50, and p95 in seconds.
+Mean chars counts submitted prompt characters. Displayed values are rounded;
+the machine report retains full precision. Category and stratum labels use
+readable words; their exact identifiers remain in the report. All subgroup rows
+are retained.
+
+**Within-model paired method contrasts**
+
+{{BACKEND_COMPARISON_TABLE}}
+
+The contrast pairs identical seeded examples within each backend and computes
+the unweighted mean of the per-seed mean paired token-F1 deltas. This is not a
+pooled-example mean when represented seed sizes differ. Wins, ties, and losses
+count raw complete pairs. Any incomplete planned pair suppresses both the contrast
+estimate and interval; missing reference methods produce no contrasts. A single
+represented seed has no interval. With multiple represented seeds, seeded
+cluster resampling of seed means gives descriptive intervals; small-cluster
+warnings remain visible and do not establish significance, power, or a
+target-population claim.
+
+**Category and stratum observations**
+
+{{BACKEND_GROUP_TABLE}}
+
+All observation cells retain requested/completed/failed counts. Token-F1 compares
+deduplicated token sets, not multiset token-F1 or adjudicated semantic correctness.
+Incomplete cells report success-only diagnostic means. Prompt characters count
+submitted text, not billed
+tokens. Latency includes method execution, local work, transport/model serving,
+and cleanup; it is neither throughput nor cost. Sequential execution, cold starts,
+cache state, hardware/load, and provider scheduling preclude a speed-winner claim.
+These are finite synthetic observations, not expert-quality or production
+certificates, and cannot rank the historical DSPy or legacy cloud cohorts.
+Cloud appears only with explicit collection consent.
+
+Category determines the research stratum; subgroup differences cannot isolate an
+independent difficulty effect. A construct's long-context label is not evidence
+of advertised context-window stress or retained attention. The full execution
+receipt and source-grounded interpretation are in `docs/local_method_study.md`.
+
+**Recorded source and runtime binding:** {{BACKEND_BENCHMARK_PROVENANCE}}
+
+Portable source-file checksums, exact method configurations, prompt identities,
+generation options, and observed runtime metadata support artifact auditing.
+Checksums bind recorded bytes; they do not authenticate a publisher or attest
+the provider binary, hardware, or retained context.
 
 ### Context-Poisoning Stress Test {#sec:eval-injection}
 

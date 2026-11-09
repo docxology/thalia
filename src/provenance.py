@@ -207,6 +207,7 @@ def write_figure_registry(
     """Write the template-compatible figure registry for generated PNGs."""
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     entries: dict[str, dict[str, object]] = {}
     for figure_path in sorted((Path(p) for p in figure_paths), key=lambda p: p.name):
         stem = figure_path.stem
@@ -215,7 +216,13 @@ def write_figure_registry(
             "filename": figure_path.name,
             "label": label,
             "caption": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
-            "alt_text": FIGURE_CAPTIONS.get(stem, "Generated THALIA figure."),
+            "alt_text": (
+                previous.get(label, {}).get("alt_text")
+                if isinstance(previous.get(label), dict)
+                and isinstance(previous[label].get("alt_text"), str)
+                and previous[label]["alt_text"].strip()
+                else FIGURE_CAPTIONS.get(stem, "Generated THALIA figure.")
+            ),
             "generated_by": "scripts/generate_figures.py",
             "source": "src/figures/",
         }

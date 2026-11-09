@@ -37,8 +37,8 @@ class FusedChunk:
     Attributes:
         id: Stable identifier.
         fused_score: Weighted RRF score (higher is better).
-        lexical_rank: 0-based rank in the lexical lane (-1 if absent).
-        semantic_rank: 0-based rank in the semantic lane (-1 if absent).
+        lexical_rank: 0-based lexical rank (-1 if absent or lane disabled).
+        semantic_rank: 0-based semantic rank (-1 if absent or lane disabled).
     """
 
     id: int
@@ -75,6 +75,9 @@ def rrf_fuse(
 
     The contribution of a chunk at 0-based rank ``r`` in a lane of weight ``w`` is
     ``w / (k + r + 1)``. Contributions across lanes are summed.
+    A zero-weight lane is disabled: its chunks contribute neither candidates nor
+    ranks, even when its supplied list is nonempty. Both weights may be zero,
+    yielding an empty result. Positive weights are used as supplied, not normalised.
 
     Args:
         lexical_results: Lexical lane chunks in rank order (best first).
@@ -99,8 +102,8 @@ def rrf_fuse(
     # contributes to the fused score exactly once, consistent with the single rank
     # reported for it. Without this, a duplicate would add a second contribution at
     # its later rank while ``lex_rank``/``sem_rank`` still report the first rank.
-    lexical_results = _dedupe_first_occurrence(lexical_results)
-    semantic_results = _dedupe_first_occurrence(semantic_results)
+    lexical_results = _dedupe_first_occurrence(lexical_results) if lexical_weight != 0 else []
+    semantic_results = _dedupe_first_occurrence(semantic_results) if semantic_weight != 0 else []
 
     scores: dict[int, float] = defaultdict(float)
     lex_rank: dict[int, int] = {}

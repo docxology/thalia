@@ -76,6 +76,7 @@ from src.figures import (  # noqa: E402
     plot_thalia_overview,
 )
 from src.figures.manifest import COMMITTED_FIGURES  # noqa: E402
+from src.figures.diagrams import plot_backend_method_design  # noqa: E402
 from src.harness import build_run_fn  # noqa: E402
 from src.provenance import write_artifact_manifest, write_figure_registry  # noqa: E402
 
@@ -145,6 +146,7 @@ def main() -> list[Path]:
         plot_evidence_tier_map(fig_dir / "evidence_tier_map.png"),
         plot_foundations_map(fig_dir / "foundations_map.png"),
         plot_quality_protocol(fig_dir / "quality_protocol.png"),
+        plot_backend_method_design(fig_dir / "backend_method_design.png"),
         plot_memory_lifecycle(fig_dir / "memory_lifecycle.png"),
         plot_gepa_evolution_loop(fig_dir / "gepa_evolution_loop.png"),
     ]

@@ -34,6 +34,7 @@ figure_types:
   - thalia_overview
   - foundations_map
   - quality_protocol
+  - backend_method_design
   - memory_lifecycle
   - gepa_evolution_loop
   - backend_comparison
@@ -79,6 +80,7 @@ artifact_expectations:
   - output/figures/thalia_cover.png
   - output/figures/thalia_overview.png
   - output/figures/foundations_map.png
+  - output/figures/backend_method_design.png
   - output/figures/memory_lifecycle.png
   - output/figures/gepa_evolution_loop.png
   - output/figures/backend_comparison.png

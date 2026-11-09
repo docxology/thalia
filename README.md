@@ -10,18 +10,17 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-> **Current version:** v0.2.0 (2026-11-08), identified by its versioned
-> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.2.0).
+> **Current version:** v0.3.0 (2026-11-09), identified by its versioned
+> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.3.0).
 > Source metadata is not evidence that the release has been published: the
 > publisher must verify the exact tag, assets, and candidate checks.
-> See the [v0.2.0 release notes](docs/releases/v0.2.0.md) and
-> [release controls](docs/release_readiness.md). Generated outputs are gitignored
-> and must be regenerated from this version before packaging.
+> See the [release controls](docs/release_readiness.md). Generated outputs are
+> gitignored and must be regenerated from this version before packaging.
 
 > **Historical archive only:** the immutable **v0.1.0** source and manuscript
 > are archived at
 > [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
-> That DOI does **not** identify v0.2.0; no new Zenodo publication or DOI is
+> That DOI does **not** identify v0.3.0; no new Zenodo publication or DOI is
 > asserted. The old commit, checksums, and gates remain recorded unchanged in
 > [`docs/release_receipt.md`](docs/release_receipt.md).
 
@@ -32,9 +31,9 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 
 ## Status & next actions
 
-- **Version boundary:** v0.2.0 adds installed query/benchmark commands and the
-  optional common-backend diagnostic; historical checks do not certify this
-  candidate. See [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md) and
+- **Version boundary:** v0.3.0 adds schema-2 within-model method comparisons,
+  repeatable cohort seeds and source-bound diagnostic provenance. Historical
+  checks do not certify this candidate. See
   [`docs/release_readiness.md`](docs/release_readiness.md).
 - **What to do next:** the canonical backlog is [`tasks.yaml`](tasks.yaml)
   ("task + Gantt source of truth", managed by the projects/taskboard server).
@@ -136,15 +135,19 @@ digest check.
 Production readiness is a separate operational gate covering latency, cost,
 privacy, rollback, monitoring, drift, and red-team evidence.
 
-The optional [common backend benchmark](docs/backend_benchmark.md) composes
-caller-supplied `LMClient` implementations with the same `AutoHarness`,
-configuration, metric, and seeded examples. Local Ollama and explicitly selected
-OpenRouter models can be measured together, with isolated outputs, complete/failure
-accounting, and observed harness latency. This capability does not promote a
-cloud/local winner, model quality, or production readiness. The historical
-`data/neural_eval.json` full-context DSPy cohort and
-`data/openrouter_eval.json` provider diagnostic remain separate, incomparable
-cohorts; `run_openrouter.py` is a third, direct-DSPy smoke recorder.
+The optional [backend and method benchmark](docs/backend_benchmark.md) compares
+`full_context`, `harness`, `lexical_only`, and `adaptive` on matched seeded
+examples within each selected `LMClient` backend. All use the same typed renderer
+and query with different selected context; full submission is not a guarantee of
+provider context retention. Reports retain failures, method-specific summaries,
+category/stratum diagnostics and seed-clustered paired contrasts. Missing pairs
+suppress deltas/intervals; single-seed contrasts have no interval, and small-seed
+warnings remain visible. Prompt characters are not billed tokens; end-to-end
+timing is not throughput or cost. There are no benchmark retries or response cache.
+The [declared local study](docs/local_method_study.md) is a plan, not an observed
+result or quality/power/promotion claim. Historical `data/neural_eval.json` and
+`data/openrouter_eval.json` remain separate cohorts; direct DSPy smoke recorders
+are not this benchmark. Schema 1 is rejected, never rewritten in place.
 
 ## Quick start
 
@@ -168,8 +171,10 @@ remain thin entry-point bootstraps.
 # From the repository root.
 uv sync --project . --extra dev
 uv run --project . --extra dev python scripts/00_preflight.py
-PYTHONWARNINGS=error::ResourceWarning uv run --project . --extra dev python -m pytest tests/ \
-  --cov=src --cov-report=term-missing --cov-report=json:output/reports/coverage.json \
+PYTHONWARNINGS=error::ResourceWarning \
+  uv run --project . --extra dev python -m pytest tests/ \
+  --cov=src --cov-report=term-missing \
+  --cov-report=json:output/reports/coverage.json \
   --junitxml=output/reports/pytest.xml --cov-fail-under=90
 uv run --project . --extra dev mypy src
 uv run --project . --extra dev ruff check src tests scripts
@@ -216,7 +221,8 @@ uv run --project . --extra dev python scripts/promote_production_readiness.py --
 # goes stale silently if this step is skipped).
 # Optional external integration: requires the sibling template checkout. The
 # adapter creates a temporary exact project link and removes it on exit.
-uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate
+uv run --no-sync --project ../template python \
+  scripts/render_pdf_external.py --skip-manuscript-hydration --validate
 ```
 
 PDF rendering is an optional external integration. The standalone adapter
@@ -266,12 +272,20 @@ from src.pipeline import Pipeline
 pipe = (
     Pipeline()
     .with_inspector()
-    .add_step("log", lambda ctx: (ctx.extras.update({"n": len(ctx.evidence_windows)}), ctx)[1])
+    .add_step(
+        "log",
+        lambda ctx: (
+            ctx.extras.update({"n": len(ctx.evidence_windows)}), ctx
+        )[1],
+    )
     .with_retriever()
     .with_reasoner()
     .with_memory_gate()
 )
-out = pipe.run(query="What is the wifi password?", session_history="User: my wifi password is bluefish42")
+out = pipe.run(
+    query="What is the wifi password?",
+    session_history="User: my wifi password is bluefish42",
+)
 # Inspect intermediate state after each step
 for step_name, ctx in pipe.intermediates:
     print(step_name, ctx.extras)
@@ -295,21 +309,27 @@ thalia --query "..." --adaptive-windows --adaptive-window-ratio 5
 ```
 
 ```bash
-# Optional common AutoHarness lane: baseline + a local model, isolated output.
+# Optional matched methods on a local model; no DSPy prerequisite.
 thalia-benchmark \
-  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+  --ollama-model gemma3:1b --per-category 2 \
+  --method full_context --method harness --method lexical_only \
+  --method adaptive --seed 0 --seed 1 --seed 2 --num-ctx 8192 \
+  --n-boot 2000 --analysis-seed 0 --reference-method full_context \
   --output output/data/backend_local.json
-# Cloud additionally requires --openrouter-model MODEL --allow-cloud.
-# Selected failures return nonzero and print an .incomplete.json sidecar path.
+# Optional --config loads base YAML without harness env overrides.
+# Cloud requires --openrouter-model MODEL and --allow-cloud.
+# Failures return nonzero and print an .incomplete.json sidecar path.
 uv run --project . --extra dev python scripts/build_dashboard.py \
   --backend-benchmark output/data/backend_local.json
+uv run --project . --extra dev python \
+  scripts/z_generate_manuscript_variables.py \
+  --benchmark-report output/data/backend_local.json
 ```
 
-The [benchmark guide](docs/backend_benchmark.md) covers repeated model selection,
-caller-supplied clients/configuration, validator, complete/incomplete artifact
-schema, privacy/cost boundaries, and latency caveats. The manuscript's optional
-table reads validated default benchmark evidence; an absent artifact is reported
-as not recorded rather than fabricated or pooled with historical cohorts.
+The [benchmark guide](docs/backend_benchmark.md) covers CLI/API migration,
+repeatable models/methods/seeds, validation, provenance, and privacy boundaries.
+The manuscript consumes validated generated observation/contrast tables; absent
+evidence is not recorded, not fabricated or pooled with historical cohorts.
 
 ```python
 # Available after package installation or from the standalone THALIA root.
@@ -370,7 +390,7 @@ serving a small Gemma, `configure_ollama()` wires `dspy.LM` → litellm → Olla
 
 ```bash
 ollama pull gemma3:4b
-uv run --project . --extra neural python scripts/run_dspy.py   # adds a real gemma3:4b answer
+uv run --project . --extra neural python scripts/run_dspy.py
 ```
 
 Direct DSPy smoke programs do not execute the complete `AutoHarness`.
@@ -415,8 +435,8 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
   lambda=1 reducing to relevance, episode append-only, consolidation gate strictness,
   harness determinism, answer grounding, query-expansion superset, recall read-only,
   recency-zero noop, static determinism guard, and more.
-- **30 registered figures** — all generated deterministically from `src/evaluation`
-  and `src/figures`, including the title-page cover visual abstract, the
+- **Registered figures** — source-owned figures are generated from
+  `src/evaluation` and `src/figures`, including the title-page cover visual abstract, the
   per-category component breakdown, the metric-construct-audit heatmap,
   pipeline evidence-flow, GEPA component trajectory, and multi-seed
   sample-size precision audit.
@@ -436,7 +456,7 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
 
 The THALIA source code is licensed under the [MIT License](LICENSE). Current
 version/tag metadata and the explicitly historical archive relation are maintained
-in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.2.0 has no assigned DOI. MIT
+in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.3.0 has no assigned DOI. MIT
 covers this project's code and does not by itself grant redistribution rights
 for external benchmark data, model weights, raw answers, credentials, or other
 third-party artifacts. The current release boundary is tracked in

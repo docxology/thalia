@@ -35,7 +35,7 @@ tested); if you are tempted to compute something here, it belongs in `src/`.
 | Deterministic generators + query CLI | `00_preflight.py`, `run_harness_eval.py`, `run_compiler.py`, `run_pipeline.py`, `run_seed_sensitivity.py`, `run_compiler_generalization.py`, `analyze_integrity_advantage.py`, `generate_figures.py`, `z_generate_manuscript_variables.py`, `run_demo.py`, `build_dashboard.py`, `run_query.py` | `dev` extra |
 | Validators / frozen-protocol promoters (fail-closed) | `validate_artifacts.py`, `freeze_quality_protocol.py`, `analyze_quality.py`, `promote_quality_report.py`, `analyze_production_readiness.py`, `promote_production_readiness.py`, `freeze_provenance_p0.py`, `build_provenance_p0_packets.py`, `analyze_provenance_p0.py`, `promote_provenance_p0.py` | `dev` extra |
 | Neural opt-in recorders / campaigns | `run_dspy.py`, `run_neural_eval.py`, `run_learned_retrieval.py`, `run_injection_probe.py`, `run_longmemeval.py`, `run_longmemeval_bottleneck.py`, `run_research_campaign.py`, `run_bottleneck_campaign.py`, `run_quality_campaign.py`, `run_production_readiness.py`, `run_openrouter.py` | `neural` extra + live model/network |
-| Common backend observations | `run_backend_benchmark.py` | No DSPy prerequisite; Ollama/cloud only when selected; cloud explicit |
+| Backend/method observations | `run_backend_benchmark.py` | Schema 2; no DSPy prerequisite; local/cloud explicit |
 | External helpers | `get_longmemeval.sh` (benchmark download + validation), `render_pdf_external.py` (optional `../template` PDF) | bash / template project |
 
 ## Gotchas
@@ -70,3 +70,11 @@ tested); if you are tempted to compute something here, it belongs in `src/`.
   data, real SQLite, and real temp files.
 - **Keep `scripts/` clean.** No `__pycache__/`, `.DS_Store`, or deprecated
   shims; remove a shim only after grep confirms zero callers.
+- **Method cutover.** The benchmark CLI accepts repeatable `--method`/`--seed`,
+  optional `--num-ctx`, `--n-boot`, `--analysis-seed`, `--reference-method`,
+  and `--config` loaded without harness env overrides. Delegate to the shared
+  runner with `methods`/`seeds`, never obsolete singular `seed`/root `config`.
+- **One report, explicit consumers.** Pass the actual complete/incomplete report
+  path to dashboard `--backend-benchmark` and variable generation
+  `--benchmark-report`. Schema 1 is rejected; preserve historical artifacts.
+  Never copy new observed values into manuscript prose or pool legacy cohorts.

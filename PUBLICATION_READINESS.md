@@ -1,19 +1,22 @@
 # THALIA — Publication-Readiness Assessment
 
-_Release identity updated 2026-11-08 for v0.2.0. The current GitHub release target
-is [v0.2.0](https://github.com/docxology/thalia/releases/tag/v0.2.0); no Zenodo
+_Release identity updated 2026-11-09 for v0.3.0. The current GitHub release target
+is [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0); no Zenodo
 publication or DOI is assigned to this version. Historical checks below do not
 certify the current candidate or assert that the GitHub target is published._
 
 ## Current software capability and release boundary
 
-v0.2.0 adds an optional common-backend benchmark using the same `AutoHarness`,
-configuration, metric, and seeded synthetic examples. It supports an offline
-extractive baseline, caller-supplied clients, local Ollama models, and explicitly
+v0.3.0 adds composable full-context, harness, lexical-only, and adaptive methods
+to the optional common-backend benchmark. It supports an offline extractive
+baseline, caller-supplied clients, local Ollama models, and explicitly
 selected/authorized OpenRouter models without requiring DSPy for this lane.
-Fresh per-example state, failure accounting, complete/incomplete output
-separation, and validation make runs inspectable; they do not establish a
-general model ranking, answer quality, or production readiness.
+Matched multi-seed examples, rotating method order, recorded prompt sizes,
+fresh state, failure accounting, and portable source inventories make runs
+inspectable. Complete within-backend contrasts average equally across seed
+means; missing pairs suppress estimates and one seed suppresses its interval.
+Small seed-cluster warnings remain descriptive. None of these mechanisms
+establishes a general model ranking, expert quality, or production readiness.
 
 Installed commands are `thalia` (query) and `thalia-benchmark` (benchmark).
 The benchmark's default output is `output/data/backend_benchmark.json` relative
@@ -23,15 +26,15 @@ not silently pooled with this lane.
 
 The manuscript includes this capability and its limitations. Its regenerated
 page count, tagged-PDF structure, HTML, slides, and exact source substitution
-must be checked after the v0.2.0 metadata changes; older renders and earlier
+must be checked after the v0.3.0 metadata changes; older renders and earlier
 test results are not source-current release receipts. The publisher must
 record the current candidate checks, exact tag/commit, asset inventory, and
 checksums before announcing release completion. See
 [`docs/release_readiness.md`](docs/release_readiness.md) and
-[`docs/releases/v0.2.0.md`](docs/releases/v0.2.0.md).
+[`docs/releases/v0.3.0.md`](docs/releases/v0.3.0.md).
 
 The v0.1.0 DOI and [`docs/release_receipt.md`](docs/release_receipt.md) remain
-immutable historical authority only. The current citation identifies v0.2.0
+immutable historical authority only. The current citation identifies v0.3.0
 on GitHub; the old DOI is retained as an `isNewVersionOf` relation.
 
 ## Historical evidence (2026-08-02, v0.1.0 boundary)
@@ -137,7 +140,8 @@ evidence ceilings remain unchanged.
    preserve their independent run receipts; do not fold them into the
    deterministic headline.
 5. **Versioned software release:** retain the tag/DOI/bundle as the immutable
-   v0.1.0 authority. For v0.2.0, regenerate the ledger, figures, dashboard,
+   v0.1.0 authority. For v0.3.0, execute the declared local method study and
+   regenerate the ledger, figures, dashboard,
    variables, PDF, and supplementary outputs, then repeat the full test,
    typing, lint, artifact, packaging, and rendering gates against the exact
    candidate before publishing its distinct GitHub tag. No Zenodo action or

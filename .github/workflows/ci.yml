@@ -113,7 +113,10 @@ jobs:
           printf 'THALIA_ISOLATED_ENV=%s\n' "$isolated" >> "$GITHUB_ENV"
           unset PYTHONPATH
           cd "$isolated"
-          "$isolated/venv/bin/thalia-benchmark" --per-category 1 --limit 6 --seed 7
+          "$isolated/venv/bin/thalia-benchmark" \
+            --per-category 1 --seed 7 --seed 9 --n-boot 64 \
+            --method full_context --method harness \
+            --method lexical_only --method adaptive
           "$isolated/venv/bin/thalia" \
             --query "What is the wifi password?" \
             --session-history "User: my wifi password is bluefish42" \
@@ -130,6 +133,7 @@ jobs:
           from src.cli import run_query
           from src.evaluation.backend_benchmark import (
               build_benchmark_backends,
+              build_benchmark_methods,
               run_backend_benchmark,
               validate_backend_benchmark,
               write_backend_benchmark,
@@ -141,24 +145,42 @@ jobs:
           assert importlib.util.find_spec("dspy") is None
           cli_report = json.loads(Path("output/data/backend_benchmark.json").read_text())
           api_report = run_backend_benchmark(
-              build_benchmark_backends(), per_category=1, limit=6, seed=7,
+              build_benchmark_backends(),
+              methods=build_benchmark_methods(
+                  ("full_context", "harness", "lexical_only", "adaptive"),
+              ),
+              per_category=1, seeds=(7, 9), n_boot=64,
           )
           api_path = write_backend_benchmark(api_report, Path("api-benchmark.json"))
           assert json.loads(api_path.read_text()) == api_report
           for report in (cli_report, api_report):
               validate_backend_benchmark(report)
               assert report["status"] == "complete"
-              assert report["n_examples"] == len(report["examples"]) == len(report["rows"]) == 6
-              assert len({row["example_id"] for row in report["rows"]}) == 6
+              assert report["schema_version"] == 2
+              assert report["n_examples"] == len(report["examples"]) == 12
+              assert len(report["rows"]) == 48
+              assert len({row["example_id"] for row in report["rows"]}) == 12
               assert {row["category"] for row in report["rows"]} == {category.value for category in TaskCategory}
               assert len(report["backends"]) == 1
               backend = report["backends"][0]
               assert backend["provider"] == backend["name"] == "extractive"
-              assert (backend["n_requested"], backend["n_completed"], backend["n_failed"]) == (6, 6, 0)
+              assert len(report["summaries"]) == 4
+              for summary in report["summaries"]:
+                  selected = [row for row in report["rows"] if row["method"] == summary["method"]]
+                  assert (summary["n_requested"], summary["n_completed"], summary["n_failed"]) == (12, 12, 0)
+                  assert math.isclose(
+                      summary["mean_token_f1"], sum(row["token_f1"] for row in selected) / 12,
+                  )
+              assert len(report["comparisons"]) == 3
+              for comparison in report["comparisons"]:
+                  assert comparison["n_requested_pairs"] == comparison["n_complete_pairs"] == 12
+                  assert comparison["n_seed_clusters"] == 2
+                  assert comparison["mean_delta"] is not None
+                  assert comparison["interval"] is not None
               assert all(row["status"] == "complete" and row["error_class"] is None for row in report["rows"])
               assert all(len(row["prompt_fingerprints"]) == 1 for row in report["rows"])
-              assert math.isclose(backend["mean_token_f1"], sum(row["token_f1"] for row in report["rows"]) / 6)
-          for field in ("examples", "cohort", "config_fingerprint", "dataset_fingerprint"):
+              assert all(row["prompt_characters"] > 0 for row in report["rows"])
+          for field in ("examples", "cohort", "methods", "dataset_fingerprint", "analysis", "comparisons"):
               assert cli_report[field] == api_report[field]
           assert [
               (row["answer"], row["prompt_fingerprints"]) for row in cli_report["rows"]
@@ -175,7 +197,7 @@ jobs:
           assert query["answer"] == api_query["answer"]
           assert query["citations"] == api_query["citations"]
           assert importlib.util.find_spec("dspy") is None
-          print("Installed CLI/API: six offline observations each, accounting and query verified")
+          print("Installed CLI/API: 48 matched offline method observations each, paired accounting and query verified")
           PY
       - name: Verify deterministic core import without DSPy
         run: |

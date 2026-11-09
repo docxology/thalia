@@ -34,8 +34,9 @@ is loadable, overridable, and serialisable:
   path — `save_config` delegates to it, so the YAML representation stays identical
   from the dataclass.
 
-Precedence, lowest to highest: built-in defaults → file → environment → explicit
-CLI flags.
+Query precedence, lowest to highest: built-in defaults → file → environment →
+explicit CLI flags. The benchmark deliberately loads base `--config` without
+environment overrides to keep the method configuration explicit.
 
 This precedence order is part of the reproducibility story. A manuscript render
 can point to the checked-in `config/harness.yaml`; a local experiment can override
@@ -158,61 +159,89 @@ Everything else — evidence selection, citation construction, memory gating,
 configuration, and artifact generation — remains unchanged. This is what lets the
 deterministic manuscript distinguish method validation from model performance.
 
-## Optional Common Backend Benchmark {#sec:op-backend-benchmark}
+## Optional Backend and Method Benchmark {#sec:op-backend-benchmark}
 
 `BenchmarkBackend(name, provider, model, lm, generation_options,
 model_observation)` describes a real caller-supplied `LMClient` and public
-metadata. `run_backend_benchmark(backends, per_category=..., seed=...,
-limit=..., config=...)` supplies the same seeded, category-round-robin cohort
-to every backend. It prepends extractive when absent, rejects `verify=True`,
-and uses a fresh context-managed `AutoHarness` per example. One completion
-attempt per row preserves an observable failure denominator.
+metadata. Frozen `BenchmarkMethod(name, kind, config)` separates context selection
+from backend identity. `build_benchmark_methods(names, config=base)` selects
+`harness`, `full_context`, `lexical_only`, or `adaptive`; custom named harness
+configs are allowed. Harness kinds require validated `verify=False` configs,
+while full context requires no harness config.
+
+`run_backend_benchmark(backends, methods=..., seeds=..., per_category=...,
+limit=..., reference_method=..., n_boot=..., analysis_seed=...)` replaces the old
+singular `seed` and run-level `config` interface without compatibility aliases.
+Each seed's research cohort is built independently, preserving category/stratum
+and stable identity. Deterministic category/seed interleaving precedes the global
+limit. The runner prepends extractive when absent, executes backend-outer with
+rotated method order, and records the schedule and contiguous execution indices.
+
+Full context directly submits every history line to the real selected LM using
+the same typed `ReasonerSignature` renderer/query as harness arms. It bypasses
+Inspector/Retriever, not the provider boundary. Harness arms use fresh
+context-managed `AutoHarness` state per cell. Thus selected context changes,
+while full submission is not a provider context-retention guarantee. Each cell
+has one attempt, with no retries, warm-up, benchmark cache or verification
+re-answer.
 
 ```bash
-# Baseline + explicitly selected local model; no DSPy prerequisite.
-uv run --project . python scripts/run_backend_benchmark.py \
-  --ollama-model gemma3:4b --per-category 2 --seed 0 \
+# Installed command; no checkout-relative path or DSPy prerequisite.
+thalia-benchmark --ollama-model gemma3:1b \
+  --method full_context --method harness --method lexical_only \
+  --method adaptive --seed 0 --seed 1 --seed 2 \
+  --per-category 2 --num-ctx 8192 --timeout 120 --max-tokens 1024 \
+  --n-boot 2000 --analysis-seed 0 --reference-method full_context \
   --output output/data/backend_local.json
 
-# Optional paid/network path; process environment key required.
-uv run --project . python scripts/run_backend_benchmark.py \
-  --ollama-model gemma3:4b --openrouter-model tencent/hy3-preview \
-  --allow-cloud --per-category 2 --seed 0 --timeout 120 --max-tokens 512 \
-  --output output/data/backend_local_cloud.json
+# Source consumer selection is explicit and offline.
+uv run --project . --extra dev python scripts/build_dashboard.py \
+  --backend-benchmark output/data/backend_local.json
+uv run --project . --extra dev python \
+  scripts/z_generate_manuscript_variables.py \
+  --benchmark-report output/data/backend_local.json
 ```
 
-Both model flags are repeatable. Without them the CLI runs only extractive;
-neither credentials nor `--allow-cloud` alone select cloud. `--limit` caps the
-round-robin cohort; `--per-category` and `--seed` define it. The CLI uses default
-`HarnessConfig`; custom configuration is a Python API input, not a CLI
-`--config` option. Python OpenRouter selection also requires explicit
-`allow_cloud=True`. Callers remain responsible for authorized behavior of custom
-clients whose network use cannot be inferred from the protocol.
+Model, method and seed flags are repeatable; defaults select extractive with
+`harness` and the default cohort seed. Optional `--config PATH` loads base YAML
+without harness environment overrides. `--num-ctx` requests Ollama context only,
+not a measured retention limit. `--n-boot`, `--analysis-seed` and
+`--reference-method` control descriptive paired analysis; they do not set model
+generation randomness. Cloud requires explicit `--openrouter-model` and
+`--allow-cloud`, plus an authorized process-environment key; neither a key nor
+consent alone selects cloud. Python selection likewise requires `allow_cloud=True`.
+Callers remain responsible for authorized behavior of custom clients.
 
-`validate_backend_benchmark(payload)` checks schema, planned identity, prompt
-agreement, accounting, finite scores/times, recomputed token-F1 and summaries,
-and report fingerprints. Honest incomplete evidence remains valid diagnostic
-input. `write_backend_benchmark(payload, path)` atomically writes complete
-reports to the requested destination and incomplete reports to an `.incomplete`
-sidecar, preserving a previous complete file. The CLI prints the actual path and
-returns nonzero for incomplete runs. A preserved older file is not a fresh success.
+Schema two separates backend metadata, method configs/fingerprints, example
+identities, rows, cell summaries, category/stratum groups and within-backend
+paired contrasts. Portable producer-source inventory and observed runtime/
+dependency/model metadata bind source scope, not authenticity. Schema one is
+rejected rather than silently upgraded; preserve old release artifacts.
+The validator rebuilds the seeded plan and recomputes accounting, prompt
+agreement, token-F1, summaries/groups and paired statistics. Failed rows retain
+null answer/score and safe exception class only, never raw provider errors.
 
-The separate artifact records each requested backend/example, null answer and
-score on failure, error class only, model/options, dataset/config/content/prompt
-identity, and runtime provenance. Summaries expose requested/completed/failed
-counts and successful-only F1 and latency means/quantiles; null summaries mean
-no successful rows, not zero performance. Failed backends are not complete paired
-estimates. No retained empirical aggregate or publication claim is promoted.
+Comparisons estimate the unweighted mean of per-seed mean paired F1 deltas.
+Any missing planned pair suppresses both mean delta and interval. A complete
+single-seed contrast has no interval; multi-seed clustered intervals retain the
+small-cluster warning. If the reference method is not selected, comparisons are
+not requested. These are descriptive finite contrasts, not significance, power,
+model ranking or promotion.
 
-`build_dashboard.py --backend-benchmark PATH` validates and displays this optional
-artifact offline; otherwise it reads the default benchmark path only if present.
-Missing/incomplete state is explicit. Timing is observed end-to-end harness
-execution, not token throughput, price, or a production service-level guarantee.
-Network, serving, cold-start, caching, hardware, and sequential order effects
-remain uncontrolled. Matched identity permits finite descriptive comparison;
-quality or cloud/local superiority requires a separate adjudicated design.
-The detailed schema and short Claim-Evidence Audit are in
-`docs/backend_benchmark.md`.
+Complete reports are atomically written to the requested caller-relative path;
+incomplete reports go to a sidecar, preserving the last good file. The CLI prints
+the actual path and returns nonzero on incomplete runs. Select that sidecar
+explicitly in both consumers rather than mistaking an old complete file for a
+fresh success. Manuscript observation and contrast tables use generated tokens;
+missing evidence is labelled not recorded, not fabricated.
+
+Prompt characters are not billed tokens. Latency is observed end-to-end cell
+execution, including method/client work and cleanup, not throughput, price or a
+service-level guarantee. Host load, cold starts, serving caches and runtime
+versions remain uncontrolled. `docs/backend_benchmark.md` records migration and
+the Claim-Evidence Audit; `docs/local_method_study.md` declares a local plan, not
+measured outcomes. Historical DSPy/cloud cohorts remain separate, and no expert
+quality or production certificate is implied.
 
 
 ## Persistent Multi-Turn Sessions {#sec:op-session}
