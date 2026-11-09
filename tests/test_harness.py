@@ -4,6 +4,9 @@ import pytest
 from src.config import HarnessConfig, default_config
 from src.evaluation import build_demo_dataset
 from src.harness import AutoHarness, build_run_fn
+from src.llm import CallableLM
+from src.stages.reasoner import Reasoner
+from src.stages.retriever import Retriever
 from src.signatures import HarnessOutput, MemorySnapshot, TaskCategory
 
 SESSION = "User: my wifi password is bluefish42\nAssistant: noted the wifi password\nUser: the guest code is 7781"
@@ -53,6 +56,74 @@ class TestForward:
         assert out2.memory_written is not None
         assert out2.memory_written.turn_id == 1
 
+    def test_exposed_stages_execute_across_turns(self):
+        prompts = []
+        history = "\n".join(f"User: wifi password bluefish42 entry {index}" for index in range(4))
+
+        def complete(prompt):
+            prompts.append(prompt)
+            return "wifi password bluefish42"
+
+        with AutoHarness(start_turn=7) as harness:
+            inspector = harness.inspector
+            retriever = harness.retriever
+            reasoner = harness.reasoner
+            gate = harness.memory_gate
+            reasoner.lm = CallableLM(complete)
+            retriever.top_k = 1
+            first = harness.forward("what is the wifi password", history)
+            assert len(first.ranked_evidence) == 1
+            assert len(prompts) == 1
+            assert first.answer == "wifi password bluefish42"
+            assert first.memory_written.turn_id == 7
+
+            retriever.top_k = 3
+            reasoner.max_evidence = 1
+            second = harness.forward("what is the wifi password", history)
+            assert len(second.ranked_evidence) == 3
+            assert len(second.evidence_citations) == 1
+            assert len(prompts) == 2
+            assert second.memory_written.turn_id == 8
+            assert harness.inspector is inspector
+            assert harness.retriever is retriever
+            assert harness.reasoner is reasoner
+            assert harness.memory_gate is gate
+            assert [episode.turn_id for episode in gate.store.all()] == [7, 8]
+
+    def test_replacing_exposed_stages_changes_execution(self):
+        with AutoHarness() as harness:
+            harness.retriever = Retriever(top_k=1)
+            harness.reasoner = Reasoner(lm=CallableLM(lambda prompt: "replacement answer"))
+            out = harness.forward("what is the wifi password", SESSION)
+            assert out.answer == "replacement answer"
+            assert len(out.ranked_evidence) == 1
+
+    def test_config_replacement_updates_actual_stages_without_losing_effective_lm(self):
+        calls: list[str] = []
+        history = "\n".join(f"User: wifi password bluefish42 entry {index}" for index in range(4))
+
+        def complete(prompt: str) -> str:
+            calls.append(prompt)
+            return "unrelated astronomy"
+
+        with AutoHarness() as harness:
+            harness.reasoner.lm = CallableLM(complete)
+            initial = harness.forward("wifi password", history)
+            assert len(initial.ranked_evidence) == 4
+            assert len(calls) == 1
+            reasoner = harness.reasoner
+            retriever = harness.retriever
+            harness.config = harness.config.with_(
+                top_k=2, max_evidence=1, verify=True, grounding_threshold=0.9,
+            )
+            updated = harness.forward("wifi password", history)
+            assert len(updated.ranked_evidence) == 2
+            assert len(updated.evidence_citations) == 1
+            assert len(calls) == 3
+            assert harness.reasoner is reasoner
+            assert harness.retriever is retriever
+            assert updated.memory_written.turn_id == 1
+
 
 class TestConsolidation:
     def test_knowledge_update_with_session_ending_consolidates(self):
@@ -95,6 +166,16 @@ class TestBuildRunFn:
         out_b = run(ex)
         # Deterministic and isolated: identical answers, fresh stores each time.
         assert out_a.answer == out_b.answer
+        assert out_a.memory_written.turn_id == out_b.memory_written.turn_id == 0
+
+    def test_interleaved_examples_do_not_share_episodes(self):
+        run = build_run_fn(HarnessConfig(recall_memory=True))
+        first, second = build_demo_dataset()[:2]
+        before = run(first)
+        between = run(second)
+        after = run(first)
+        assert before == after
+        assert before.memory_written.turn_id == between.memory_written.turn_id == 0
 
     def test_config_applied(self):
         run = build_run_fn(HarnessConfig(top_k=1))
@@ -171,3 +252,27 @@ class TestAdaptiveWindows:
         assert adaptive.inspector_metadata is not None
         assert adaptive.inspector_metadata.adaptive_windows is True
         assert adaptive.inspector_metadata.effective_max_windows == 60
+
+    def test_persistent_inspector_recomputes_policy_after_config_replacement(self):
+        config = HarnessConfig(max_windows=2, partition_threshold=100)
+        history = "\n".join(f"User: wifi password item {index}" for index in range(30))
+        with AutoHarness(config=config) as harness:
+            inspector = harness.inspector
+            first = harness.forward("wifi password", history)
+            assert first.inspector_metadata.effective_max_windows == 2
+            assert first.inspector_metadata.partition_blocks_considered == 0
+            harness.config = config.with_(
+                adaptive_windows=True,
+                adaptive_window_ratio=3,
+                partition_threshold=5,
+                partition_size=4,
+            )
+            second = harness.forward("wifi password", history)
+            assert harness.inspector is inspector
+            assert second.inspector_metadata.effective_max_windows == 10
+            assert second.inspector_metadata.adaptive_windows is True
+            assert second.inspector_metadata.partition_threshold == 5
+            assert second.inspector_metadata.partition_size == 4
+            assert second.inspector_metadata.partition_blocks_considered == 8
+            third = harness.forward("wifi password", SESSION)
+            assert third.inspector_metadata.effective_max_windows == 2

@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use THALIA, please cite this software and the accompanying manuscript."
 title: "THALIA: Typed Harness with Analytical Lexical-Integrated Architecture"
 type: software
-version: "0.3.1"
+version: "0.4.0"
 date-released: 2026-11-09
 license: MIT
 authors:
@@ -10,14 +10,15 @@ authors:
     given-names: Daniel Ari
     email: daniel@activeinference.institute
 repository-code: "https://github.com/docxology/thalia"
-url: "https://github.com/docxology/thalia/releases/tag/v0.3.1"
+url: "https://github.com/docxology/thalia/releases/tag/v0.4.0"
 abstract: >-
   THALIA is an executable research harness for long-context memory systems.
   It combines typed stage contracts, inspectable context selection,
   evidence-preserving episodic state, lexical-first retrieval, and bounded
   compiler search with source-bound evaluation and reproducible artifact checks.
-  The v0.3.1 patch corrects publication-manifest closure without changing
-  the measured study or promoting scientific or production-readiness claims.
+  Version 0.4.0 adds offline experiment planning, auditable per-seed contrasts,
+  coherent runtime composition, and bound publication inputs without changing
+  the historical measured study or promoting scientific acceptance.
 keywords:
   - agentic systems
   - long-context memory

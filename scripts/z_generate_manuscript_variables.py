@@ -30,6 +30,7 @@ from src.manuscript_integrity import (  # noqa: E402
 from src.formalism_traceability import write_traceability_report  # noqa: E402
 from src.manuscript_variables import generate_variables  # noqa: E402
 from src.provenance import write_artifact_manifest  # noqa: E402
+from src.publication_inputs import write_benchmark_input_receipt  # noqa: E402
 
 
 def main(argv: Sequence[str] = ()) -> Path:
@@ -47,7 +48,11 @@ def main(argv: Sequence[str] = ()) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     manuscript_dir = PROJECT_ROOT / "docs" / "manuscript"
 
-    variables = generate_variables(backend_benchmark_path=args.benchmark_report)
+    benchmark_path = args.benchmark_report
+    if benchmark_path is None:
+        default_report = output_dir / "backend_benchmark.json"
+        benchmark_path = default_report if default_report.exists() else None
+    variables = generate_variables(backend_benchmark_path=benchmark_path)
     validate_claim_ledger(load_claim_ledger(), project_root=PROJECT_ROOT)
     used, missing = verify_token_coverage(variables, manuscript_dir)
     if missing:
@@ -71,6 +76,9 @@ def main(argv: Sequence[str] = ()) -> Path:
 
     output_path = output_dir / "manuscript_variables.json"
     output_path.write_text(json.dumps(variables, indent=2, sort_keys=True))
+    receipt_path = write_benchmark_input_receipt(
+        "manuscript", benchmark_path, project_root=PROJECT_ROOT,
+    )
     write_paper_audit_json(PROJECT_ROOT / "output" / "reports" / "paper_audit.json")
     # Source-only generation must work in a clean checkout.  The release
     # validator performs the stricter claim-artifact check after all generators.
@@ -83,6 +91,7 @@ def main(argv: Sequence[str] = ()) -> Path:
     if template_root is None:
         print(str(output_path))
         print(str(manifest_path))
+        print(str(receipt_path))
         print(
             f"[ok] {len(used)} manuscript token(s) all generated; "
             "[skip] output/manuscript/ injection — template 'infrastructure' "
@@ -100,6 +109,7 @@ def main(argv: Sequence[str] = ()) -> Path:
     )
     print(str(output_path))
     print(str(manifest_path))
+    print(str(receipt_path))
     print(
         f"[ok] {len(used)} manuscript token(s) all generated; "
         f"{len(injected_files)} numbered section(s) exactly injected -> {injected}"

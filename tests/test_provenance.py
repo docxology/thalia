@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from src.provenance import (
     FIGURE_CAPTIONS,
     FIGURE_LABELS,
@@ -42,6 +44,118 @@ class TestVerificationSummary:
         assert payload["latest_observed_tests"] == "731 passed; 733 collected"
         assert payload["latest_observed_coverage"] == "94.68% (src; gate 90%)"
         assert payload["status"] == "pass"
+        tests = payload["command_results"]["tests"]
+        assert tests["resource_warnings_as_errors"] is None
+        assert set(tests["report_evidence"]) == {"pytest.xml", "coverage.json"}
+
+    @pytest.mark.parametrize("tests,failures,errors,skipped", [
+        (0, 0, 0, 0), (4, 1, 0, 0), (4, 0, 1, 0),
+    ])
+    def test_current_unsuccessful_collection_never_passes(
+        self, tmp_path, tests, failures, errors, skipped,
+    ):
+        junit = tmp_path / "pytest.xml"
+        coverage = tmp_path / "coverage.json"
+        junit.write_text(
+            f'<testsuite tests="{tests}" failures="{failures}" errors="{errors}" skipped="{skipped}"/>'
+        )
+        coverage.write_text('{"totals": {"percent_covered": 99}}')
+        original = (junit.read_bytes(), coverage.read_bytes())
+        payload = json.loads(write_verification_summary(tmp_path / "summary.json").read_text())
+        assert payload["status"] == "fail"
+        assert payload["command_results"]["tests"]["status"] == "fail"
+        assert payload["command_results"]["tests"]["collected"] == tests
+        assert original == (junit.read_bytes(), coverage.read_bytes())
+
+    @pytest.mark.parametrize("junit,coverage", [
+        (None, '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite tests="5" failures="0" errors="0" skipped="0"/>', None),
+        ('<broken', '{"totals": {"percent_covered": 99}}'),
+        ('<other/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuites/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite tests="-1" failures="0" errors="0" skipped="0"/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite tests="2.5" failures="0" errors="0" skipped="0"/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite tests="1" failures="1" errors="1" skipped="0"/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite failures="0" errors="0" skipped="0"/>', '{"totals": {"percent_covered": 99}}'),
+        ('<testsuite tests="5" failures="0" errors="0" skipped="0"/>', '[]'),
+        ('<testsuite tests="5" failures="0" errors="0" skipped="0"/>', '{"totals": {}}'),
+        ('<testsuite tests="5" failures="0" errors="0" skipped="0"/>', 'not JSON'),
+    ])
+    def test_partial_or_malformed_reports_replace_stale_pass(self, tmp_path, junit, coverage):
+        path = tmp_path / "summary.json"
+        path.write_text(json.dumps({
+            **default_verification_summary().to_dict(),
+            "status": "pass",
+            "latest_observed_tests": "999 passed",
+            "latest_observed_coverage": "100%",
+            "command_results": {"tests": {"status": "pass", "collected": 999, "passed": 999}},
+        }))
+        if junit is not None:
+            (tmp_path / "pytest.xml").write_text(junit)
+        if coverage is not None:
+            (tmp_path / "coverage.json").write_text(coverage)
+        payload = json.loads(write_verification_summary(path).read_text())
+        assert payload["status"] == "fail"
+        assert payload["latest_observed_tests"] == ""
+        assert payload["latest_observed_coverage"] == ""
+        assert payload["command_results"]["tests"]["status"] == "unavailable"
+        assert "collected" not in payload["command_results"]["tests"]
+        assert payload["command_results"]["tests"]["issues"]
+
+    @pytest.mark.parametrize("percent", [float("nan"), float("inf"), float("-inf"), -1, 101, True, "99"])
+    def test_invalid_coverage_is_unavailable(self, tmp_path, percent):
+        (tmp_path / "pytest.xml").write_text(
+            '<testsuite tests="5" failures="0" errors="0" skipped="0"/>'
+        )
+        (tmp_path / "coverage.json").write_text(json.dumps({"totals": {"percent_covered": percent}}))
+        payload = json.loads(write_verification_summary(tmp_path / "summary.json").read_text())
+        assert payload["status"] == "fail"
+        assert payload["command_results"]["tests"]["status"] == "unavailable"
+        assert payload["latest_observed_coverage"] == ""
+
+    @pytest.mark.parametrize("counters", [
+        {"num_statements": -1},
+        {"num_statements": True},
+        {"covered_lines": 1.5},
+        {"num_partial_branches": -1},
+        {"num_statements": 1, "covered_lines": 2},
+        {"num_statements": 5, "covered_lines": 3, "missing_lines": 3},
+        {"num_branches": 2, "covered_branches": 3},
+        {"num_branches": 4, "covered_branches": 2, "missing_branches": 1},
+    ])
+    def test_invalid_coverage_counters_fail_closed(self, tmp_path, counters):
+        (tmp_path / "pytest.xml").write_text(
+            '<testsuite tests="5" failures="0" errors="0" skipped="0"/>'
+        )
+        (tmp_path / "coverage.json").write_text(json.dumps({
+            "totals": {"percent_covered": 99, **counters},
+        }))
+        payload = json.loads(write_verification_summary(tmp_path / "summary.json").read_text())
+        assert payload["command_results"]["tests"]["status"] == "unavailable"
+
+    def test_aggregate_suites_and_coverage_threshold(self, tmp_path):
+        (tmp_path / "pytest.xml").write_text(
+            '<testsuites tests="5" failures="0" errors="0" skipped="1">'
+            '<testsuite tests="2" failures="0" errors="0" skipped="1"/>'
+            '<testsuite tests="3" failures="0" errors="0" skipped="0"/></testsuites>'
+        )
+        (tmp_path / "coverage.json").write_text('{"totals": {"percent_covered": 89.99}}')
+        payload = json.loads(write_verification_summary(tmp_path / "summary.json").read_text())
+        assert payload["status"] == "fail"
+        assert payload["command_results"]["tests"]["passed"] == 4
+        assert payload["command_results"]["tests"]["coverage_percent"] == 89.99
+
+    def test_both_absent_preserve_historical_test_observations(self, tmp_path):
+        previous = {
+            **default_verification_summary().to_dict(),
+            "status": "pass",
+            "latest_observed_tests": "8 passed; 8 collected",
+            "latest_observed_coverage": "95.00% (src; gate 90%)",
+            "command_results": {"tests": {"status": "pass", "collected": 8, "passed": 8}},
+        }
+        path = tmp_path / "summary.json"
+        path.write_text(json.dumps(previous))
+        assert json.loads(write_verification_summary(path).read_text()) == previous
 
     def test_refreshes_artifact_observation_from_manifest(self, tmp_path):
         root = tmp_path / "thalia"
@@ -59,6 +173,8 @@ class TestVerificationSummary:
         assert artifact_result["status"] == "pass"
         assert artifact_result["checked"] >= 2
         assert artifact_result["required"] == 0
+        assert payload["status"] == "unavailable"
+        assert payload["command_results"]["tests"]["status"] == "unavailable"
 
 
 class TestFigureRegistry:
@@ -126,6 +242,17 @@ class TestArtifactManifest:
         assert "data/integrity_advantage.json" in paths
         report = validate_artifact_manifest(root, required_paths=("data/integrity_advantage.json",))
         assert report.ok
+
+    def test_tracks_both_publication_input_receipts(self, tmp_path):
+        reports = tmp_path / "output" / "reports"
+        reports.mkdir(parents=True)
+        for consumer in ("dashboard", "manuscript"):
+            (reports / f"{consumer}_benchmark_input.json").write_text("{}\n")
+        payload = json.loads(write_artifact_manifest(tmp_path).read_text())
+        assert {entry["path"] for entry in payload["entries"]} == {
+            "output/reports/dashboard_benchmark_input.json",
+            "output/reports/manuscript_benchmark_input.json",
+        }
 
     def test_validator_accepts_current_manifest(self, tmp_path):
         root = tmp_path / "thalia"

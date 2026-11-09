@@ -14,6 +14,9 @@ Public API surface and invariants for the THALIA implementation. Import via the
   `.forward(query, session_history, session_ending=False) -> HarnessOutput`;
   `.run(example) -> HarnessOutput`; `.close()` and context-manager support close
   only the store created by the harness.
+  Its exposed stages are the executing objects; fresh per-example runners remain
+  isolated. Pipeline diagnostic extras mappings are copied, but opaque custom
+  values retain caller identity and lifetime.
 - `Pipeline(config?, lm?, episodic_store?, memory_gate?)` — composable stage
   chain with `.close()` and context-manager support; caller-owned stores remain
   open.
@@ -30,6 +33,8 @@ Public API surface and invariants for the THALIA implementation. Import via the
   Inspector diagnostics in `inspector_metadata`;
   `cli.main(argv) -> int` is the CLI entry; `resolve_config(args)` applies
   file < env < flag precedence.
+  Positive/negative boolean flags override file/environment values in either
+  direction; omission retains them.
 - `load_config(path, apply_env=True)`, `save_config(config, path)`,
   `apply_env_overrides(config)` — `THALIA_*` env vars map to config fields.
 - LM adapters: `CallableLM(fn)`, `OllamaLM(model?, host?, timeout?, options?)`
@@ -49,9 +54,17 @@ Public API surface and invariants for the THALIA implementation. Import via the
   Incomplete pairs suppress delta/interval; one seed suppresses interval; small
   seed warnings remain visible. No retries/cache or implicit cloud selection.
   [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md) owns details.
+  `build_benchmark_plan` and CLI `--plan` use the same pure plan/schedule without
+  metadata probes, completion calls or report writes. `summarize_seed_pairs` is
+  exported by `evaluation.benchmark_analysis` for post-validation seed audits.
 - Installed commands: `thalia = src.cli:main` and
   `thalia-benchmark = src.benchmark_cli:main`; both accept `argv` and return a
   process status. Benchmark output paths are caller-relative, not package-relative.
+- `publication_inputs` writes/validates exact dashboard/manuscript benchmark
+  receipts; the final artifact gate rejects divergent or unstaged selected inputs.
+- `release_artifacts.assemble_release_artifacts` packs an explicit frozen file
+  allowlist with inventory closure checks. It never runs native validation or
+  publishes; its receipt attests member bytes only.
 
 ## Stage contracts
 

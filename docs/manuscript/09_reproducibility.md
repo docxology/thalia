@@ -125,7 +125,7 @@ measurements. The original local method study remains the unreleased
 report fingerprint
 `f1615d74dfe8af07133a42e4941158b4310f4ebadbbc7b0d6e6e483815dda117`.
 Its historical 1,152 rows include 864 neural responses; these are original
-study counts, not v0.3.1 qualification results. Preserve measured JSON and the
+study counts, not current-reader qualification results. Preserve measured JSON and the
 `STUDY_PRODUCER/` capsule names rather than resealing or relabeling them.
 
 Publication requires a final step after rendering and **all** browser inspection,
@@ -143,7 +143,20 @@ validation or refresh manifest-tracked QA, previews, dashboard, manuscript, or
 verification summaries after the final gates. A tracked change requires a new
 final manifest/native/project sequence, not a hand-edited digest. Exact current
 release outcomes belong in its downloadable manifest; no earlier release's
-validation counts establish the patch's result.
+validation counts establish this release's result.
+
+The source-owned archive assembler accepts an explicit portable file allowlist
+and refuses an omitted output member referenced by either inventory. It checks
+member bytes and produces deterministic archive metadata; it neither reruns
+native validation nor substitutes a new passing attestation. A deterministic
+archive is byte-closure evidence, not scientific or accessibility certification.
+
+Dashboard and manuscript generation also write input receipts binding the exact
+selected benchmark report and final consumer artifact. The staged gate compares
+both selections to the included raw bytes. An external-only selection, divergent
+valid reports, a mutated consumer or missing evidence fails closed rather than
+being repaired by implicit copying or resealing. Generated views of per-seed
+contributions are derived from the unchanged validated observation rows.
 
 Deterministic algorithms reproduce results for fixed inputs and a compatible
 runtime; this is not a promise that figures, PDFs, or validation metadata are

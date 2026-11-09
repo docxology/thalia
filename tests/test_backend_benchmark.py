@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -24,6 +25,7 @@ from src.evaluation.backend_benchmark import (
     BenchmarkMethod,
     build_benchmark_backends,
     build_benchmark_methods,
+    build_benchmark_plan,
     run_backend_benchmark,
     validate_backend_benchmark,
     write_backend_benchmark,
@@ -135,6 +137,77 @@ def test_balanced_multiseed_plan_and_rotating_schedule(complete_report):
     for key in ("examples", "cohort", "methods", "dataset_fingerprint", "comparisons"):
         assert repeated[key] == complete_report[key]
     assert [(row["answer"], row["prompt_fingerprints"], row["prompt_characters"]) for row in repeated["rows"]] == [(row["answer"], row["prompt_fingerprints"], row["prompt_characters"]) for row in complete_report["rows"]]
+
+
+@pytest.mark.parametrize("selection", [
+    ("adaptive", "full_context", "lexical_only", "harness"),
+    ("lexical_only",),
+    ("custom", "full_context", "adaptive"),
+])
+def test_plan_and_execution_share_exact_limited_uneven_cohort_and_schedule(selection):
+    config = HarnessConfig(top_k=2, max_evidence=1)
+    methods = [
+        BenchmarkMethod("custom", "harness", config)
+        if name == "custom" else build_benchmark_methods((name,), config=config)[0]
+        for name in selection
+    ]
+    backends = [
+        BenchmarkBackend("second", "caller", "ExtractiveLM", ExtractiveLM(), {"nested": {"selected": 2}},
+                         {"digest": "already-observed-but-not-planned"}),
+    ]
+    original_options = copy.deepcopy(backends[0].generation_options)
+    kwargs = dict(methods=methods, per_category=2, seeds=(9, -2, 4), limit=7, n_boot=13, analysis_seed=3)
+    plan = build_benchmark_plan(backends, **kwargs)
+    report = run_backend_benchmark(backends, **kwargs)
+    assert plan["status"] == "planned"
+    assert set(plan) == {
+        "status", "metric", "cohort", "dataset_fingerprint", "n_examples", "examples",
+        "methods", "backends", "analysis", "execution_order", "schedule", "counts",
+    }
+    for key in ("metric", "cohort", "dataset_fingerprint", "n_examples", "examples",
+                "methods", "backends", "analysis", "execution_order"):
+        assert plan[key] == report[key]
+    assert Counter(example["seed"] for example in plan["examples"]) == {9: 2, -2: 3, 4: 2}
+    assert [method["name"] for method in plan["methods"]] == list(selection)
+    assert [backend["name"] for backend in plan["backends"]] == ["extractive", "second"]
+    expected = []
+    for backend in ("extractive", "second"):
+        for index, example in enumerate(plan["examples"]):
+            shift = index % len(selection)
+            for method in selection[shift:] + selection[:shift]:
+                expected.append({
+                    "execution_index": len(expected), "backend": backend, "method": method,
+                    "example_id": example["example_id"], "seed": example["seed"],
+                })
+    assert plan["schedule"] == expected
+    assert plan["schedule"] == [
+        {key: row[key] for key in ("execution_index", "backend", "method", "example_id", "seed")}
+        for row in report["rows"]
+    ]
+    assert plan["counts"] == {
+        "backends": 2, "methods": len(selection), "examples": 7,
+        "planned_attempts": 14 * len(selection),
+        "planned_pairs": 14 * (len(selection) - 1) if "full_context" in selection else 0,
+    }
+    assert json.loads(json.dumps(plan)) == plan
+    assert build_benchmark_plan(backends, **kwargs) == plan
+    plan["backends"][1]["generation_options"]["nested"]["selected"] = 99
+    assert backends[0].generation_options == original_options
+    assert len(backends) == 1
+    validate_backend_benchmark(report)
+
+
+def test_full_context_ignores_unused_verification_but_harness_selections_refuse_it():
+    config = HarnessConfig(verify=True)
+    methods = build_benchmark_methods(("full_context",), config=config)
+    report = run_backend_benchmark([], methods=methods, limit=2)
+    assert all(row["status"] == "complete" for row in report["rows"])
+    assert all(row["prompt_fingerprints"] for row in report["rows"])
+    assert report["methods"][0]["config"] is None
+    assert config.verify is True
+    for name in ("harness", "lexical_only", "adaptive"):
+        with pytest.raises(ValueError, match="verify"):
+            build_benchmark_methods(("full_context", name), config=config)
 
 
 def test_methods_hold_renderer_and_query_fixed_but_change_evidence(loopback):
@@ -539,14 +612,15 @@ def test_duplicate_backends_and_prompt_disagreement_rejected(complete_report):
         validate_backend_benchmark(_resign(report))
 
 
+@pytest.mark.parametrize("build", [build_benchmark_plan, run_backend_benchmark])
 @pytest.mark.parametrize("kwargs", [
     {"limit": 0}, {"limit": True}, {"per_category": 0}, {"per_category": True},
     {"seeds": (True,)}, {"seeds": ()}, {"seeds": (0, 0)}, {"seeds": "0"},
     {"methods": []}, {"n_boot": 0}, {"n_boot": True}, {"analysis_seed": True}, {"reference_method": ""},
 ])
-def test_run_rejects_invalid_plan_before_attempts(kwargs):
+def test_run_rejects_invalid_plan_before_attempts(kwargs, build):
     with pytest.raises(ValueError):
-        run_backend_benchmark([], **kwargs)
+        build([], **kwargs)
 
 
 @pytest.mark.parametrize("names", [("harness", "harness"), ("unknown",), (), "harness"])
@@ -677,3 +751,88 @@ def test_cli_malformed_config_is_rejected_without_exposing_content(tmp_path, cap
     assert secret not in streams.err and "Traceback" not in streams.err
     assert not output.exists()
     assert not (tmp_path / "never-created.incomplete.json").exists()
+
+
+def test_cli_plan_is_observation_free_against_unavailable_loopback_service(tmp_path):
+    requests = []
+
+    class Unavailable(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            pass
+
+        def reject(self):
+            requests.append((self.command, self.path))
+            if self.command == "POST":
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            self.send_response(503)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        do_GET = reject
+        do_POST = reject
+        do_CONNECT = reject
+
+    # A real loopback HTTP proxy makes even silently swallowed metadata probes
+    # observable without binding the developer's Ollama port or touching cloud.
+    server = HTTPServer(("127.0.0.1", 0), Unavailable)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    proxy = f"http://127.0.0.1:{server.server_port}"
+    environment = {
+        **os.environ, "http_proxy": proxy, "https_proxy": proxy,
+        "HTTP_PROXY": proxy, "HTTPS_PROXY": proxy, "no_proxy": "", "NO_PROXY": "",
+        "THALIA_OPENROUTER_API_KEY": "",
+    }
+    output = tmp_path / "last-good.json"
+    output.write_bytes(b"prior-evidence\n")
+    arguments = [
+        "--ollama-model", "unavailable-plan-model", "--openrouter-model", "unavailable-cloud-model",
+        "--allow-cloud", "--method", "adaptive", "--method", "full_context",
+        "--seed", "9", "--seed", "2", "--limit", "7", "--timeout", "1",
+    ]
+    try:
+        for destination in ([], ["--output", str(output)]):
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "--plan", *arguments, *destination],
+                cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=30,
+            )
+            assert result.returncode == 0, result.stderr
+            plan = json.loads(result.stdout)
+            assert plan["status"] == "planned"
+            assert plan["counts"]["planned_attempts"] == 42
+            assert plan["counts"]["planned_pairs"] == 21
+            assert [backend["name"] for backend in plan["backends"]] == [
+                "extractive", "ollama:unavailable-plan-model", "openrouter:unavailable-cloud-model",
+            ]
+            assert requests == []
+            assert output.read_bytes() == b"prior-evidence\n"
+            assert not (tmp_path / "last-good.incomplete.json").exists()
+            assert not (tmp_path / "output").exists()
+
+        # The same real unavailable route is observed by execution, proving that
+        # the plan test does not merely point its request observer at a dead path.
+        execution = subprocess.run(
+            [sys.executable, str(SCRIPT), "--ollama-model", "unavailable-plan-model",
+             "--method", "full_context", "--limit", "1", "--timeout", "1", "--output", str(output)],
+            cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=30,
+        )
+        assert execution.returncode == 1, execution.stderr
+        assert any(command == "GET" and path.endswith("/api/tags") for command, path in requests)
+        assert any(command == "POST" and path.endswith("/api/generate") for command, path in requests)
+        report = json.loads((tmp_path / "last-good.incomplete.json").read_text())
+        local = next(row for row in report["rows"] if row["backend"] == "ollama:unavailable-plan-model")
+        assert local["status"] == "failed" and local["token_f1"] is None
+        assert output.read_bytes() == b"prior-evidence\n"
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
+
+def test_cli_plan_still_requires_explicit_cloud_opt_in(tmp_path, capsys):
+    output = tmp_path / "never-created.json"
+    with pytest.raises(SystemExit) as refused:
+        main(["--plan", "--openrouter-model", "explicit", "--output", str(output)])
+    assert refused.value.code == 2
+    assert "--allow-cloud" in capsys.readouterr().err
+    assert not output.exists()

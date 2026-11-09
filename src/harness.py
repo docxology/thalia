@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from .config import HarnessConfig, default_config
+from .config import HarnessConfig
 from .memory.episodic_store import EpisodicStore
 from .module import LMClient
 from .pipeline import Pipeline
@@ -29,7 +29,13 @@ from .stages.retriever import Retriever
 
 
 class AutoHarness:
-    """The composed THALIA pipeline for a single conversational thread."""
+    """One persistent runtime stage graph for a conversational thread.
+
+    Exposed stages are the executing instances, so changing a Reasoner or
+    Retriever attribute affects subsequent turns. Replacing ``config`` applies
+    changed fields to those instances without replacing the effective LM or
+    episodic state. Inspector policy remains config-driven each turn.
+    """
 
     def __init__(
         self,
@@ -41,37 +47,75 @@ class AutoHarness:
     ) -> None:
         if start_turn < 0:
             raise ValueError(f"start_turn must be non-negative, got {start_turn}")
-        self.config = config or default_config()
-        self.memory_snapshot = memory_snapshot or MemorySnapshot()
-        self._lm = lm
-        self.inspector = Inspector(
-            max_windows=self.config.max_windows,
-            partition_threshold=self.config.partition_threshold,
-            partition_size=self.config.partition_size,
-        )
-        self.retriever = Retriever(
-            top_k=self.config.top_k,
-            k=self.config.rrf_k,
-            lexical_weight=self.config.lexical_weight,
-            semantic_weight=self.config.semantic_weight,
-            rerank=self.config.rerank,
-            mmr_lambda=self.config.mmr_lambda,
-            query_expansion=self.config.query_expansion,
-            expansion_terms=self.config.expansion_terms,
-            recency_weight=self.config.recency_weight,
-        )
-        self.reasoner = Reasoner(
+        self._pipeline = Pipeline(
+            config=config,
             lm=lm,
-            max_evidence=self.config.max_evidence,
-            verify=self.config.verify,
-            grounding_threshold=self.config.grounding_threshold,
-        )
-        self.memory_gate = MemoryGate(
             episodic_store=episodic_store,
-            memory_md=self.memory_snapshot.memory_md,
-        )
-        self._owns_store = episodic_store is None
+            memory_snapshot=memory_snapshot,
+        ).with_all_stages()
         self._turn = start_turn
+
+    @property
+    def config(self) -> HarnessConfig:
+        return self._pipeline.config
+
+    @config.setter
+    def config(self, value: HarnessConfig) -> None:
+        """Apply changed configuration fields while retaining stage identity."""
+        value.validate()
+        previous = self._pipeline.config
+        for name in (
+            "top_k", "lexical_weight", "semantic_weight", "rerank", "mmr_lambda",
+            "query_expansion", "expansion_terms", "recency_weight",
+        ):
+            if getattr(value, name) != getattr(previous, name):
+                setattr(self.retriever, name, getattr(value, name))
+        if value.rrf_k != previous.rrf_k:
+            self.retriever.k = value.rrf_k
+        for name in ("max_evidence", "verify", "grounding_threshold"):
+            if getattr(value, name) != getattr(previous, name):
+                setattr(self.reasoner, name, getattr(value, name))
+        self._pipeline.config = value
+
+    @property
+    def memory_snapshot(self) -> MemorySnapshot:
+        return self._pipeline.memory_snapshot
+
+    @memory_snapshot.setter
+    def memory_snapshot(self, value: MemorySnapshot) -> None:
+        self._pipeline.memory_snapshot = value
+
+    @property
+    def inspector(self) -> Inspector:
+        assert self._pipeline._inspector is not None
+        return self._pipeline._inspector
+
+    @inspector.setter
+    def inspector(self, value: Inspector) -> None:
+        self._pipeline._inspector = value
+
+    @property
+    def retriever(self) -> Retriever:
+        assert self._pipeline._retriever is not None
+        return self._pipeline._retriever
+
+    @retriever.setter
+    def retriever(self, value: Retriever) -> None:
+        self._pipeline._retriever = value
+
+    @property
+    def reasoner(self) -> Reasoner:
+        assert self._pipeline._reasoner is not None
+        return self._pipeline._reasoner
+
+    @reasoner.setter
+    def reasoner(self, value: Reasoner) -> None:
+        self._pipeline._reasoner = value
+
+    @property
+    def memory_gate(self) -> MemoryGate:
+        assert self._pipeline._memory_gate is not None
+        return self._pipeline._memory_gate
 
     def forward(
         self,
@@ -80,25 +124,12 @@ class AutoHarness:
         session_ending: bool = False,
     ) -> HarnessOutput:
         """Run one full harness turn."""
-        pipeline = (
-            Pipeline(
-                config=self.config,
-                lm=self._lm,
-                episodic_store=self.memory_gate.store,
-                memory_snapshot=self.memory_snapshot,
-                memory_gate=self.memory_gate,
-            )
-            .with_all_stages()
-        )
-        result = pipeline.run(
+        result = self._pipeline.run(
             query=query,
             session_history=session_history,
             session_ending=session_ending,
             turn_id=self._turn,
         )
-        if pipeline._inspector is not None:
-            self.inspector.max_windows = pipeline._inspector.max_windows
-            self.inspector.adaptive_windows = pipeline._inspector.adaptive_windows
         self._turn += 1
         return result
 
@@ -108,8 +139,7 @@ class AutoHarness:
 
     def close(self) -> None:
         """Close the default-owned episodic store, leaving caller stores open."""
-        if self._owns_store:
-            self.memory_gate.store.close()
+        self._pipeline.close()
 
     def __enter__(self) -> "AutoHarness":
         """Return the harness for context-managed resource ownership."""

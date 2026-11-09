@@ -18,6 +18,11 @@ belong in finished machine reports, not an undated pass assertion. Exit code 0
 alone is not proof — confirm collection and the coverage floor. Optional DSPy
 classes skip without the SDK. Neural DSPy generation additionally requires
 `THALIA_LIVE_TESTS=1` and server/model availability; collection never generates.
+Generated observations require positive JUnit collection, consistent nonnegative
+counts and finite coverage in range. Present malformed or partial current reports
+cannot retain an old PASS or old count; historical preservation when neither
+report is present is not proof of a new test execution. Resource-warning settings
+must be established by the exercised command, not inferred from a JUnit counter.
 
 ## 2. Executable invariants
 
@@ -37,6 +42,11 @@ validator checks `data/claim_ledger.yaml` structure, safe anchors, declared JSON
 fields, and strict formalism claim-artifact resolution. Source-only manuscript
 generation remains valid before `output/` exists; the release-time validator owns
 the generated-artifact check.
+The final gate additionally compares source-owned dashboard/manuscript input
+receipts with the exact staged benchmark bytes and each final generated artifact.
+Two valid but different reports are inconsistent publication evidence. Negative
+controls cover consumer/report mutation, divergent selection, missing portable
+evidence and incomplete-report agreement without rewriting observations.
 
 The optional benchmark's `validate_backend_benchmark(payload)` is a separate
 schema-2 consistency gate before writing or consumer use. It rebuilds all seeded
@@ -55,6 +65,11 @@ claims. Honest incomplete diagnostics retain denominators and a sidecar rather
 than replacing the last good destination. Checksums establish consistency, not
 authenticity, expert quality, power, promotion or production readiness. See
 [`backend_benchmark.md`](backend_benchmark.md).
+Per-seed audit tests cover unequal denominators, failed/empty surviving seeds,
+stable ordering and no mutation. Offline plan probes require exact cohort/schedule
+agreement without observations or report-file writes. Runtime probes exercise
+effective exposed stages, opaque caller-owned extras, SQLite cleanup after memory
+flush failure and negative CLI override precedence through actual behavior.
 
 ## 4. Golden regression
 

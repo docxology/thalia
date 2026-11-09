@@ -37,6 +37,10 @@ is loadable, overridable, and serialisable:
 Query precedence, lowest to highest: built-in defaults → file → environment →
 explicit CLI flags. The benchmark deliberately loads base `--config` without
 environment overrides to keep the method configuration explicit.
+The boolean CLI controls accept both positive and `--no-*` forms for
+verification, query expansion, memory recall and adaptive windows. An explicit
+negative flag overrides an enabled file/environment value; omission leaves that
+value intact. Disabling verification avoids its optional additional completion.
 
 This precedence order is part of the reproducibility story. A manuscript render
 can point to the checked-in `config/harness.yaml`; a local experiment can override
@@ -75,12 +79,22 @@ for step_name, ctx in pipe.intermediates:
 Each `with_*` method appends one stage and returns `self` for chaining;
 `add_step` inserts an arbitrary callable that receives and returns a
 `PipelineContext` (a mutable state bag with an `extras` dict for custom data).
-After `run`, `pipe.intermediates` returns defensive deep copies of the
-`(step_name, context)` snapshots, so inspection cannot mutate the recorded trace.
+After `run`, `pipe.intermediates` returns defensive copies of built-in state and
+the extras mapping. Opaque extras retain caller-owned identity and lifetime:
+diagnostics do not copy or close handles, generators or connections. Nested custom
+values remain shared, so a caller needing value snapshots must make them explicitly.
 Partial chains intentionally retain absent-stage state; constructing
 `HarnessOutput` afterward is not another runtime step. The offline Compiler
 remains the additional architectural stage, not part of `with_all_stages()`.
 `scripts/run_pipeline.py` writes this composition trace to `output/data/`.
+`AutoHarness` retains a single executing stage graph. The exposed stage objects
+are the objects actually used for its turns, not dormant parallel instances.
+An effective LM change therefore behaves consistently before and after a session
+reset. Benchmark cells and compiler examples still create fresh harnesses.
+Replacing the harness configuration applies changed fields to those same stage
+objects while retaining the effective LM and episodic state. Unrelated direct
+Retriever/Reasoner customizations survive; Inspector budget and partition policy
+are recomputed from configuration each turn.
 
 ## Resource Safety and Context-Manager Cleanup {#sec:op-resource-safety}
 
@@ -104,6 +118,11 @@ caller’s responsibility. `EpisodicStore.close()` is idempotent, so cleanup is
 safe in both nested context managers and explicit `finally` blocks. The strict
 suite runs with `ResourceWarning` promoted to an error to make a leaked SQLite
 connection fails the resource contract.
+Session shutdown closes its owned SQLite connection in a `finally` path even
+when derived-memory persistence raises. The persistence error is not swallowed;
+when a context-body failure precedes it, standard Python exception chaining keeps
+that failure available. A disk-backed `reset()` reopens retained episodes rather
+than deleting append-only history.
 
 The standalone preflight reports independent readiness states for the
 deterministic core, DSPy SDK, Ollama server, Gemma model, embedding model,
@@ -176,6 +195,10 @@ Each seed's research cohort is built independently, preserving category/stratum
 and stable identity. Deterministic category/seed interleaving precedes the global
 limit. The runner prepends extractive when absent, executes backend-outer with
 rotated method order, and records the schedule and contiguous execution indices.
+`build_benchmark_plan` exposes that same source-owned cohort and exact schedule
+without model observation or inference. The CLI's `--plan` prints a planned JSON
+workload and writes no report file. Planned counts are neither successful
+observations nor estimates of billed tokens, cost or elapsed time.
 
 Full context directly submits every history line to the real selected LM using
 the same typed `ReasonerSignature` renderer/query as harness arms. It bypasses
@@ -227,6 +250,11 @@ single-seed contrast has no interval; multi-seed clustered intervals retain the
 small-cluster warning. If the reference method is not selected, comparisons are
 not requested. These are descriptive finite contrasts, not significance, power,
 model ranking or promotion.
+The source-owned `summarize_seed_pairs` reader exposes requested and complete
+pair denominators and raw wins/ties/losses for each represented seed. A missing
+pair suppresses that seed's mean; complete visible seeds never rescue an
+incomplete whole contrast. Pooled successful-example means must not be mistaken
+for the equally weighted seed-mean estimand. This adds inspectability, not power.
 
 Complete reports are atomically written to the requested caller-relative path;
 incomplete reports go to a sidecar, preserving the last good file. The CLI prints
@@ -234,6 +262,10 @@ the actual path and returns nonzero on incomplete runs. Select that sidecar
 explicitly in both consumers rather than mistaking an old complete file for a
 fresh success. Manuscript observation and contrast tables use generated tokens;
 missing evidence is labelled not recorded, not fabricated.
+Each consumer records its exact selected benchmark bytes and final generated
+artifact in a source-owned input receipt. The publication gate requires matching
+portable staged evidence across dashboard and manuscript; independently valid
+but different reports do not certify one coherent publication.
 
 Prompt characters are not billed tokens. Latency is observed end-to-end cell
 execution, including method/client work and cleanup, not throughput, price or a

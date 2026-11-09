@@ -94,8 +94,9 @@ any compiler-generated artifact to disk.
 
 ## DSPy bridge (optional)
 
-`gepa.py` detects DSPy lazily. Importing deterministic compiler metrics does not
-load the SDK; requesting `to_dspy_signature` does. `DSPY_AVAILABLE` is false
+`gepa.py` detects the optional SDK without importing it. Deterministic compiler
+and planning imports do not load DSPy; calling `to_dspy_signature` does.
+`DSPY_AVAILABLE` is false
 when the optional extra is absent, and the bridge raises an actionable install
 error in that environment. Install with `uv sync --extra neural` for the real
 DSPy bridge/runtime.

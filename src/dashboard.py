@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import html
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from .invariants import InvariantResult, summarize
 from .figures.manifest import FIGURE_CAPTIONS
 from .evaluation.backend_benchmark import validate_backend_benchmark
-from .evaluation.benchmark_analysis import summarize_prompt_exposure
+from .evaluation.benchmark_analysis import summarize_prompt_exposure, summarize_seed_pairs
 
 _CSS = """
 body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem auto;
@@ -147,7 +148,8 @@ def _backend_benchmark_table(payload: dict | None) -> str:
         return (
             "<p class='status-banner'>Backend benchmark: MISSING. "
             "No method benchmark evidence was supplied; legacy local and cloud "
-            "measurements are not ranked as comparable results.</p>"
+            "measurements are not ranked as comparable results. "
+            "Per-seed paired audit: not recorded; no benchmark report supplied.</p>"
         )
 
     def table(
@@ -254,6 +256,33 @@ def _backend_benchmark_table(payload: dict | None) -> str:
         "<p>Within-model contrasts: reference method absent or no non-reference method selected; "
         "not recorded. No paired estimate is inferred.</p>"
     )
+    seed_pairs = summarize_seed_pairs(
+        payload["rows"], backends=list(backends),
+        methods=[method["name"] for method in payload["methods"]],
+        examples=payload["examples"], reference_method=reference,
+    )
+    seed_tables = "".join(
+        table(
+            f"Per-seed paired audit — {backend_name}; model: {backend['model']}; reference: {reference}",
+            ("Method", "Seed", "Pairs requested / complete", "W / T / L", "Mean delta", "Status"),
+            [
+                [
+                    row["method"], row["seed"],
+                    f"{row['n_requested_pairs']} / {row['n_complete_pairs']}",
+                    f"{row['wins']} / {row['ties']} / {row['losses']}",
+                    _number(row["mean_delta"]),
+                    row["status"] if row["status"] == "complete"
+                    else "incomplete: seed mean suppressed",
+                ]
+                for row in seed_pairs if row["backend"] == backend_name
+            ],
+            table_id=f"backend-seed-pairs-{index}",
+        )
+        for index, (backend_name, backend) in enumerate(backends.items())
+    ) if seed_pairs else (
+        "<p>Per-seed paired audit: reference method absent or no non-reference method selected; "
+        "not recorded. No paired estimate is inferred.</p>"
+    )
     metadata = {
         key: payload[key] for key in (
             "cohort", "dataset_fingerprint", "report_fingerprint", "n_examples", "methods",
@@ -275,13 +304,17 @@ def _backend_benchmark_table(payload: dict | None) -> str:
         "comparison, not a zero quality effect. "
         "Within-model contrasts pair the same examples, then average per-seed mean paired token-F1 deltas "
         "with equal seed weight; wins/ties/losses count raw complete pairs. Any incomplete planned pair "
-        "suppresses the estimate and interval. Single-seed contrasts have no interval; small seed-cluster "
+        "suppresses the estimate and interval. Pooled cell means weight examples, not seeds; their "
+        "difference is not the equally weighted seed-mean contrast when seed sizes differ. Per-seed means "
+        "are suppressed for incomplete seeds; complete seeds do not rescue an incomplete whole-report "
+        "contrast. Single-seed contrasts have no interval; small seed-cluster "
         "intervals are descriptive, not population-power or significance claims. "
         "Prompt characters are submitted text length, not billed tokens or retained provider context. "
         "Latency includes method, transport, serving, and cleanup; it is not throughput or cost. "
         "This is not adjudicated answer quality or a production certificate. "
         "Source checksums bind recorded bytes, not authenticity or provider-binary attestation.</p>"
-        + exposure_table + observations + comparisons + "<details><summary>Category and stratum observations</summary>"
+        + exposure_table + observations + comparisons + seed_tables
+        + "<details><summary>Category and stratum observations</summary>"
         + groups + "</details><details><summary>Backend benchmark provenance</summary><pre>"
         + html.escape(json.dumps(metadata, indent=2, sort_keys=True))
         + "</pre></details>"
@@ -345,6 +378,7 @@ def render_dashboard_html(
     quality_status: dict | None = None,
     production_status: dict | None = None,
     backend_benchmark: dict | None = None,
+    figure_descriptions: Mapping[str, str] | None = None,
 ) -> str:
     """Render the full dashboard HTML page as a string.
 
@@ -355,6 +389,9 @@ def render_dashboard_html(
         verification: Optional generated verification-summary payload.
         demo: Optional deterministic demo payload.
         backend_benchmark: Optional validated schema2 backend × method evidence.
+        figure_descriptions: Optional image-stem to authored alt text mapping.
+            Blank or absent descriptions fall back to source captions; visible
+            captions remain source-authored. No figure files are read here.
 
     Returns:
         An offline HTML document referencing the supplied companion figure assets.
@@ -362,8 +399,15 @@ def render_dashboard_html(
     if backend_benchmark is not None:
         validate_backend_benchmark(backend_benchmark)
     n_pass, n_total = summarize(invariants)
+    descriptions = figure_descriptions or {}
+
+    def figure_alt(path: str) -> str:
+        stem = Path(path).stem
+        description = descriptions.get(stem)
+        return description if description and description.strip() else FIGURE_CAPTIONS.get(stem, stem)
+
     figures_html = "".join(
-        f"<figure class='fig'><img src='{html.escape(p)}' alt='{html.escape(FIGURE_CAPTIONS.get(Path(p).stem, Path(p).stem))}'>"
+        f"<figure class='fig'><img src='{html.escape(p)}' alt='{html.escape(figure_alt(p))}'>"
         f"<figcaption class='muted'><strong>{html.escape(Path(p).name)}</strong> — "
         f"{html.escape(FIGURE_CAPTIONS.get(Path(p).stem, 'Generated THALIA figure.'))}</figcaption></figure>"
         for p in figure_paths
@@ -422,6 +466,7 @@ def write_dashboard(
     quality_status: dict | None = None,
     production_status: dict | None = None,
     backend_benchmark: dict | None = None,
+    figure_descriptions: Mapping[str, str] | None = None,
 ) -> Path:
     """Render and write the dashboard HTML to ``output_path``; return the path."""
     path = Path(output_path)
@@ -435,6 +480,7 @@ def write_dashboard(
         quality_status=quality_status,
         production_status=production_status,
         backend_benchmark=backend_benchmark,
+        figure_descriptions=figure_descriptions,
     )
     path.write_text(document, encoding="utf-8")
     return path

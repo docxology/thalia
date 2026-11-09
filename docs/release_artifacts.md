@@ -53,6 +53,55 @@ answers/annotations/adjudications, and unrelated generated files. Synthetic
 per-example ledgers may be included only as such; model-quality private records
 must not be swept into a release because they also have a JSON extension.
 
+## Source-owned frozen archive assembly
+
+`src.release_artifacts.assemble_release_artifacts(project_root, allowlist,
+output, *, prefix="")` inventories and packs an already frozen project stage.
+It is not a renderer, model runner, Git publisher or replacement native validator.
+The allowlist is an explicit list of portable regular-file paths, never a glob
+or recursive output sweep. Include both artifact inventories and every output
+member referenced by either; required committed source remains in the Git stage
+and exact source archive rather than being silently copied into the supplement.
+
+After the real native/project sequence below, invoke the thin source CLI with
+an explicitly reviewed JSON array of those paths:
+
+```bash
+"$THALIA_PYTHON" scripts/assemble_release_artifacts.py \
+  --project-root "$THALIA_STAGE" --allowlist /path/to/reviewed-files.json \
+  --output /path/to/thalia-0.4.0-artifacts.tar.gz \
+  --prefix thalia-0.4.0-artifacts
+```
+
+The command prints a member/byte/closure receipt as JSON; retain it **outside**
+the frozen output tree and archive. Archive metadata is deterministic and members
+are sorted. Missing, unsafe, duplicate, symlinked, omitted inventoried output or
+changed members fail closed; an existing destination is preserved. A successful
+assembler receipt explicitly says native validation was not run by the assembler.
+Keep the separately observed native/project gate receipt with release metadata.
+
+Support material may be staged under explicitly allowlisted ignored
+`output/release_support/`: original `STUDY_PRODUCER/` filenames and bytes,
+`THIRD_PARTY_LICENSES/`, and selected QA evidence. This preserves a clean Git
+boundary while keeping those materials in the exact native inventory closure.
+Review privacy and redistribution rights before selecting paths; a checksum or
+an extension is not permission to redistribute content.
+
+## Matching publication inputs
+
+Each generator writes `output/reports/dashboard_benchmark_input.json` or
+`output/reports/manuscript_benchmark_input.json` after its final artifact write.
+These receipts bind selected report bytes, dataset/report fingerprints and status
+to the final consumer artifact. `validate_publication_inputs` and the full project
+gate require consistent portable staged evidence and current artifact hashes.
+Both explicitly unrecorded views remain valid absence, not zero results.
+
+An external report can be inspected independently, but distributable evidence
+must be explicitly staged unchanged under `output/data/`; rerun both consumers
+from that same path. Divergent valid reports, an external-only path, missing raw
+evidence, or later consumer/report mutation is a release failure. No helper
+silently copies or reseals measured observations to repair it.
+
 ## Manifest ownership and the final staged-closure gate
 
 v0.3.1 repairs an ownership collision discovered during canonical handoff.
@@ -108,7 +157,7 @@ THALIA's separate manifest is invalid. The last command repeats the full project
 gate **after** native validation, catching missing required source inputs and
 any native-side invalidation of THALIA's frozen entries.
 
-Record actual statuses and report details in the v0.3.1 release manifest; do not
+Record actual statuses and report details in the current release manifest; do not
 inherit earlier release counts. If a gate fails, fix the cause and repeat the
 final inventory/native/project sequence. Never reseal or rewrite measured study
 JSON to make it pass. After the final sequence, do not change any manifest-tracked
@@ -118,11 +167,10 @@ Package the exact verified closure without another render, dashboard build,
 verification-summary refresh, QA annotation, or allowlist change. An intentional
 tracked change requires a fresh final sequence before packaging.
 
-Publish this repair under v0.3.1; retain the v0.3.0 tag and assets unchanged.
-The original `STUDY_PRODUCER/` capsule remains the unreleased `41da836` producer
-with a `0.3.0` wheel, not a v0.3.1 producer. Preserve its names and measured
-report fingerprint; the patch qualifies the reader and release closure, not a
-new model execution.
+The v0.3.1 repair and v0.3.0 tag/assets remain unchanged. The original
+`STUDY_PRODUCER/` capsule still identifies unreleased `41da836` and its `0.3.0`
+wheel, not the current reader. Preserve original filenames and report fingerprint;
+new planning, audit views and engineering qualification do not rerun that study.
 
 ## Bundled web typography and runtime notices
 
@@ -132,7 +180,7 @@ Sans, and Serif. All twelve embedded SHA-256 values and lengths must match the
 renderer-owned `infrastructure/rendering/assets/fonts/liberation/provenance.json`.
 The font name tables identify Google/Red Hat copyright and SIL Open Font License
 1.1. Include the full renderer-held `OFL.txt` and provenance JSON in the
-supplement's `THIRD_PARTY_LICENSES/`; the short font metadata is not a substitute
+supplement's `output/release_support/THIRD_PARTY_LICENSES/`; the short font metadata is not a substitute
 for the license text. [Upstream license](https://github.com/liberationfonts/liberation-fonts/blob/2.1.5/LICENSE).
 
 The JavaScript contains the LZMA decoder's Nathan Rugg MIT notice; preserve it
@@ -146,7 +194,7 @@ Download all assets into one empty directory and verify their bytes before
 installation or extraction:
 
 ```bash
-gh release download v0.3.1 --repo docxology/thalia
+gh release download v0.4.0 --repo docxology/thalia
 shasum -a 256 -c SHA256SUMS
 ```
 

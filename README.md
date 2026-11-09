@@ -10,18 +10,18 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-> **Current version:** v0.3.1 (2026-11-09), identified by its versioned
-> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.3.1).
+> **Current version:** v0.4.0 (2026-11-09), identified by its versioned
+> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.4.0).
 > Source metadata is not evidence that the release has been published: the
 > publisher must verify the exact tag, assets, and candidate checks.
-> See the [v0.3.1 release notes](docs/releases/v0.3.1.md) and
+> See the [v0.4.0 release notes](docs/releases/v0.4.0.md) and
 > [release controls](docs/release_readiness.md). Generated outputs are gitignored;
 > freeze and validate the exact publication closure before packaging.
 
 > **Historical archive only:** the immutable **v0.1.0** source and manuscript
 > are archived at
 > [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
-> That DOI does **not** identify v0.3.1; no new Zenodo publication or DOI is
+> That DOI does **not** identify v0.4.0; no new Zenodo publication or DOI is
 > asserted. The old commit, checksums, and gates remain recorded unchanged in
 > [`docs/release_receipt.md`](docs/release_receipt.md).
 
@@ -32,11 +32,12 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 
 ## Status & next actions
 
-- **Version boundary:** v0.3.1 corrects publication-manifest closure and
-  supersedes the v0.3.0 supplement defect without changing the measured study.
-  The schema-2 method comparisons, repeatable cohort seeds, and source-bound
-  diagnostics introduced in v0.3.0 remain unchanged. Historical checks do not
-  certify this candidate. See the [patch notes](docs/releases/v0.3.1.md) and
+- **Version boundary:** v0.4.0 adds offline experiment planning, per-seed
+  contribution audits, coherent executing runtime stages, negative query
+  overrides, truthful verification observations, bound publication inputs and
+  deterministic explicit supplement assembly. The historical schema-2 study
+  remains unchanged; release checks do not promote scientific acceptance.
+  See the [release notes](docs/releases/v0.4.0.md) and
   [`docs/release_readiness.md`](docs/release_readiness.md).
 - **What to do next:** the canonical backlog is [`tasks.yaml`](tasks.yaml)
   ("task + Gantt source of truth", managed by the projects/taskboard server).
@@ -147,10 +148,16 @@ category/stratum diagnostics and seed-clustered paired contrasts. Missing pairs
 suppress deltas/intervals; single-seed contrasts have no interval, and small-seed
 warnings remain visible. Prompt characters are not billed tokens; end-to-end
 timing is not throughput or cost. There are no benchmark retries or response cache.
-The [declared local study](docs/local_method_study.md) is a plan, not an observed
-result or quality/power/promotion claim. Historical `data/neural_eval.json` and
-`data/openrouter_eval.json` remain separate cohorts; direct DSPy smoke recorders
+The [local study guide](docs/local_method_study.md) separates its declared plan,
+preserved original execution and bounded review; none is a quality/power/promotion
+certificate. Historical `data/neural_eval.json` and `data/openrouter_eval.json`
+remain separate cohorts; direct DSPy smoke recorders
 are not this benchmark. Schema 1 is rejected, never rewritten in place.
+Before inference, `thalia-benchmark --plan` prints the exact workload without
+model probes, completion calls, or a report write. Generated per-seed audit tables
+show contribution denominators and missing-pair suppression. Publication-input
+receipts bind both consumers to the same unchanged staged report, rather than
+merely accepting two independently valid but different reports.
 
 ## Quick start
 
@@ -295,10 +302,12 @@ for step_name, ctx in pipe.intermediates:
 ```
 
 `with_all_stages()` appends the four runtime stages, not an output or Compiler
-step. `intermediates` returns defensive deep-copy snapshots; custom data belongs
-in `PipelineContext.extras`. Partial chains do not pretend omitted stages ran.
-Use `with Pipeline(...) as pipe:` when it owns a store; caller-supplied stores
-remain caller-owned.
+step. `intermediates` defensively copies built-in state and the extras mapping;
+opaque values in `PipelineContext.extras` keep caller-owned identity and lifetime,
+so handles and generators do not fail merely because diagnostics are recorded.
+Nested custom values remain shared. Partial chains do not pretend omitted stages
+ran. Use `with Pipeline(...) as pipe:` when it owns a store; caller-supplied stores
+remain caller-owned. `AutoHarness` exposes the actual stage instances it executes.
 
 ## Operate it
 
@@ -333,6 +342,10 @@ The [benchmark guide](docs/backend_benchmark.md) covers CLI/API migration,
 repeatable models/methods/seeds, validation, provenance, and privacy boundaries.
 The manuscript consumes validated generated observation/contrast tables; absent
 evidence is not recorded, not fabricated or pooled with historical cohorts.
+The query CLI accepts `--no-verify`, `--no-query-expansion`, `--no-recall-memory`
+and `--no-adaptive-windows` to override enabled file/environment settings. An
+omitted boolean preserves the inherited choice. Session cleanup closes its
+SQLite store even when derived MEMORY.md persistence fails; the error propagates.
 
 ```python
 # Available after package installation or from the standalone THALIA root.
@@ -459,7 +472,7 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
 
 The THALIA source code is licensed under the [MIT License](LICENSE). Current
 version/tag metadata and the explicitly historical archive relation are maintained
-in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.3.1 has no assigned DOI. MIT
+in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.4.0 has no assigned DOI. MIT
 covers this project's code and does not by itself grant redistribution rights
 for external benchmark data, model weights, raw answers, credentials, or other
 third-party artifacts. The current release boundary is tracked in

@@ -216,10 +216,17 @@ core and the headline results remain extractive-bounded as documented. Citations
 - Preserve partial-pair suppression, single-seed interval suppression and small
   seed warnings. Prompt characters are not billed tokens; end-to-end timing is
   not throughput/cost. Complete accounting is not quality/power/promotion.
-- The declared local matrix is a plan in `docs/local_method_study.md`, not an
-  observed receipt. Consumers use validated generated tokens, with explicit
-  report selection via generator `--benchmark-report PATH`. See
-  `docs/backend_benchmark.md` for migration and provenance boundaries.
+- `docs/local_method_study.md` separates its declared matrix from the preserved
+  original execution receipt and bounded review. Consumers use validated generated
+  tokens with explicit report selection. `build_benchmark_plan` / CLI `--plan`
+  expose planned counts without observations or file writes; they are not reports.
+- `summarize_seed_pairs` exposes represented-seed denominators and means from
+  validated rows without altering schema 2. Missing pairs suppress seed means
+  and the whole contrast; never reconstruct a missing estimate from survivors.
+- Publication receipts bind the final dashboard/manuscript artifact and the same
+  unchanged staged benchmark bytes. Both receipts and exact raw evidence belong
+  in the final closure. Explicit archive assembly cannot replace native validation.
+  See `docs/backend_benchmark.md` and `docs/release_artifacts.md`.
 - In a file-owned Workflowz wave, workers stop before tests/generators/Git
   mutations; the integration owner runs the combined gates after source writers
   stop. Do not reinterpret the command inventory as permission to violate that

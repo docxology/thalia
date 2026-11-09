@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -134,36 +135,25 @@ def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path
     results = payload.get("command_results")
     command_results = dict(results) if isinstance(results, dict) else {}
 
-    if junit_path.is_file() and coverage_path.is_file():
+    reports_present = any(path.exists() or path.is_symlink() for path in (junit_path, coverage_path))
+    current_tests_unavailable = False
+    if reports_present:
+        # Never let a partial or malformed current run inherit an older PASS.
+        payload["latest_observed_tests"] = ""
+        payload["latest_observed_coverage"] = ""
         try:
-            root = ET.parse(junit_path).getroot()
-            suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
-            tests = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
-            failures = sum(int(suite.attrib.get("failures", "0")) for suite in suites)
-            errors = sum(int(suite.attrib.get("errors", "0")) for suite in suites)
-            skipped = sum(int(suite.attrib.get("skipped", "0")) for suite in suites)
-            coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-            totals = coverage_payload.get("totals", {})
-            coverage = float(totals["percent_covered"])
-        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, ET.ParseError):
-            tests = failures = errors = skipped = 0
-            coverage = None
-        if coverage is not None:
-            passed = tests - failures - errors - skipped
-            coverage_gate = payload.get("coverage_gate")
-            gate = coverage_gate if isinstance(coverage_gate, int) else _coverage_gate()
-            command_results["tests"] = {
-                "collected": tests,
-                "passed": passed,
-                "failed": failures + errors,
-                "skipped": skipped,
-                "coverage_percent": round(coverage, 2),
-                "coverage_gate": gate,
-                "resource_warnings_as_errors": True,
-                "status": "pass" if failures == 0 and errors == 0 and coverage >= gate else "fail",
-            }
-            payload["latest_observed_tests"] = f"{passed} passed; {tests} collected"
-            payload["latest_observed_coverage"] = f"{coverage:.2f}% (src; gate {gate}%)"
+            observation = _test_report_observation(junit_path, coverage_path, payload)
+        except (OSError, UnicodeError, ValueError, KeyError, TypeError, ET.ParseError) as exc:
+            current_tests_unavailable = True
+            command_results["tests"] = {"status": "unavailable", "issues": [str(exc)]}
+        else:
+            command_results["tests"] = observation
+            payload["latest_observed_tests"] = (
+                f"{observation['passed']} passed; {observation['collected']} collected"
+            )
+            payload["latest_observed_coverage"] = (
+                f"{observation['coverage_percent']:.2f}% (src; gate {observation['coverage_gate']}%)"
+            )
 
     manifest_path = reports_dir / "thalia_artifact_manifest.json"
     if manifest_path.is_file():
@@ -178,6 +168,12 @@ def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path
             "status": "pass" if artifact_report.ok else "fail",
         }
 
+    if (
+        manifest_path.is_file() and not reports_present
+        and not isinstance(command_results.get("tests"), dict)
+    ):
+        command_results["tests"] = {"status": "unavailable", "issues": ["test reports absent"]}
+
     if not command_results:
         return
     payload["command_results"] = command_results
@@ -187,7 +183,75 @@ def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path
         if isinstance(value, dict) and isinstance(value.get("status"), str)
     ]
     if statuses:
-        payload["status"] = "pass" if all(status == "pass" for status in statuses) else "fail"
+        if current_tests_unavailable or "fail" in statuses:
+            payload["status"] = "fail"
+        elif all(status == "pass" for status in statuses):
+            payload["status"] = "pass"
+        else:
+            payload["status"] = "unavailable"
+
+
+def _test_report_observation(
+    junit_path: Path, coverage_path: Path, payload: dict[str, object],
+) -> dict[str, object]:
+    """Read current evidence without inferring the invocation's warning policy."""
+    root = ET.parse(junit_path).getroot()
+    suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+    if root.tag not in {"testsuite", "testsuites"} or not suites:
+        raise ValueError("JUnit report has no test suites")
+    counts = dict.fromkeys(("tests", "failures", "errors", "skipped"), 0)
+    for suite in suites:
+        values: dict[str, int] = {}
+        for key in counts:
+            text = suite.attrib[key]
+            if not text.isascii() or not text.isdecimal():
+                raise ValueError(f"invalid JUnit counter: {key}")
+            values[key] = int(text)
+        if values["failures"] + values["errors"] + values["skipped"] > values["tests"]:
+            raise ValueError("JUnit outcome counters exceed collected tests")
+        for key, value in values.items():
+            counts[key] += value
+    if root.tag == "testsuites":
+        for key, count in counts.items():
+            if key in root.attrib and root.attrib[key] != str(count):
+                raise ValueError(f"JUnit aggregate counter mismatch: {key}")
+    coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
+    totals = coverage_payload["totals"]
+    coverage = totals["percent_covered"]
+    if (
+        isinstance(coverage, bool) or not isinstance(coverage, (int, float))
+        or not 0 <= coverage <= 100 or not math.isfinite(coverage)
+    ):
+        raise ValueError("coverage percent must be finite and between 0 and 100")
+    for key in ("num_statements", "covered_lines", "missing_lines", "excluded_lines",
+                "num_branches", "covered_branches", "missing_branches", "num_partial_branches"):
+        if key in totals and (type(totals[key]) is not int or totals[key] < 0):
+            raise ValueError(f"invalid coverage counter: {key}")
+    for total, covered, missing in (
+        ("num_statements", "covered_lines", "missing_lines"),
+        ("num_branches", "covered_branches", "missing_branches"),
+    ):
+        if total in totals and covered in totals and totals[covered] > totals[total]:
+            raise ValueError(f"coverage counter exceeds total: {covered}")
+        if all(key in totals for key in (total, covered, missing)):
+            if totals[covered] + totals[missing] != totals[total]:
+                raise ValueError(f"coverage counter mismatch: {total}")
+    gate_value = payload.get("coverage_gate")
+    gate = gate_value if type(gate_value) is int else _coverage_gate()
+    failed = counts["failures"] + counts["errors"]
+    return {
+        "collected": counts["tests"],
+        "passed": counts["tests"] - failed - counts["skipped"],
+        "failed": failed,
+        "skipped": counts["skipped"],
+        "coverage_percent": round(coverage, 2),
+        "coverage_gate": gate,
+        "resource_warnings_as_errors": None,
+        "report_evidence": {
+            path.name: {"sha256": _sha256(path)} for path in (junit_path, coverage_path)
+        },
+        "status": "pass" if counts["tests"] > 0 and failed == 0 and coverage >= gate else "fail",
+    }
 
 
 def load_verification_summary(
@@ -378,6 +442,8 @@ def _stable_artifacts(project_root: Path) -> list[Path]:
         output / "reports" / "evaluation_ledger.jsonl",
         output / "reports" / "paper_audit.json",
         output / "reports" / "formalism_traceability.json",
+        output / "reports" / "dashboard_benchmark_input.json",
+        output / "reports" / "manuscript_benchmark_input.json",
     ):
         if path.exists():
             candidates.append(path)

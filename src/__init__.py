@@ -13,7 +13,7 @@ The full design rationale lives in ``docs/manuscript/``; this package is the run
 deterministic, fully-tested implementation.
 """
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 from .cli import run_query
 from .config import (

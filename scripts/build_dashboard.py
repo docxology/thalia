@@ -23,6 +23,7 @@ from src.dashboard import write_dashboard  # noqa: E402
 from src.evaluation import run_full_eval  # noqa: E402
 from src.invariants import all_invariants  # noqa: E402
 from src.provenance import load_verification_summary, write_artifact_manifest, write_verification_summary  # noqa: E402
+from src.publication_inputs import write_benchmark_input_receipt  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> Path:
@@ -60,6 +61,16 @@ def main(argv: list[str] | None = None) -> Path:
         for p in figure_paths
         if Path(p).suffix.lower() in {".png", ".jpg", ".jpeg", ".svg"}
     ]
+    registry_path = PROJECT_ROOT / "output" / "figures" / "figure_registry.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    figure_descriptions = {
+        Path(entry["filename"]).stem: entry["alt_text"]
+        for entry in registry.values()
+        if isinstance(entry, dict)
+        and isinstance(entry.get("filename"), str)
+        and isinstance(entry.get("alt_text"), str)
+        and entry["alt_text"].strip()
+    }
 
     metrics = run_full_eval()
     eval_bundle = PROJECT_ROOT / "output" / "data" / "eval_results.json"
@@ -120,6 +131,13 @@ def main(argv: list[str] | None = None) -> Path:
         quality_status=quality_status,
         production_status=production_status,
         backend_benchmark=backend_benchmark,
+        figure_descriptions=figure_descriptions,
+    )
+    # Include the first dashboard receipt before observing required-path status.
+    # The final receipt below binds any verification-driven rewrite.
+    write_benchmark_input_receipt(
+        "dashboard", backend_path if backend_benchmark is not None else None,
+        project_root=PROJECT_ROOT,
     )
     write_artifact_manifest(PROJECT_ROOT)
     # The dashboard itself is an artifact, so refresh the summary once more and
@@ -137,9 +155,15 @@ def main(argv: list[str] | None = None) -> Path:
             quality_status=quality_status,
             production_status=production_status,
             backend_benchmark=backend_benchmark,
+            figure_descriptions=figure_descriptions,
         )
+    receipt_path = write_benchmark_input_receipt(
+        "dashboard", backend_path if backend_benchmark is not None else None,
+        project_root=PROJECT_ROOT,
+    )
     write_artifact_manifest(PROJECT_ROOT)
     print(str(output_path))
+    print(str(receipt_path))
     return output_path
 
 
