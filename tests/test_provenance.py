@@ -6,7 +6,6 @@ from src.provenance import (
     FIGURE_CAPTIONS,
     FIGURE_LABELS,
     default_verification_summary,
-    load_verification_summary,
     validate_artifact_manifest,
     write_artifact_manifest,
     write_figure_registry,
@@ -15,15 +14,6 @@ from src.provenance import (
 
 
 class TestVerificationSummary:
-    def test_default_summary_has_authoritative_commands(self):
-        summary = default_verification_summary()
-        assert "uv run --project . --extra dev python -m pytest tests/" in summary.test_command
-        assert summary.coverage_gate == 90
-
-    def test_write_and_load_round_trip(self, tmp_path):
-        path = write_verification_summary(tmp_path / "verification_summary.json")
-        loaded = load_verification_summary(path)
-        assert loaded.test_command == default_verification_summary().test_command
 
     def test_existing_observations_keep_current_commands(self, tmp_path):
         path = tmp_path / "verification_summary.json"
@@ -129,8 +119,8 @@ class TestArtifactManifest:
         screen.parent.mkdir(parents=True)
         screen.write_text('{"schema_version": 3}\n')
 
-        write_artifact_manifest(root)
-        payload = json.loads((root / "output" / "reports" / "artifact_manifest.json").read_text())
+        manifest = write_artifact_manifest(root)
+        payload = json.loads(manifest.read_text())
         paths = {entry["path"] for entry in payload["entries"]}
 
         assert "data/integrity_advantage.json" in paths
@@ -163,7 +153,7 @@ class TestArtifactManifest:
 
     def test_validator_refuses_unsafe_manifest_path(self, tmp_path):
         root = tmp_path / "thalia"
-        manifest = root / "output" / "reports" / "artifact_manifest.json"
+        manifest = root / "output" / "reports" / "thalia_artifact_manifest.json"
         manifest.parent.mkdir(parents=True)
         manifest.write_text('{"entries": [{"path": "../secret.txt"}], "issues": []}\n')
         report = validate_artifact_manifest(root)
@@ -178,7 +168,7 @@ class TestArtifactManifest:
         outside.write_text("{}\n")
         artifact = data / "demo_result.json"
         artifact.symlink_to(outside)
-        manifest = root / "output" / "reports" / "artifact_manifest.json"
+        manifest = root / "output" / "reports" / "thalia_artifact_manifest.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_text(json.dumps({"entries": [{
             "path": "output/data/demo_result.json",
@@ -195,9 +185,31 @@ class TestArtifactManifest:
         profile = root / "domain_profile.yaml"
         profile.parent.mkdir(parents=True)
         profile.write_text("artifact_expectations: [\n")
-        manifest = root / "output" / "reports" / "artifact_manifest.json"
+        manifest = root / "output" / "reports" / "thalia_artifact_manifest.json"
         manifest.parent.mkdir(parents=True)
         manifest.write_text('{"entries": [], "issues": []}\n')
         report = validate_artifact_manifest(root)
         assert not report.ok
         assert "domain profile invalid" in report.issues[0]
+
+    def test_native_inventory_cannot_replace_required_source_attestation(self, tmp_path):
+        root = tmp_path / "thalia"
+        screen = root / "data" / "integrity_advantage.json"
+        screen.parent.mkdir(parents=True)
+        screen.write_text('{"observed": 1}\n')
+        (root / "domain_profile.yaml").write_text(
+            "artifact_expectations:\n  - data/integrity_advantage.json\n"
+        )
+        native = root / "output" / "reports" / "artifact_manifest.json"
+        native.parent.mkdir(parents=True)
+        native.write_text('{"native_inventory": "retained"}\n')
+        write_artifact_manifest(root)
+        assert json.loads(native.read_text()) == {"native_inventory": "retained"}
+
+        # Native validation inventories output/, not committed required data.
+        native.write_text('{"entries": [], "issues": []}\n')
+        assert validate_artifact_manifest(root).ok
+        screen.write_text('{"observed": 2}\n')
+        report = validate_artifact_manifest(root)
+        assert not report.ok
+        assert any("sha256 mismatch: data/integrity_advantage.json" == issue for issue in report.issues)

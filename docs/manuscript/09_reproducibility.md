@@ -98,17 +98,17 @@ uv run --project . --extra dev python scripts/generate_figures.py
 uv run --project . --extra dev python \
   scripts/z_generate_manuscript_variables.py
 
-# 9. Demo, dashboard, then artifact hashes + required-output completeness
+# 9. Demo, dashboard, then an initial project artifact gate
 uv run --project . --extra dev python scripts/run_demo.py
 uv run --project . --extra dev python scripts/build_dashboard.py
 uv run --project . --extra dev python scripts/validate_artifacts.py
 
-# 10. Optional external render: an already-provisioned template runtime is
-# required.
+# 10. External render for publication: an already-provisioned template
+# runtime is required. This precedes final QA and staged-closure validation.
 # THALIA hydration above is fresh and exact; use render-only mode because
 # template hydration admission independently requires Python >=3.14.
 uv run --no-sync --project ../template python \
-  scripts/render_pdf_external.py \
+  scripts/render_pdf_external.py --template-root ../template \
   --skip-manuscript-hydration --validate
 ```
 
@@ -118,6 +118,32 @@ sources **before** the integrity screen, then regenerate figures, tokens,
 dashboard, manifests, and validation in that order. A later source mutation makes
 the earlier fingerprint-bound screen stale. A quick smoke grid must not replace
 the publication-size deterministic audit.
+
+These are regeneration instructions, not permission to rewrite retained
+measurements. The original local method study remains the unreleased
+`41da836be37995fe9a4612c9ce2b325cc58671b4` producer, its `0.3.0` wheel, and
+report fingerprint
+`f1615d74dfe8af07133a42e4941158b4310f4ebadbbc7b0d6e6e483815dda117`.
+Its historical 1,152 rows include 864 neural responses; these are original
+study counts, not v0.3.1 qualification results. Preserve measured JSON and the
+`STUDY_PRODUCER/` capsule names rather than resealing or relabeling them.
+
+Publication requires a final step after rendering and **all** browser inspection,
+QA, and preview selection: combine the exact release source with only the
+allowlisted supplemental outputs in a clean staging root. Write THALIA's final
+manifest there, invoke `scripts/render_pdf_external.py --template-root PATH
+--validate-only` using the provisioned native runtime, and then run
+`scripts/validate_artifacts.py` using THALIA's runtime. Validation-only performs
+real native validation without hydration or rerendering and fails on an invalid
+THALIA manifest even if native checks pass. The executable staged sequence and
+runtime prerequisites are in `docs/release_artifacts.md`.
+
+Package precisely that verified closure. Do not prune the worktree after
+validation or refresh manifest-tracked QA, previews, dashboard, manuscript, or
+verification summaries after the final gates. A tracked change requires a new
+final manifest/native/project sequence, not a hand-edited digest. Exact v0.3.1
+outcomes belong in its downloadable release manifest; no earlier release's
+validation counts establish the patch's result.
 
 Deterministic algorithms reproduce results for fixed inputs and a compatible
 runtime; this is not a promise that figures, PDFs, or validation metadata are
@@ -224,11 +250,21 @@ production-readiness claims. The archived package intentionally excludes raw
 answers, private external-volume records, credentials, and model weights; those
 lanes remain separately documented and gated.
 
-The final local refusal boundary is `validate_artifacts.py`. It checks the
-generated manifest's relative paths, file sizes, and SHA-256 values against the
-current output tree and verifies the required paths declared by
-`domain_profile.yaml`. Freshness is established by running the validator after the
-last generator, so a later mutation or omitted artifact fails before rendering.
+The final local refusal boundary is `validate_artifacts.py`, run again after
+native validation on the staged source-plus-output closure. THALIA owns
+`output/reports/thalia_artifact_manifest.json`; the native renderer independently
+owns `output/reports/artifact_manifest.json`. Before v0.3.1, the native generic
+output scan overwrote the shared filename, omitted the required committed
+`data/integrity_advantage.json`, and captured QA/preview entries that were later
+changed or omitted from packaging. Separate ownership preserves the project
+contract rather than treating a generic native scan as its replacement.
+
+The project gate checks relative paths, sizes, SHA-256 values, and required paths
+declared by `domain_profile.yaml`, including committed inputs from the source
+archive. Freshness requires freezing tracked evidence after all QA and validating
+the exact closure after the last native operation. No manifest-tracked output
+may change after that final sequence. The v0.3.1 patch supersedes the v0.3.0
+supplement defect without retagging or replacing its historical tag and assets.
 
 Memory-system comparisons remain in the cited design lineage and remain external
 to THALIA's result layer: MemGPT [@packer2023memgpt], Mem0 [@chhikara2025mem0],

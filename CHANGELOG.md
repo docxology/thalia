@@ -4,6 +4,34 @@ All notable changes to THALIA are documented here. Versioned GitHub software
 releases do not themselves assign a new Zenodo DOI. The immutable `0.1.0` archive
 remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 
+## [0.3.1] - 2026-11-09
+
+### Fixed
+
+- Separate manifest ownership: THALIA writes
+  `output/reports/thalia_artifact_manifest.json`; the external renderer retains
+  `output/reports/artifact_manifest.json`. The native generic output scan had
+  overwritten the shared filename, omitted the required committed
+  `data/integrity_advantage.json`, and retained stale late QA/preview entries.
+- Add explicit `--template-root PATH` and native `--validate-only` adapter
+  operation without rerendering. THALIA manifest failure remains a release
+  failure even when the native pipeline succeeds.
+- Require final QA before manifest freeze, native validation of a clean staged
+  source-plus-allowlisted-output closure, and the project artifact gate after
+  native validation. Package those exact bytes; do not mutate manifest-tracked
+  QA or other outputs after the final gates.
+
+### Release boundary
+
+- Supersede the v0.3.0 supplement defect with a new patch tag and assets; do not
+  retag or replace the immutable v0.3.0 release.
+- Preserve the measured study and original producer capsule unchanged:
+  unreleased producer commit `41da836`, package version `0.3.0`, and report
+  fingerprint beginning `f1615d74`. This patch is not a model rerun.
+- Exact v0.3.1 qualification outcomes and asset digests belong in its release
+  manifest, not inherited v0.3.0 counts. No new DOI, cloud execution,
+  expert-quality, P0-confirmation, or production-acceptance claim is made.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added

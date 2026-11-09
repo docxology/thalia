@@ -30,7 +30,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `promote_production_readiness.py` | Promotes only an accepted, digest-valid operational readiness certificate | `src.evaluation.production_readiness` | `dev` |
 | `promote_provenance_p0.py` | Promotes only an accepted, evidence-rebuilt, promotion-eligible P0 certificate | `src.evaluation.provenance_p0` | `dev` |
 | `promote_quality_report.py` | Promotes only a digest-valid, threshold-passing quality certificate into committed evidence | `src.evaluation.quality` | `dev` |
-| `render_pdf_external.py` | Optional PDF render/validate after fresh hydration and exact injection validation (temporary exact link, removed on exit) | `src.manuscript_integrity` + provisioned template `infrastructure` | `uv run --no-sync --project ../template python scripts/render_pdf_external.py --skip-manuscript-hydration --validate` |
+| `render_pdf_external.py` | External render or real native validation-only; explicit template selection and fail-closed THALIA manifest gate | `src.manuscript_integrity`, `src.provenance` + provisioned template `infrastructure` | `uv run --no-sync --project ../template python scripts/render_pdf_external.py --template-root ../template --skip-manuscript-hydration --validate` |
 | `run_bottleneck_campaign.py` | Matched max-window/adaptive Gemma campaign plus separate ranking diagnostics to an external root | `src.evaluation.campaign`, `src.evaluation.longmemeval` | `neural` |
 | `run_compiler.py` | `output/data/compile_result.json` (MIPRO + GEPA traces) | `src.compiler`, `src.harness` | `dev` |
 | `run_compiler_generalization.py` | Isolated train/held-out generalization aggregate; explicit seed lists supported | `src.evaluation` | `dev` |
@@ -57,8 +57,10 @@ caller-selected external root), and prints produced paths to stdout.
 `run_harness_eval.py` → `run_compiler.py` → `run_seed_sensitivity.py` →
 `run_compiler_generalization.py` → `analyze_integrity_advantage.py` →
 `run_pipeline.py` → `generate_figures.py` → `z_generate_manuscript_variables.py`
-→ `run_demo.py` → `build_dashboard.py` → `validate_artifacts.py` (last and
-fail-closed: it refuses missing, mutated, or unsafe manifest entries).
+→ `run_demo.py` → `build_dashboard.py` → `validate_artifacts.py` (fail-closed:
+it refuses missing, mutated, or unsafe THALIA manifest entries). Publication
+continues through rendering, QA, and the final staged-closure gate below; the
+early project check is not a receipt for later modified outputs.
 
 For the source-bound publication refresh, use the recorded enlarged grids (see
 the root [AGENTS.md](../AGENTS.md) command block) rather than the quick smoke
@@ -72,11 +74,11 @@ the integrity screen and its downstream figures/tokens/dashboard/manifest gates.
 
 ## Backend/method observations
 
-Install the wheel downloaded from the versioned v0.3.0 GitHub release into your
+Install the wheel downloaded from the versioned v0.3.1 GitHub release into your
 chosen environment; this is not a PyPI publication claim:
 
 ```bash
-python -m pip install /path/to/thalia-0.3.0-py3-none-any.whl
+python -m pip install /path/to/thalia-0.3.1-py3-none-any.whl
 thalia-benchmark --method full_context --method harness \
   --seed 0 --seed 1 --per-category 2 \
   --output output/data/backend_offline.json
@@ -135,12 +137,55 @@ finished machine reports, then reconcile the `test-count` and `test-coverage`
 entries in `data/claim_ledger.yaml` from that refreshed summary — never from an
 incomplete or failing run.
 
-The PDF render/validate step belongs to the external template checkout and is
-optional for this standalone project; `render_pdf_external.py` fails closed if
-`../template` is absent.
+The PDF render/validate step uses an external, already-provisioned template
+checkout and is optional for standalone non-publication use. The adapter discovers
+a sibling by default or takes `--template-root PATH`; absence fails closed.
 Freshly hydrate with THALIA's interpreter and pass exact injection validation
-before using render-only mode. The provisioned template runtime has independent
-Python admission requirements; `--no-sync` does not install or reconfigure it.
+before using `--skip-manuscript-hydration`. The provisioned template runtime has
+independent Python admission requirements; `--no-sync` does not install or
+reconfigure it.
+
+### Final publication validation without rerendering
+
+For v0.3.1, THALIA owns `output/reports/thalia_artifact_manifest.json`;
+the native renderer owns `output/reports/artifact_manifest.json`. The old shared
+filename let the native generic output scan overwrite THALIA's inventory, omit
+the required committed `data/integrity_advantage.json`, and record QA/preview
+entries that later changed or were excluded. Neither inventory replaces the
+downloadable release manifest.
+
+Finish all render/browser/QA work before freezing THALIA's inventory. Stage the
+exact source archive plus only the intended supplemental allowlist, preserving
+relative paths and committed inputs. With the current directory set to this
+clean staged project root, `THALIA_PYTHON` an absolute provisioned THALIA
+interpreter outside it, and `TEMPLATE_ROOT` an absolute provisioned template root:
+
+```bash
+set -e
+: "${THALIA_PYTHON:?Set the provisioned THALIA interpreter}"
+: "${TEMPLATE_ROOT:?Set the provisioned template checkout}"
+"$THALIA_PYTHON" -c \
+  'from src.provenance import write_artifact_manifest; print(write_artifact_manifest())'
+uv run --no-sync --project "$TEMPLATE_ROOT" python \
+  scripts/render_pdf_external.py --template-root "$TEMPLATE_ROOT" \
+  --validate-only
+"$THALIA_PYTHON" scripts/validate_artifacts.py
+```
+
+`--validate-only` runs the real native validation pipeline, not a simulated
+check, and neither hydrates nor rerenders. THALIA manifest failure is nonzero
+even if the native pipeline passes. Run the full project gate after native
+validation; package precisely this verified closure, not a pruned worktree.
+Do not mutate manifest-tracked QA or other outputs after the final sequence.
+Do not refresh the demo/dashboard/verification summary, annotate QA, or render
+again afterward; any tracked change requires a fresh inventory and both gates.
+No measured study JSON is resealed. The retained `STUDY_PRODUCER/` capsule and
+its `0.3.0` wheel still identify the original unreleased producer, not a patch
+rerun. Exact current results belong in the v0.3.1 release manifest.
+
+See [artifact assembly](../docs/release_artifacts.md) and
+[v0.3.1 release notes](../docs/releases/v0.3.1.md). The patch supersedes the
+v0.3.0 supplement defect without changing that release's tag or assets.
 
 See [CONVENTIONS.md](CONVENTIONS.md) and [AGENTS.md](AGENTS.md).
 

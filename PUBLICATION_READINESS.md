@@ -1,16 +1,24 @@
 # THALIA — Publication-Readiness Assessment
 
-_Release identity updated 2026-11-09 for v0.3.0. The current GitHub release target
-is [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0); no Zenodo
+_Release identity updated 2026-11-09 for v0.3.1. The current GitHub release target
+is [v0.3.1](https://github.com/docxology/thalia/releases/tag/v0.3.1); no Zenodo
 publication or DOI is assigned to this version. Historical checks below do not
 certify the current candidate or assert that the GitHub target is published._
 
 ## Current software capability and release boundary
 
-v0.3.0 adds composable full-context, harness, lexical-only, and adaptive methods
-to the optional common-backend benchmark. It supports an offline extractive
-baseline, caller-supplied clients, local Ollama models, and explicitly
-selected/authorized OpenRouter models without requiring DSPy for this lane.
+v0.3.1 corrects publication-manifest closure and supersedes the v0.3.0 supplement
+defect; it does not change or rerun the measured study. THALIA's manifest is
+`output/reports/thalia_artifact_manifest.json`; the native renderer retains
+ownership of `output/reports/artifact_manifest.json`. The original measured
+study remains an unreleased producer at `41da836`, using the `0.3.0` wheel and
+its original fingerprint and producer capsule names.
+
+The v0.3.0 capability boundary remains: composable full-context, harness,
+lexical-only, and adaptive methods in the optional common-backend benchmark,
+with an offline extractive baseline, caller-supplied clients, local Ollama
+models, and explicitly selected/authorized OpenRouter models without requiring
+DSPy for this lane.
 Matched multi-seed examples, rotating method order, recorded prompt sizes,
 fresh state, failure accounting, and portable source inventories make runs
 inspectable. Complete within-backend contrasts average equally across seed
@@ -26,15 +34,15 @@ not silently pooled with this lane.
 
 The manuscript includes this capability and its limitations. Its regenerated
 page count, tagged-PDF structure, HTML, slides, and exact source substitution
-must be checked after the v0.3.0 metadata changes; older renders and earlier
+must be checked after the v0.3.1 metadata changes; older renders and earlier
 test results are not source-current release receipts. The publisher must
 record the current candidate checks, exact tag/commit, asset inventory, and
 checksums before announcing release completion. See
 [`docs/release_readiness.md`](docs/release_readiness.md) and
-[`docs/releases/v0.3.0.md`](docs/releases/v0.3.0.md).
+[`docs/releases/v0.3.1.md`](docs/releases/v0.3.1.md).
 
 The v0.1.0 DOI and [`docs/release_receipt.md`](docs/release_receipt.md) remain
-immutable historical authority only. The current citation identifies v0.3.0
+immutable historical authority only. The current citation identifies v0.3.1
 on GitHub; the old DOI is retained as an `isNewVersionOf` relation.
 
 ## Historical evidence (2026-08-02, v0.1.0 boundary)
@@ -140,13 +148,15 @@ evidence ceilings remain unchanged.
    preserve their independent run receipts; do not fold them into the
    deterministic headline.
 5. **Versioned software release:** retain the tag/DOI/bundle as the immutable
-   v0.1.0 authority. For v0.3.0, execute the declared local method study and
-   regenerate the ledger, figures, dashboard,
-   variables, PDF, and supplementary outputs, then repeat the full test,
-   typing, lint, artifact, packaging, and rendering gates against the exact
-   candidate before publishing its distinct GitHub tag. No Zenodo action or
-   new DOI is authorized by this release. Reassess redistribution rights before adding
-   any external benchmark, model, raw-answer, or annotation artifacts.
+   v0.1.0 authority; retain v0.2.0 and v0.3.0 tags and assets unchanged.
+   For v0.3.1, preserve the measured JSON and producer provenance without
+   resealing them. Finalize QA and publication artifacts, freeze the outputs,
+   run real native validation on clean staged source plus allowlisted outputs,
+   then run the project release gate and package that exact verified closure.
+   Do not edit manifest-tracked QA after final validation. Publish only the
+   distinct patch tag after recording its checks and asset inventory. No Zenodo
+   action or new DOI is authorized by this release. Reassess redistribution
+   rights before adding external benchmark, model, raw-answer, or annotation artifacts.
 
 Until the independent P0, expert-quality, and production acceptance records
 exist, the paper should describe those lanes as protocols and open validation

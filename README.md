@@ -10,17 +10,18 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
-> **Current version:** v0.3.0 (2026-11-09), identified by its versioned
-> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.3.0).
+> **Current version:** v0.3.1 (2026-11-09), identified by its versioned
+> [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.3.1).
 > Source metadata is not evidence that the release has been published: the
 > publisher must verify the exact tag, assets, and candidate checks.
-> See the [release controls](docs/release_readiness.md). Generated outputs are
-> gitignored and must be regenerated from this version before packaging.
+> See the [v0.3.1 release notes](docs/releases/v0.3.1.md) and
+> [release controls](docs/release_readiness.md). Generated outputs are gitignored;
+> freeze and validate the exact publication closure before packaging.
 
 > **Historical archive only:** the immutable **v0.1.0** source and manuscript
 > are archived at
 > [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
-> That DOI does **not** identify v0.3.0; no new Zenodo publication or DOI is
+> That DOI does **not** identify v0.3.1; no new Zenodo publication or DOI is
 > asserted. The old commit, checksums, and gates remain recorded unchanged in
 > [`docs/release_receipt.md`](docs/release_receipt.md).
 
@@ -31,9 +32,11 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 
 ## Status & next actions
 
-- **Version boundary:** v0.3.0 adds schema-2 within-model method comparisons,
-  repeatable cohort seeds and source-bound diagnostic provenance. Historical
-  checks do not certify this candidate. See
+- **Version boundary:** v0.3.1 corrects publication-manifest closure and
+  supersedes the v0.3.0 supplement defect without changing the measured study.
+  The schema-2 method comparisons, repeatable cohort seeds, and source-bound
+  diagnostics introduced in v0.3.0 remain unchanged. Historical checks do not
+  certify this candidate. See the [patch notes](docs/releases/v0.3.1.md) and
   [`docs/release_readiness.md`](docs/release_readiness.md).
 - **What to do next:** the canonical backlog is [`tasks.yaml`](tasks.yaml)
   ("task + Gantt source of truth", managed by the projects/taskboard server).
@@ -456,7 +459,7 @@ The in-house `MIPRO`/`GEPA` compilers remain the project's own deterministic eng
 
 The THALIA source code is licensed under the [MIT License](LICENSE). Current
 version/tag metadata and the explicitly historical archive relation are maintained
-in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.3.0 has no assigned DOI. MIT
+in [`CITATION.cff`](CITATION.cff) and `.zenodo.json`; v0.3.1 has no assigned DOI. MIT
 covers this project's code and does not by itself grant redistribution rights
 for external benchmark data, model weights, raw answers, credentials, or other
 third-party artifacts. The current release boundary is tracked in

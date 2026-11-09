@@ -22,6 +22,7 @@ OUTPUT_ROOT = PROJECT_ROOT / "output"
 
 _MANIFEST_EXCLUDE_NAMES = {
     "artifact_manifest.json",
+    "thalia_artifact_manifest.json",
     "diagnostics.json",
     "evidence_registry.json",
     "lessons.jsonl",
@@ -164,7 +165,7 @@ def _refresh_observed_verification(payload: dict[str, object], reports_dir: Path
             payload["latest_observed_tests"] = f"{passed} passed; {tests} collected"
             payload["latest_observed_coverage"] = f"{coverage:.2f}% (src; gate {gate}%)"
 
-    manifest_path = reports_dir / "artifact_manifest.json"
+    manifest_path = reports_dir / "thalia_artifact_manifest.json"
     if manifest_path.is_file():
         artifact_report = validate_artifact_manifest(
             reports_dir.parent.parent,
@@ -234,9 +235,9 @@ def write_artifact_manifest(
     project_root: str | Path = PROJECT_ROOT,
     output_path: str | Path | None = None,
 ) -> Path:
-    """Write a current, validator-compatible manifest for stable THALIA outputs."""
+    """Write THALIA's stable-output manifest without replacing native inventory."""
     root = Path(project_root).resolve()
-    out = Path(output_path) if output_path else root / "output" / "reports" / "artifact_manifest.json"
+    out = Path(output_path) if output_path else root / "output" / "reports" / "thalia_artifact_manifest.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     entries = []
     for artifact in _stable_artifacts(root):
@@ -270,7 +271,7 @@ def validate_artifact_manifest(
     the artifact completeness source of truth.
     """
     root = Path(project_root).resolve()
-    source = Path(manifest_path) if manifest_path else root / "output" / "reports" / "artifact_manifest.json"
+    source = Path(manifest_path) if manifest_path else root / "output" / "reports" / "thalia_artifact_manifest.json"
     issues: list[str] = []
     if not source.exists():
         return ArtifactValidation(False, 0, 0, (f"manifest missing: {source}",))
