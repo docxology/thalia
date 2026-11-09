@@ -28,7 +28,11 @@ from src.evaluation.backend_benchmark import (
     validate_backend_benchmark,
     write_backend_benchmark,
 )
-from src.evaluation.benchmark_analysis import ANALYSIS_UNIT, analyze_benchmark_rows
+from src.evaluation.benchmark_analysis import (
+    ANALYSIS_UNIT,
+    analyze_benchmark_rows,
+    summarize_prompt_exposure,
+)
 from src.evaluation.dataset import build_research_dataset
 from src.evaluation.statistics import clustered_bootstrap_mean
 from src.harness import AutoHarness
@@ -386,6 +390,127 @@ def test_prompt_observations_are_consistency_not_current_renderer_authentication
         n_boot=payload["analysis"]["resamples"], analysis_seed=payload["analysis"]["seed"],
     ))
     validate_backend_benchmark(_resign(payload))
+
+
+@pytest.mark.parametrize("reverse_rows", [False, True])
+def test_prompt_exposure_collapses_backends_without_erasing_captured_failures(reverse_rows):
+    rows = [
+        {"backend": backend, "method": "full_context", "example_id": example_id,
+         "status": "complete", "prompt_fingerprints": [fingerprint * 64]}
+        for backend in ("first", "second")
+        for example_id, fingerprint in (("a", "a"), ("b", "a"), ("c", "c"))
+    ]
+    rows += [
+        {"backend": "first", "method": "harness", "example_id": "a",
+         "status": "complete", "prompt_fingerprints": ["a" * 64]},
+        {"backend": "second", "method": "harness", "example_id": "a",
+         "status": "complete", "prompt_fingerprints": ["a" * 64]},
+        {"backend": "first", "method": "harness", "example_id": "b",
+         "status": "failed", "prompt_fingerprints": ["b" * 64]},
+        {"backend": "second", "method": "harness", "example_id": "b",
+         "status": "failed", "prompt_fingerprints": []},
+        {"backend": "first", "method": "harness", "example_id": "c",
+         "status": "failed", "prompt_fingerprints": []},
+        {"backend": "second", "method": "harness", "example_id": "c",
+         "status": "failed", "prompt_fingerprints": ["c" * 64]},
+    ]
+    if reverse_rows:
+        rows.reverse()
+    original = copy.deepcopy(rows)
+    assert summarize_prompt_exposure(
+        rows, methods=("full_context", "harness"), example_ids=("a", "b", "c"),
+        reference_method="full_context",
+    ) == [
+        {"method": "full_context", "n_requested_cases": 3, "n_observed_cases": 3,
+         "n_unique_prompts": 2, "n_compared_to_reference": 3,
+         "n_different_from_reference": 0, "prompt_group": 1},
+        {"method": "harness", "n_requested_cases": 3, "n_observed_cases": 3,
+         "n_unique_prompts": 3, "n_compared_to_reference": 3,
+         "n_different_from_reference": 1, "prompt_group": 2},
+    ]
+    assert rows == original
+
+
+def test_prompt_exposure_groups_exact_case_vectors_not_unordered_prompt_sets():
+    vectors = {
+        "reference": ("a", "b", "a"),
+        "swapped": ("b", "a", "a"),
+        "same": ("a", "b", "a"),
+    }
+    rows = [
+        {"method": method, "example_id": example_id, "prompt_fingerprints": [fingerprint * 64]}
+        for method, vector in vectors.items()
+        for example_id, fingerprint in zip(("first", "second", "third"), vector)
+    ]
+    summaries = summarize_prompt_exposure(
+        rows, methods=("swapped", "reference", "same"),
+        example_ids=("third", "first", "second"), reference_method="reference",
+    )
+    assert [row["method"] for row in summaries] == ["swapped", "reference", "same"]
+    assert [row["n_unique_prompts"] for row in summaries] == [2, 2, 2]
+    assert [row["prompt_group"] for row in summaries] == [1, 2, 2]
+    assert [row["n_compared_to_reference"] for row in summaries] == [3, 3, 3]
+    assert [row["n_different_from_reference"] for row in summaries] == [2, 0, 0]
+
+
+def test_prompt_exposure_missing_prompts_never_establish_group_equivalence():
+    vectors = {
+        "partial": ("a", None, "c"),
+        "same_missing": ("a", None, "c"),
+        "unobserved": (None, None, None),
+        "complete": ("a", "b", "c"),
+        "complete_copy": ("a", "b", "c"),
+    }
+    rows = [
+        {"method": method, "example_id": example_id,
+         "prompt_fingerprints": [fingerprint * 64] if fingerprint else []}
+        for method, vector in vectors.items()
+        for example_id, fingerprint in zip(("a", "b", "c"), vector)
+    ]
+    summaries = summarize_prompt_exposure(
+        rows, methods=tuple(vectors), example_ids=("a", "b", "c"),
+        reference_method="partial",
+    )
+    assert [row["n_requested_cases"] for row in summaries] == [3] * 5
+    assert [row["n_observed_cases"] for row in summaries] == [2, 2, 0, 3, 3]
+    assert [row["n_unique_prompts"] for row in summaries] == [2, 2, 0, 3, 3]
+    assert [row["n_compared_to_reference"] for row in summaries] == [2, 2, 0, 2, 2]
+    assert [row["n_different_from_reference"] for row in summaries] == [0] * 5
+    assert [row["prompt_group"] for row in summaries] == [None, None, None, 1, 1]
+
+
+def test_prompt_exposure_absent_reference_is_not_an_observed_zero_difference():
+    rows = [
+        {"method": method, "example_id": "a", "prompt_fingerprints": ["a" * 64]}
+        for method in ("selected", "unselected_reference")
+    ]
+    assert summarize_prompt_exposure(
+        rows, methods=("selected", "missing"), example_ids=("a", "b"),
+        reference_method="unselected_reference",
+    ) == [
+        {"method": "selected", "n_requested_cases": 2, "n_observed_cases": 1,
+         "n_unique_prompts": 1, "n_compared_to_reference": 0,
+         "n_different_from_reference": None, "prompt_group": None},
+        {"method": "missing", "n_requested_cases": 2, "n_observed_cases": 0,
+         "n_unique_prompts": 0, "n_compared_to_reference": 0,
+         "n_different_from_reference": None, "prompt_group": None},
+    ]
+
+
+def test_prompt_exposure_empty_plan_does_not_group_empty_vectors():
+    summaries = summarize_prompt_exposure(
+        [], methods=("reference", "candidate"), example_ids=(),
+        reference_method="reference",
+    )
+    assert summaries == [
+        {"method": method, "n_requested_cases": 0, "n_observed_cases": 0,
+         "n_unique_prompts": 0, "n_compared_to_reference": 0,
+         "n_different_from_reference": 0, "prompt_group": None}
+        for method in ("reference", "candidate")
+    ]
+    assert summarize_prompt_exposure(
+        [], methods=(), example_ids=(), reference_method="reference",
+    ) == []
 
 
 def test_validator_rejects_mutation_before_writing(complete_report, tmp_path):

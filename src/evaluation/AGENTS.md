@@ -11,7 +11,7 @@ Barrel package: `from src.evaluation import run_full_eval, build_demo_dataset, �
 | [`accounting.py`](accounting.py) | Stable fingerprints, per-example/method ledger, deterministic JSONL events, runtime provenance |
 | [`statistics.py`](statistics.py) | IID/stratified/cluster bootstrap, Wilson/exact paired tests, Holm correction, clustered effect sizes, sample planning |
 | [`backend_benchmark.py`](backend_benchmark.py) | Schema-2 sequential backend × named-method × balanced seeded-cohort observations, true full-context Reasoner prompts, portable producer-source checksums, recomputing validator, atomic complete output or incomplete sidecar |
-| [`benchmark_analysis.py`](benchmark_analysis.py) | Pure success-only summaries and category/stratum accounting; complete paired seed-mean contrasts with seeded descriptive cluster intervals and no p-values |
+| [`benchmark_analysis.py`](benchmark_analysis.py) | Pure success-only summaries and category/stratum accounting; recorded prompt exposure and exact per-example vector groups; complete paired seed-mean contrasts with seeded descriptive cluster intervals and no p-values |
 | [`integrity_advantage.py`](integrity_advantage.py) | Native-unit endpoint screen for provenance, poisoning, retrieval, context, compiler, and neural comparisons with source/code hashes |
 | [`provenance_p0.py`](provenance_p0.py) | Isolated P0 source-record protocol, immutable atomic condition rows, sealed blinded-packet/key evidence, expert adjudication, source-condition tables, strata-aware paired analysis, and explicit promotion; it never upgrades the legacy lexical proxy |
 | [`scaling.py`](scaling.py) | Configurable seeded sample-size research audit, paired method comparisons, complete accounting; quick defaults and enlarged publication grids are recorded separately |
@@ -48,6 +48,18 @@ within each backend-matched example/method. It never renders prompts or calls
 any completion client: these checks establish consistency, not independently
 authenticated inference or prompt length, and do not bind readers to current
 prompt implementation bytes.
+`summarize_prompt_exposure(rows, *, methods, example_ids, reference_method)` is
+exported from `benchmark_analysis` only. Pass validated rows and ordered method/
+example-ID sequences. It collapses backends by method/example, retaining captured
+hashes even on failed attempts and ignoring empty failures. Requested/observed
+case counts, distinct prompt counts, paired fingerprint differences and complete
+vector groups describe recorded attempted text only. Missing prompts or an empty
+plan never establish equivalence; an absent reference yields zero pairs and a
+null difference count. Groups follow first complete-vector occurrence, not
+unordered hash sets. Unique example IDs need not mean unique inputs, and repeated
+inputs are not independent new content. These diagnostics do not authenticate
+inference traffic or establish provider retention, equal code/compute/latency,
+or independent method-quality evidence; they do not modify schema-2 reports.
 Producer inventory conservatively includes every Python file under the installed
 `src` package, not repository/venv files or an executed-file trace. Recorded
 portable paths and source checksums are checked structurally, not for equality

@@ -119,7 +119,8 @@ adaptive enables adaptive Inspector windows. Custom named harness configurations
 retain their own validated configuration and method fingerprint.
 
 The query and typed Reasoner template are fixed across methods, while the supplied
-evidence text changes according to the context policy. The seeded cohort retains
+evidence text is selected by each configured context policy; different policy names
+do not guarantee different submitted inputs. The seeded cohort retains
 example/category/stratum/seed identity; a deterministic interleaving precedes any
 global limit. Backends run in outer loops and method order rotates within examples.
 The validator rebuilds the planned backend × method × example matrix, verifies its
@@ -144,6 +145,14 @@ closed. No mixed-method backend mean is computed.
 
 **Recorded scope:** {{BACKEND_BENCHMARK_SCOPE}}
 
+**Recorded prompt exposure by method**
+
+{{BACKEND_EXPOSURE_TABLE}}
+
+These post-run descriptive groups concern only the recorded attempted prompts in
+this cohort, not new experiments, independent content replications, causal effects,
+or model rankings. A shared group is not independent method-quality evidence.
+
 {{BACKEND_BENCHMARK_TABLE}}
 
 **Within-model paired method contrasts**
@@ -164,15 +173,21 @@ target-population claim.
 
 {{BACKEND_GROUP_TABLE}}
 
-All observation cells retain requested/completed/failed counts. Token-F1 measures
-lexical overlap, not adjudicated semantic correctness. Incomplete cells report
-success-only diagnostic means. Prompt characters count submitted text, not billed
+All observation cells retain requested/completed/failed counts. Token-F1 compares
+deduplicated token sets, not multiset token-F1 or adjudicated semantic correctness.
+Incomplete cells report success-only diagnostic means. Prompt characters count
+submitted text, not billed
 tokens. Latency includes method execution, local work, transport/model serving,
 and cleanup; it is neither throughput nor cost. Sequential execution, cold starts,
 cache state, hardware/load, and provider scheduling preclude a speed-winner claim.
 These are finite synthetic observations, not expert-quality or production
 certificates, and cannot rank the historical DSPy or legacy cloud cohorts.
 Cloud appears only with explicit collection consent.
+
+Category determines the research stratum; subgroup differences cannot isolate an
+independent difficulty effect. A construct's long-context label is not evidence
+of advertised context-window stress or retained attention. The full execution
+receipt and source-grounded interpretation are in `docs/local_method_study.md`.
 
 **Recorded source and runtime binding:** {{BACKEND_BENCHMARK_PROVENANCE}}
 

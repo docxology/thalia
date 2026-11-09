@@ -220,3 +220,4 @@ class TestBackendMethodVariables:
         path.write_text(json.dumps(payload), encoding="utf-8")
         variables = _backend_benchmark_variables(path)
         assert "Reference method absent" in variables["BACKEND_COMPARISON_TABLE"]
+

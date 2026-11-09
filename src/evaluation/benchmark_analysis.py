@@ -31,6 +31,56 @@ def summarize_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def summarize_prompt_exposure(
+    rows: Sequence[dict[str, Any]], *, methods: Sequence[str],
+    example_ids: Sequence[str], reference_method: str,
+) -> list[dict[str, Any]]:
+    """Describe recorded attempted prompts from already validated benchmark rows.
+
+    Backends share one prompt per method/example; failed attempts with a captured
+    fingerprint still count, while empty failed rows cannot erase that capture.
+    Groups require complete, identical vectors in the supplied example order.
+    They describe this cohort's recorded text, not equivalent computation,
+    latency, quality, provider retention, or authenticated inference traffic.
+    """
+    captured: dict[tuple[str, str], str] = {}
+    for row in rows:
+        fingerprints = row["prompt_fingerprints"]
+        if fingerprints:
+            captured.setdefault((row["method"], row["example_id"]), fingerprints[0])
+
+    reference = (
+        tuple(captured.get((reference_method, example_id)) for example_id in example_ids)
+        if reference_method in methods else None
+    )
+    groups: dict[tuple[str | None, ...], int] = {}
+    summaries = []
+    for method in methods:
+        vector = tuple(captured.get((method, example_id)) for example_id in example_ids)
+        observed = [fingerprint for fingerprint in vector if fingerprint is not None]
+        paired = (
+            [(candidate, baseline) for candidate, baseline in zip(vector, reference)
+             if candidate is not None and baseline is not None]
+            if reference is not None else []
+        )
+        group = None
+        if vector and len(observed) == len(vector):
+            group = groups.setdefault(vector, len(groups) + 1)
+        summaries.append({
+            "method": method,
+            "n_requested_cases": len(example_ids),
+            "n_observed_cases": len(observed),
+            "n_unique_prompts": len(set(observed)),
+            "n_compared_to_reference": len(paired),
+            "n_different_from_reference": (
+                sum(candidate != baseline for candidate, baseline in paired)
+                if reference is not None else None
+            ),
+            "prompt_group": group,
+        })
+    return summaries
+
+
 def analyze_benchmark_rows(
     rows: Sequence[dict[str, Any]], *, backends: Sequence[str], methods: Sequence[str],
     examples: Sequence[dict[str, Any]], reference_method: str, n_boot: int,
@@ -87,4 +137,4 @@ def analyze_benchmark_rows(
     return {"summaries": summaries, "groups": groups, "comparisons": comparisons}
 
 
-__all__ = ["ANALYSIS_UNIT", "summarize_rows", "analyze_benchmark_rows"]
+__all__ = ["ANALYSIS_UNIT", "summarize_rows", "summarize_prompt_exposure", "analyze_benchmark_rows"]

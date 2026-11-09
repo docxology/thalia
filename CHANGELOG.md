@@ -19,6 +19,9 @@ remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
   and suppression of estimates for incomplete pairs or intervals for one seed.
 - Method-aware accessible dashboard/manuscript tables and a source-owned
   experimental-design flow diagram.
+- Realized prompt-exposure diagnostics: distinguish unique example IDs from
+  repeated inputs, compare recorded prompt pairs, and group exact per-example
+  prompt vectors without inferring equivalence from missing observations.
 - Repeatable method/seed CLI selection, explicit base configuration loading,
   Ollama requested context control, and selectable manuscript benchmark input.
 

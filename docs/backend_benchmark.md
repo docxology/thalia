@@ -219,6 +219,44 @@ inference and cleanup), not throughput, cost, or a service-level guarantee.
 Failed times remain in rows but not successful-only summaries. Cohort generation
 and factory metadata probes are outside cell timing.
 
+### Recorded prompt exposure
+
+`src.evaluation.benchmark_analysis.summarize_prompt_exposure(rows, *, methods,
+example_ids, reference_method)` is a pure reader helper, exported from that
+module rather than the package barrel. Call it after
+`validate_backend_benchmark(report)`, using ordered method names and example IDs.
+It returns one row per requested method, in that order:
+
+| Field | Meaning |
+|---|---|
+| `method` | Requested method name |
+| `n_requested_cases` | Number of planned example IDs |
+| `n_observed_cases` | Planned cases with a recorded nonempty prompt fingerprint |
+| `n_unique_prompts` | Distinct recorded fingerprints across those cases |
+| `n_compared_to_reference` | Cases with fingerprints recorded for both this method and the selected reference |
+| `n_different_from_reference` | Different paired fingerprints; null if the reference was not selected |
+| `prompt_group` | Integer starting at 1 for the first complete vector, reused only for exact vector equality; null if any prompt is missing or the plan is empty |
+
+Observations collapse across backends by `(method, example_id)`, since validated
+rows agree on any recorded hash for that case. A failed attempt with a captured
+hash counts as observed; an empty failed row never erases a captured hash.
+Recorded/planned counts therefore expose missing captures, not successful-answer
+counts: retain the separate requested/completed/failed observation accounting.
+If the reference is absent there are zero compared cases and a null difference
+count; a selected reference with no recorded pairs has zero pairs, not evidence
+of equal prompts or a zero quality effect.
+
+Prompt vectors align fingerprints to the supplied example-ID order. Equal
+unordered sets of hashes do not establish equivalence, and shared missingness
+never assigns a group. A group describes exact per-example recorded submitted
+text equivalence in this cohort, not equal code, compute, latency, or quality.
+Unique example IDs need not be unique inputs; repeated inputs are not independent
+new content or independent method-quality evidence. These are post-run
+descriptive diagnostics, not new experiments, causal effects, or model rankings.
+They neither recapture prompts nor authenticate actual inference traffic,
+provider retention, or effective attention. The helper adds no report fields and
+does not alter schema-2 metrics, paired analysis, or report fingerprints.
+
 ## Validation, provenance and failure custody
 
 `validate_backend_benchmark(report)` rebuilds the full seeded cohort and checks

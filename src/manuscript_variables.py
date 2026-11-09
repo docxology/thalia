@@ -162,10 +162,12 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
             "BACKEND_BENCHMARK_TABLE": "No backend × method benchmark is recorded.",
             "BACKEND_COMPARISON_TABLE": "No within-model paired method contrasts are recorded.",
             "BACKEND_GROUP_TABLE": "No category or stratum observations are recorded.",
+            "BACKEND_EXPOSURE_TABLE": "No recorded prompt exposure is available.",
             "BACKEND_BENCHMARK_SCOPE": "No validated method-benchmark artifact was supplied.",
             "BACKEND_BENCHMARK_PROVENANCE": "Not recorded.",
         }
     from .evaluation.backend_benchmark import validate_backend_benchmark
+    from .evaluation.benchmark_analysis import summarize_prompt_exposure
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     validate_backend_benchmark(payload)
@@ -184,6 +186,12 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         )
 
     backends = {backend["name"]: backend for backend in payload["backends"]}
+    reference = payload["analysis"]["reference_method"]
+    exposure = summarize_prompt_exposure(
+        payload["rows"], methods=[method["name"] for method in payload["methods"]],
+        example_ids=[example["example_id"] for example in payload["examples"]],
+        reference_method=reference,
+    )
 
     def observation(summary: dict) -> list[object]:
         backend = backends[summary["backend"]]
@@ -220,13 +228,21 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
             caveat,
         ])
     scope = (
-        f"Unique seeded examples: {payload['n_examples']}; cohort seeds: {payload['cohort']['seeds']}; "
+        f"Unique seeded example IDs: {payload['n_examples']}; cohort seeds: {payload['cohort']['seeds']}; "
         f"per category per seed: {payload['cohort']['per_category']}; limit: {payload['cohort']['limit']}; "
         f"methods: {', '.join(method['name'] for method in payload['methods'])}; "
         f"reference: {payload['analysis']['reference_method']}; "
         f"analysis unit: {payload['analysis']['unit']}; "
         f"resamples: {payload['analysis']['resamples']}; analysis seed: {payload['analysis']['seed']}; "
-        f"confidence: {payload['analysis']['confidence']}."
+        f"confidence: {payload['analysis']['confidence']}. "
+        "Example IDs are not unique submitted inputs. Recorded prompt cases collapse backends for "
+        "each method and example ID, including failed completions with a captured prompt; unobserved "
+        "cases are planned minus recorded. Completion failures remain visible in the observation "
+        "counts. Repeated inputs are not independent new content. A realized prompt group means "
+        "exact per-example submitted-text equivalence across this cohort's complete ordered case "
+        "vector, not equal code, compute, latency, quality, or independent method-quality evidence. "
+        "Missing prompts leave groups unavailable. Missing reference or no recorded prompt pairs "
+        "means no prompt-difference comparison, not a zero quality effect."
     )
     provenance = {
         key: payload[key] for key in (
@@ -237,6 +253,26 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
     return {
         "BACKEND_BENCHMARK_STATUS": cell(payload["status"]),
         "BACKEND_BENCHMARK_TABLE": table(headings, [observation(s) for s in payload["summaries"]]),
+        "BACKEND_EXPOSURE_TABLE": table(
+            ["Method", "Recorded / planned cases", "Distinct prompts",
+             f"Different / paired cases vs {cell(reference)}", "Realized prompt group"],
+            [
+                [
+                    row["method"],
+                    f"{row['n_observed_cases']} / {row['n_requested_cases']} "
+                    f"({row['n_requested_cases'] - row['n_observed_cases']} unobserved)",
+                    row["n_unique_prompts"],
+                    f"{row['n_different_from_reference']} / {row['n_compared_to_reference']}"
+                    if row["n_compared_to_reference"] else (
+                        f"— / {row['n_compared_to_reference']} (reference absent)"
+                        if row["n_different_from_reference"] is None
+                        else f"— / {row['n_compared_to_reference']} (no recorded prompt pairs)"
+                    ),
+                    "—" if row["prompt_group"] is None else f"P{row['prompt_group']}",
+                ]
+                for row in exposure
+            ],
+        ),
         "BACKEND_COMPARISON_TABLE": table(
             ["Backend", "Method", "Reference", "Status", "Requested / complete pairs", "Seed clusters",
              "Wins / ties / losses", "Seed-mean token-F1 delta", "Descriptive interval", "Caveat"],

@@ -14,6 +14,7 @@ from pathlib import Path
 from .invariants import InvariantResult, summarize
 from .figures.manifest import FIGURE_CAPTIONS
 from .evaluation.backend_benchmark import validate_backend_benchmark
+from .evaluation.benchmark_analysis import summarize_prompt_exposure
 
 _CSS = """
 body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem auto;
@@ -149,11 +150,17 @@ def _backend_benchmark_table(payload: dict | None) -> str:
             "measurements are not ranked as comparable results.</p>"
         )
 
-    def table(caption: str, headings: tuple[str, ...], rows: list[list[object]]) -> str:
+    def table(
+        caption: str, headings: tuple[str, ...], rows: list[list[object]], *,
+        table_id: str | None = None,
+    ) -> str:
+        label_id = f"{table_id}-caption" if table_id else "backend-benchmark-heading"
+        table_attribute = f" id='{html.escape(table_id)}'" if table_id else ""
+        caption_attribute = f" id='{html.escape(label_id)}'" if table_id else ""
         return (
-            "<div class='table-scroll' role='region' aria-labelledby='backend-benchmark-heading' "
+            f"<div class='table-scroll' role='region' aria-labelledby='{html.escape(label_id)}' "
             "aria-describedby='backend-benchmark-description' tabindex='0'>"
-            f"<table><caption>{html.escape(caption)}</caption><thead><tr>"
+            f"<table{table_attribute}><caption{caption_attribute}>{html.escape(caption)}</caption><thead><tr>"
             + "".join(f"<th scope='col'>{html.escape(h)}</th>" for h in headings)
             + "</tr></thead><tbody>"
             + "".join(
@@ -184,6 +191,34 @@ def _backend_benchmark_table(payload: dict | None) -> str:
     observations = table(
         "Backend × method observations", headings,
         [observation(summary) for summary in payload["summaries"]],
+    )
+    reference = payload["analysis"]["reference_method"]
+    exposure = summarize_prompt_exposure(
+        payload["rows"], methods=[method["name"] for method in payload["methods"]],
+        example_ids=[example["example_id"] for example in payload["examples"]],
+        reference_method=reference,
+    )
+    exposure_table = table(
+        "Recorded prompt exposure by method",
+        ("Method", "Recorded / planned cases", "Distinct prompts",
+         f"Different / paired cases vs {reference}", "Realized prompt group"),
+        [
+            [
+                row["method"],
+                f"{row['n_observed_cases']} / {row['n_requested_cases']} "
+                f"({row['n_requested_cases'] - row['n_observed_cases']} unobserved)",
+                row["n_unique_prompts"],
+                f"{row['n_different_from_reference']} / {row['n_compared_to_reference']}"
+                if row["n_compared_to_reference"] else (
+                    f"— / {row['n_compared_to_reference']} (reference absent)"
+                    if row["n_different_from_reference"] is None
+                    else f"— / {row['n_compared_to_reference']} (no recorded prompt pairs)"
+                ),
+                "—" if row["prompt_group"] is None else f"P{row['prompt_group']}",
+            ]
+            for row in exposure
+        ],
+        table_id="backend-exposure-table",
     )
     groups = "".join(
         table(
@@ -229,6 +264,15 @@ def _backend_benchmark_table(payload: dict | None) -> str:
         f"<p class='status-banner'>Backend benchmark: {html.escape(payload['status'].upper())}.</p>"
         "<p id='backend-benchmark-description'>Finite seeded synthetic backend × method observations; "
         "no mixed-method backend mean. Incomplete cells summarize successes only and retain all counts. "
+        f"Unique seeded example IDs: {payload['n_examples']}; IDs are not unique submitted inputs. "
+        "Recorded prompt cases collapse backends for each method and example ID, including failed "
+        "completions with a captured prompt; unobserved cases are planned minus recorded. "
+        "Completion failures remain visible in the observation counts. Repeated inputs are not "
+        "independent new content. A realized prompt group means exact per-example submitted-text "
+        "equivalence across this cohort's complete ordered case vector, not equal code, compute, "
+        "latency, quality, or independent method-quality evidence. Missing prompts leave groups "
+        "unavailable. Missing reference or no recorded prompt pairs means no prompt-difference "
+        "comparison, not a zero quality effect. "
         "Within-model contrasts pair the same examples, then average per-seed mean paired token-F1 deltas "
         "with equal seed weight; wins/ties/losses count raw complete pairs. Any incomplete planned pair "
         "suppresses the estimate and interval. Single-seed contrasts have no interval; small seed-cluster "
@@ -237,7 +281,7 @@ def _backend_benchmark_table(payload: dict | None) -> str:
         "Latency includes method, transport, serving, and cleanup; it is not throughput or cost. "
         "This is not adjudicated answer quality or a production certificate. "
         "Source checksums bind recorded bytes, not authenticity or provider-binary attestation.</p>"
-        + observations + comparisons + "<details><summary>Category and stratum observations</summary>"
+        + exposure_table + observations + comparisons + "<details><summary>Category and stratum observations</summary>"
         + groups + "</details><details><summary>Backend benchmark provenance</summary><pre>"
         + html.escape(json.dumps(metadata, indent=2, sort_keys=True))
         + "</pre></details>"
