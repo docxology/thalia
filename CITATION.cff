@@ -3,7 +3,7 @@ message: "If you use THALIA, please cite this software and the accompanying manu
 title: "THALIA: Typed Harness with Analytical Lexical-Integrated Architecture"
 type: software
 version: "0.3.0"
-date-released: 2026-11-08
+date-released: 2026-11-09
 license: MIT
 authors:
   - family-names: Friedman

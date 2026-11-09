@@ -4,7 +4,7 @@ All notable changes to THALIA are documented here. Versioned GitHub software
 releases do not themselves assign a new Zenodo DOI. The immutable `0.1.0` archive
 remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 
-## [0.3.0] - 2026-11-08
+## [0.3.0] - 2026-11-09
 
 ### Added
 

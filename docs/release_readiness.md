@@ -1,11 +1,11 @@
 # Versioned GitHub release controls
 
-_Updated 2026-11-08 for v0.3.0._ Software availability remains separate from
+_Updated 2026-11-09 for v0.3.0._ Software availability remains separate from
 scientific claim promotion.
 
 ## Current release identity
 
-- Version: `0.3.0`; release date in source metadata: `2026-11-08`.
+- Version: `0.3.0`; release date in source metadata: `2026-11-09`.
 - GitHub release target: [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0).
 - Canonical repository: [docxology/thalia](https://github.com/docxology/thalia).
 - Changes and scope: [v0.3.0 release notes](releases/v0.3.0.md).

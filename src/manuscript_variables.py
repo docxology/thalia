@@ -211,8 +211,8 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         ]
 
     headings = [
-        "Method", "Status", "Requested / complete / failed", "Mean F1",
-        "Latency: mean / p50 / p95 (s)", "Mean prompt chars",
+        "Method", "Status", "Cases R/C/F", "Mean F1",
+        "Latency (s)", "Mean chars",
     ]
     observation_tables = [
         identity(backend_name) + "\n\n" + table(
@@ -247,8 +247,8 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         if comparisons:
             comparison_tables.append(
                 identity(backend_name) + f" **Reference:** {cell(reference)}.\n\n" + table(
-                    ["Method", "Requested / paired", "Seeds", "Wins / ties / losses",
-                     "Mean delta", "Descriptive interval", "Status / limits"],
+                    ["Method", "Pairs R/P", "Seeds", "W / T / L",
+                     "Mean delta", "Interval", "Status / limits"],
                     comparisons,
                 )
             )

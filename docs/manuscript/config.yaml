@@ -7,7 +7,7 @@ paper:
   title: "THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
   subtitle: "v0.3.0 GitHub Release: Composable Context Methods, Matched Examples, and Seed-Level Analysis"
   version: "0.3.0"
-  date: "2026-11-08"
+  date: "2026-11-09"
 
 authors:
   - name: "Daniel Ari Friedman"

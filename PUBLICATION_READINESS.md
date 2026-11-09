@@ -1,6 +1,6 @@
 # THALIA — Publication-Readiness Assessment
 
-_Release identity updated 2026-11-08 for v0.3.0. The current GitHub release target
+_Release identity updated 2026-11-09 for v0.3.0. The current GitHub release target
 is [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0); no Zenodo
 publication or DOI is assigned to this version. Historical checks below do not
 certify the current candidate or assert that the GitHub target is published._
