@@ -155,6 +155,11 @@ or model rankings. A shared group is not independent method-quality evidence.
 
 {{BACKEND_BENCHMARK_TABLE}}
 
+Backend/provider/model identities precede their compact tables. Latency triples
+are mean, p50, and p95 in seconds. Displayed values are rounded; the machine
+report retains full precision. Category and stratum labels use readable words;
+their exact identifiers remain in the report. All subgroup rows are retained.
+
 **Within-model paired method contrasts**
 
 {{BACKEND_COMPARISON_TABLE}}

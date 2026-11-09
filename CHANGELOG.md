@@ -45,6 +45,8 @@ remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 - Remove duplicated token/default-count and presentation-wording pins from
   manuscript tests; retain typed fail-closed boundaries and exact hydration
   checks against real generated artifacts.
+- Split manuscript observations and contrasts by backend and subgroup tables by
+  backend/method, retaining every row while removing colliding wide-table labels.
 
 ### Validation
 

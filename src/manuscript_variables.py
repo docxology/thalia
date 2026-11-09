@@ -193,40 +193,83 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         reference_method=reference,
     )
 
+    def identity(backend_name: str) -> str:
+        backend = backends[backend_name]
+        return (
+            f"**Backend:** {cell(backend_name)}; **provider:** {cell(backend['provider'])}; "
+            f"**model:** {cell(backend['model'])}."
+        )
+
     def observation(summary: dict) -> list[object]:
-        backend = backends[summary["backend"]]
         return [
-            summary["backend"], f"{backend['provider']} / {backend['model']}", summary["method"],
-            summary["status"],
+            summary["method"], summary["status"],
             f"{summary['n_requested']} / {summary['n_completed']} / {summary['n_failed']}",
-            number(summary["mean_token_f1"]), number(summary["mean_latency_seconds"]),
+            number(summary["mean_token_f1"]),
+            f"{number(summary['mean_latency_seconds'])} / "
             f"{number(summary['p50_latency_seconds'])} / {number(summary['p95_latency_seconds'])}",
             number(summary["mean_prompt_characters"]),
         ]
 
     headings = [
-        "Backend", "Provider / model", "Method", "Status", "Requested / completed / failed",
-        "Mean token-F1", "Mean latency (s)", "p50 / p95 latency (s)", "Mean prompt characters",
+        "Method", "Status", "Requested / complete / failed", "Mean F1",
+        "Latency: mean / p50 / p95 (s)", "Mean prompt chars",
     ]
-    comparisons = []
-    for comparison in payload["comparisons"]:
-        interval = comparison["interval"]
-        caveat = (
-            "incomplete: paired estimate suppressed" if comparison["status"] != "complete"
-            else "single-seed: interval unavailable" if comparison["n_seed_clusters"] < 2
-            else "small-cluster warning" if interval["small_cluster_warning"]
-            else "descriptive seed-cluster interval"
+    observation_tables = [
+        identity(backend_name) + "\n\n" + table(
+            headings,
+            [observation(summary) for summary in payload["summaries"]
+             if summary["backend"] == backend_name],
         )
-        comparisons.append([
-            comparison["backend"], comparison["method"], comparison["reference_method"],
-            comparison["status"],
-            f"{comparison['n_requested_pairs']} / {comparison['n_complete_pairs']}",
-            comparison["n_seed_clusters"],
-            f"{comparison['wins']} / {comparison['ties']} / {comparison['losses']}",
-            number(comparison["mean_delta"]),
-            "not recorded" if interval is None else f"[{number(interval['low'])}, {number(interval['high'])}]",
-            caveat,
-        ])
+        for backend_name in backends
+    ]
+    comparison_tables = []
+    for backend_name in backends:
+        comparisons = []
+        for comparison in payload["comparisons"]:
+            if comparison["backend"] != backend_name:
+                continue
+            interval = comparison["interval"]
+            caveat = (
+                "incomplete: paired estimate suppressed" if comparison["status"] != "complete"
+                else "single-seed: interval unavailable" if comparison["n_seed_clusters"] < 2
+                else "small-cluster warning" if interval["small_cluster_warning"]
+                else "descriptive seed-cluster interval"
+            )
+            comparisons.append([
+                comparison["method"],
+                f"{comparison['n_requested_pairs']} / {comparison['n_complete_pairs']}",
+                comparison["n_seed_clusters"],
+                f"{comparison['wins']} / {comparison['ties']} / {comparison['losses']}",
+                number(comparison["mean_delta"]),
+                "not recorded" if interval is None else f"[{number(interval['low'])}, {number(interval['high'])}]",
+                f"{comparison['status']}; {caveat}",
+            ])
+        if comparisons:
+            comparison_tables.append(
+                identity(backend_name) + f" **Reference:** {cell(reference)}.\n\n" + table(
+                    ["Method", "Requested / paired", "Seeds", "Wins / ties / losses",
+                     "Mean delta", "Descriptive interval", "Status / limits"],
+                    comparisons,
+                )
+            )
+    group_tables = []
+    for group in ("category", "stratum"):
+        for backend_name in backends:
+            for method in payload["methods"]:
+                selected = [
+                    summary for summary in payload["groups"][group]
+                    if summary["backend"] == backend_name and summary["method"] == method["name"]
+                ]
+                if selected:
+                    group_tables.append(
+                        f"**{group.capitalize()} observations.** " + identity(backend_name)
+                        + f" **Method:** {cell(method['name'])}.\n\n"
+                        + table(
+                            [group.capitalize()] + headings[1:],
+                            [[summary[group].replace("_", " ")] + observation(summary)[1:]
+                             for summary in selected],
+                        )
+                    )
     scope = (
         f"Unique seeded example IDs: {payload['n_examples']}; cohort seeds: {payload['cohort']['seeds']}; "
         f"per category per seed: {payload['cohort']['per_category']}; limit: {payload['cohort']['limit']}; "
@@ -252,10 +295,10 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
     }
     return {
         "BACKEND_BENCHMARK_STATUS": cell(payload["status"]),
-        "BACKEND_BENCHMARK_TABLE": table(headings, [observation(s) for s in payload["summaries"]]),
-        "BACKEND_EXPOSURE_TABLE": table(
-            ["Method", "Recorded / planned cases", "Distinct prompts",
-             f"Different / paired cases vs {cell(reference)}", "Realized prompt group"],
+        "BACKEND_BENCHMARK_TABLE": "\n\n".join(observation_tables),
+        "BACKEND_EXPOSURE_TABLE": f"**Prompt reference:** {cell(reference)}.\n\n" + table(
+            ["Method", "Recorded / planned", "Distinct prompts",
+             "Different / paired", "Input group"],
             [
                 [
                     row["method"],
@@ -273,19 +316,10 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
                 for row in exposure
             ],
         ),
-        "BACKEND_COMPARISON_TABLE": table(
-            ["Backend", "Method", "Reference", "Status", "Requested / complete pairs", "Seed clusters",
-             "Wins / ties / losses", "Seed-mean token-F1 delta", "Descriptive interval", "Caveat"],
-            comparisons,
-        ) if comparisons else (
+        "BACKEND_COMPARISON_TABLE": "\n\n".join(comparison_tables) if comparison_tables else (
             "Reference method absent or no non-reference method selected: within-model contrasts not recorded."
         ),
-        "BACKEND_GROUP_TABLE": "\n\n".join(
-            table(
-                [group.capitalize()] + headings,
-                [[summary[group]] + observation(summary) for summary in payload["groups"][group]],
-            ) for group in ("category", "stratum")
-        ),
+        "BACKEND_GROUP_TABLE": "\n\n".join(group_tables),
         "BACKEND_BENCHMARK_SCOPE": cell(scope),
         "BACKEND_BENCHMARK_PROVENANCE": cell(json.dumps(provenance, sort_keys=True)),
     }
