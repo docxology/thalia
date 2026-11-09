@@ -177,6 +177,39 @@ reproducibility contract completes independently of the optional PDF-injection s
 — the gate enforces every published number as a generated token and remains
 independent of renderer plumbing.
 
+The v0.3.1 publication repair separates artifact-manifest ownership. THALIA's
+required-output contract uses
+`output/reports/thalia_artifact_manifest.json`; native rendering owns
+`output/reports/artifact_manifest.json`. Previously the native generic output
+scan overwrote the shared filename, omitted the required committed
+`data/integrity_advantage.json`, and captured QA/preview entries that later
+changed or were not packaged. A native working-tree pass therefore did not
+establish that the published source-plus-supplement closure passed the project
+gate.
+
+The final publication sequence is now explicit: finish rendering, browser
+inspection, QA reports, and preview selection; stage the exact release source
+and only the supplemental allowlist at their original relative paths; write
+THALIA's final inventory; run real native validation without rerendering; then
+run `scripts/validate_artifacts.py` on that same stage. The adapter accepts
+`--template-root PATH` for an explicitly provisioned template checkout and
+`--validate-only` to invoke native validation without hydration or rendering.
+It returns failure if THALIA's separate manifest fails, even when native checks
+succeed. The project gate after native validation also checks claim,
+traceability, integrity-screen, exact-injection, and bibliography contracts.
+Executable runtime and staging instructions are in `docs/release_artifacts.md`.
+
+No manifest-tracked QA or other output may change after final validation.
+Package exactly the verified closure; a later render, verification-summary
+refresh, QA edit, or allowlist change requires another final inventory and both
+gates. Do not reseal measured study JSON. The retained `0.3.0` producer wheel,
+unreleased `41da836` source, and original study fingerprint remain historical
+producer evidence, not a new run. Exact patch observations belong in the current
+release manifest rather than inherited test or validation counts.
+The patch supersedes the prior supplement defect without replacing its tag or
+assets; it adds no DOI, cloud execution, expert/P0 confirmation, or production
+acceptance.
+
 ## Static Dashboard and Visual Evidence {#sec:val-dashboard}
 
 `src/dashboard.py` renders a self-contained HTML page (no JavaScript, no
@@ -192,6 +225,8 @@ status, so a reviewer can move from prose to rendered diagnostic to JSON artifac
 without needing to infer which run produced which number.
 
 Before rendering, `scripts/validate_artifacts.py` adds a separate artifact gate:
-the manifest must cover the required outputs in `domain_profile.yaml`, and every
-recorded size and hash must still match the current file. This catches stale or
-mutated figures and JSON outside direct unit-test inspection.
+THALIA's manifest must cover the required paths in `domain_profile.yaml`, and
+every recorded size and hash must still match the current file. This catches
+stale or mutated figures and JSON outside direct unit-test inspection. It is an
+early check, not a substitute for the final staged-closure sequence after all
+rendering and QA.

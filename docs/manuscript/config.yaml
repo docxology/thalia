@@ -5,8 +5,8 @@
 
 paper:
   title: "THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
-  subtitle: "v0.3.0 GitHub Release: Composable Context Methods, Matched Examples, and Seed-Level Analysis"
-  version: "0.3.0"
+  subtitle: "v0.3.1 publication artifact closure"
+  version: "0.3.1"
   date: "2026-11-09"
 
 authors:
@@ -20,7 +20,7 @@ authors:
 
 publication:
   doi: ""
-  doi_status: "None for v0.3.0; the DOI archive cited in the text is v0.1.0"
+  doi_status: "None for v0.3.1; the DOI archive cited in the text is v0.1.0"
   journal: ""
   year: "2026"
 

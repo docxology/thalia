@@ -1,43 +1,54 @@
 # Versioned GitHub release controls
 
-_Updated 2026-11-09 for v0.3.0._ Software availability remains separate from
+_Updated 2026-11-09 for v0.3.1._ Software availability remains separate from
 scientific claim promotion.
 
 ## Current release identity
 
-- Version: `0.3.0`; release date in source metadata: `2026-11-09`.
-- GitHub release target: [v0.3.0](https://github.com/docxology/thalia/releases/tag/v0.3.0).
+- Version: `0.3.1`; release date in source metadata: `2026-11-09`.
+- GitHub release target: [v0.3.1](https://github.com/docxology/thalia/releases/tag/v0.3.1).
 - Canonical repository: [docxology/thalia](https://github.com/docxology/thalia).
-- Changes and scope: [v0.3.0 release notes](releases/v0.3.0.md).
+- Changes and scope: [v0.3.1 release notes](releases/v0.3.1.md).
 - Current metadata declares no DOI. No Zenodo publication or new DOI is
   authorized for this version. The historical DOI is recorded only as an
-  `isNewVersionOf` relation, not as v0.3.0's identity.
+  `isNewVersionOf` relation, not as v0.3.1's identity.
 
 The versioned URL is the intended release identity, not proof of remote
 publication. The publisher must verify the published tag, exact commit, assets,
 and candidate checks before recording release completion. Earlier local test
-results or an earlier manuscript render do not certify v0.3.0.
+results or an earlier manuscript render do not certify v0.3.1.
+
+This patch corrects publication-manifest closure and supersedes the v0.3.0
+supplement defect without changing the measured study. THALIA owns
+`output/reports/thalia_artifact_manifest.json`; the native renderer owns
+`output/reports/artifact_manifest.json`. Neither writer may overwrite the
+other's manifest. The measured study remains the unreleased producer `41da836`,
+with the original `0.3.0` wheel, fingerprint, and producer capsule names.
 
 ## Current-candidate publication gates
 
-1. Finish all source, metadata, citation, documentation, and entry-point changes.
-2. Run the strict test/coverage, typing, lint, locked-dependency, and package-build
-   gates on the completed candidate. Exercise installed `thalia` and
-   `thalia-benchmark` outside the checkout; benchmark output belongs under the
-   caller's working directory, never in the installed package.
-3. Execute the declared local method study with the recorded seeds, methods,
-   models, generation options, and failure accounting. Preserve incomplete
-   diagnostics and do not silently replace a failed cohort with a smaller one.
-   Regenerate deterministic evidence, fingerprint-bound screens, figures,
-   variables, manuscript injection, dashboard, and manifests in dependency order.
-   Historical DSPy/cloud aggregates remain distinct; no new cloud call is implied.
-4. Validate exact source-to-render substitution and render the completed
-   manuscript. Inspect the cover's current GitHub version versus historical DOI
-   wording, benchmark limitations, tagged-PDF structure, HTML, and slides.
-   Record actual page counts and checks rather than carrying them forward.
-5. Inventory redistributable assets, record sizes/checksums and the exact
-   candidate commit, then publish the distinct `v0.3.0` GitHub tag/release.
-   Verify remote publication and attached assets before announcing completion.
+1. Finish all source, metadata, citation, documentation, entry-point, and QA
+   changes. Retain measured JSON unchanged; do not reseal evidence or imply a
+   study rerun, new cloud execution, or new scientific acceptance.
+2. Finalize publication artifacts, figures, variables, manuscript injection,
+   dashboard, and QA in dependency order. Inspect the cover's current version
+   versus historical DOI wording, benchmark limitations, tagged-PDF structure,
+   HTML, and slides. Record actual page counts and checks, not carried-forward
+   observations, then freeze the outputs.
+3. Stage clean source plus the allowlisted output closure. Use the external
+   adapter's `--template-root PATH` and `--validate-only` mode to invoke real
+   native validation without rerendering. Require THALIA manifest validation
+   as well; a native pass alone does not certify the publication closure.
+4. After native validation, run the project release gate, including strict
+   test/coverage, typing, lint, locked-dependency, and package-build checks.
+   Exercise installed `thalia` and `thalia-benchmark` outside the checkout;
+   benchmark output belongs in the caller's working directory. Do not edit
+   manifest-tracked QA after final validation; any closure change invalidates
+   that validation and requires a newly frozen, validated closure.
+5. Package the exact verified closure, inventory redistributable assets, and
+   record sizes/checksums and the exact candidate commit. Publish the distinct
+   `v0.3.1` GitHub tag/release, then verify remote publication and attached assets
+   before announcing completion.
 
 These are release requirements, not a claim that the checks have already run.
 Model observations do not confer expert-quality or production acceptance.
@@ -54,6 +65,10 @@ manuscript is the regenerated current manuscript. The historical receipt remains
 unchanged. The separate [v0.2.0 release](releases/v0.2.0.md), tag, report schema,
 and downloadable assets are likewise immutable; schema-2 consumers do not
 silently reinterpret schema-1 data.
+
+The [v0.3.0 release](releases/v0.3.0.md), tag, and assets also remain unchanged.
+The v0.3.1 patch supersedes its supplement defect; it does not rewrite that
+historical release or rename the original measured producer capsules.
 
 ## Rights and scientific scope
 

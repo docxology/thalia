@@ -23,6 +23,7 @@ for candidate in (PROJECT_ROOT, PROJECT_ROOT / "src"):
         sys.path.insert(0, str(candidate))
 
 from src.manuscript_integrity import find_template_root  # noqa: E402
+from src.provenance import validate_artifact_manifest  # noqa: E402
 
 
 @contextmanager
@@ -59,6 +60,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run template-side output validation after rendering.",
     )
     parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate frozen retained outputs without rendering or refreshing evidence.",
+    )
+    parser.add_argument(
+        "--template-root",
+        type=Path,
+        help="Use an explicit template checkout, such as a clean pinned worktree.",
+    )
+    parser.add_argument(
         "--skip-manuscript-hydration",
         action="store_true",
         help="Skip token hydration (use only when output/manuscript is already fresh).",
@@ -67,10 +78,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Render, and optionally validate, the standalone manuscript."""
+    """Render or validate retained outputs, preserving each manifest's ownership."""
     args = _build_parser().parse_args(argv)
-    template_root = find_template_root(starts=(PROJECT_ROOT,))
-    if template_root is None:
+    template_root = args.template_root.resolve() if args.template_root else find_template_root(starts=(PROJECT_ROOT,))
+    if template_root is None or not (template_root / "infrastructure" / "rendering").is_dir():
         print(
             "No sibling template checkout with infrastructure/rendering was found; "
             "PDF rendering is an external integration prerequisite.",
@@ -81,23 +92,31 @@ def main(argv: list[str] | None = None) -> int:
     if str(template_root) not in sys.path:
         sys.path.insert(0, str(template_root))
 
-    from infrastructure.rendering.pipeline import execute_render_pipeline  # type: ignore[import-not-found]
-
     with _template_project_link(template_root) as project_name:
-        status = execute_render_pipeline(
-            project_name,
-            repo_root=template_root,
-            skip_manuscript_hydration=args.skip_manuscript_hydration,
-        )
-        if status != 0:
-            return status
+        if not args.validate_only:
+            from infrastructure.rendering.pipeline import execute_render_pipeline  # type: ignore[import-not-found]
 
-        if not args.validate:
-            return status
+            status = execute_render_pipeline(
+                project_name,
+                repo_root=template_root,
+                skip_manuscript_hydration=args.skip_manuscript_hydration,
+            )
+            if status != 0:
+                return status
 
-        from infrastructure.validation.output.pipeline import execute_validation_pipeline  # type: ignore[import-not-found]
+        if args.validate or args.validate_only:
+            from infrastructure.validation.output.pipeline import execute_validation_pipeline  # type: ignore[import-not-found]
 
-        return execute_validation_pipeline(project_name, repo_root=template_root)
+            status = execute_validation_pipeline(project_name, repo_root=template_root)
+            if status != 0:
+                return status
+
+        # Rendering owns artifact_manifest.json, never THALIA's required-data
+        # manifest. Validation must detect drift rather than refresh its hashes.
+        report = validate_artifact_manifest(PROJECT_ROOT)
+        for issue in report.issues:
+            print(f"[error] {issue}", file=sys.stderr)
+        return 0 if report.ok else 1
 
 
 if __name__ == "__main__":

@@ -53,6 +53,77 @@ answers/annotations/adjudications, and unrelated generated files. Synthetic
 per-example ledgers may be included only as such; model-quality private records
 must not be swept into a release because they also have a JSON extension.
 
+## Manifest ownership and the final staged-closure gate
+
+v0.3.1 repairs an ownership collision discovered during canonical handoff.
+THALIA and the native renderer previously wrote the same
+`output/reports/artifact_manifest.json`. The native generic output scan replaced
+THALIA's inventory, omitted the required committed
+`data/integrity_advantage.json` because it is outside `output/`, and captured
+QA/preview entries that were later changed or excluded from the supplement.
+A native pass on the working tree was therefore not proof that the downloadable
+closure passed THALIA's required-artifact contract.
+
+Ownership is now explicit:
+
+- `output/reports/thalia_artifact_manifest.json` is THALIA-owned. Its paths are
+  relative to the project root, including the committed integrity aggregate.
+- `output/reports/artifact_manifest.json` is native-owned. Do not copy it over,
+  rename it into, or use it to repair the THALIA manifest.
+- The downloadable release manifest binds the source identity, validation
+  observations, and asset digests; it is not either artifact inventory.
+
+Finish rendering, browser inspection, QA reports, preview selection, and all
+source/documentation edits before the final freeze. Create a clean Git checkout
+or worktree at the exact release commit, named `thalia` to match the retained
+`thalia_combined.pdf`, then add only the supplemental allowlist at its original
+relative paths. Native provenance requires a containing Git worktree boundary;
+extracting a source tarball alone does not satisfy that admission requirement.
+Retain committed inputs, especially `data/integrity_advantage.json`; the
+supplement alone is not the complete project. Do not validate a full worktree
+and then prune it into a different archive.
+
+Use already-provisioned runtimes outside the staging tree. Set `THALIA_STAGE`
+to that clean Git project root, `THALIA_PYTHON` to an absolute interpreter path
+with THALIA's development dependencies, and `TEMPLATE_ROOT` to the absolute,
+recorded template checkout path. From a shell:
+
+```bash
+set -e
+cd "${THALIA_STAGE:?Set the clean staged project root}"
+: "${THALIA_PYTHON:?Set the provisioned THALIA interpreter}"
+: "${TEMPLATE_ROOT:?Set the provisioned template checkout}"
+"$THALIA_PYTHON" -c \
+  'from src.provenance import write_artifact_manifest; print(write_artifact_manifest())'
+uv run --no-sync --project "$TEMPLATE_ROOT" python \
+  scripts/render_pdf_external.py --template-root "$TEMPLATE_ROOT" \
+  --validate-only
+"$THALIA_PYTHON" scripts/validate_artifacts.py
+```
+
+`--template-root PATH` selects the real renderer checkout explicitly rather than
+depending on staging-directory adjacency. `--validate-only` invokes its real
+native validation pipeline without hydration or rerendering; it also fails if
+THALIA's separate manifest is invalid. The last command repeats the full project
+gate **after** native validation, catching missing required source inputs and
+any native-side invalidation of THALIA's frozen entries.
+
+Record actual statuses and report details in the v0.3.1 release manifest; do not
+inherit earlier release counts. If a gate fails, fix the cause and repeat the
+final inventory/native/project sequence. Never reseal or rewrite measured study
+JSON to make it pass. After the final sequence, do not change any manifest-tracked
+QA, preview, manuscript, figure, or data bytes. Native-owned diagnostics may be
+written by validation, but must not be substituted for frozen THALIA evidence.
+Package the exact verified closure without another render, dashboard build,
+verification-summary refresh, QA annotation, or allowlist change. An intentional
+tracked change requires a fresh final sequence before packaging.
+
+Publish this repair under v0.3.1; retain the v0.3.0 tag and assets unchanged.
+The original `STUDY_PRODUCER/` capsule remains the unreleased `41da836` producer
+with a `0.3.0` wheel, not a v0.3.1 producer. Preserve its names and measured
+report fingerprint; the patch qualifies the reader and release closure, not a
+new model execution.
+
 ## Bundled web typography and runtime notices
 
 `output/web/assets/source-web-fonts.js` carries twelve unmodified Liberation
@@ -75,7 +146,7 @@ Download all assets into one empty directory and verify their bytes before
 installation or extraction:
 
 ```bash
-gh release download v0.3.0 --repo docxology/thalia
+gh release download v0.3.1 --repo docxology/thalia
 shasum -a 256 -c SHA256SUMS
 ```
 
@@ -87,8 +158,8 @@ services such as MathJax still require their declared network access; the
 presence of local figures/fonts is not an offline certification of every
 manuscript feature.
 
-The manifest describes the allowlisted archive contents independently of the
-native project artifact manifest, whose broader source/output inventory may
-refer to files in the separate source archive. Software validation, PDF tagging,
-accessibility descriptions, scientific acceptance, and independent PDF/UA
-certification are distinct claims.
+The downloadable manifest describes the allowlisted archive contents and source
+identity independently of the two artifact inventories. Required paths can span
+the source archive and supplement, so validate their combined staged closure as
+described above. Software validation, PDF tagging, accessibility descriptions,
+scientific acceptance, and independent PDF/UA certification are distinct claims.
