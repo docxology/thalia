@@ -29,8 +29,9 @@ session history + query
 - **`src/pipeline.py`** — `Pipeline`/`PipelineStep`/`PipelineContext`: the same four
   runtime stages as `AutoHarness` exposed as a composable, inspectable chain.
   Callers can omit stages, insert custom steps using `PipelineContext.extras`,
-  and read defensive deep-copy snapshots via `pipeline.intermediates` after
-  `run()`. Output construction is not an additional step.
+  and inspect per-step snapshots via `pipeline.intermediates` after `run()`.
+  Built-in state and extras mappings are copied; opaque extras values remain
+  caller-owned shared references. Output construction is not an additional step.
 - **Operability** — `config` (load/save/env), `llm` (real adapters), `harness`,
   `session` (persistence), `cli`, plus `evaluation`, `figures`, `dashboard`,
   `invariants`, `manuscript_variables`, and `formalism_traceability` (the

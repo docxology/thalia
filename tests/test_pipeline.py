@@ -22,6 +22,7 @@ from src.memory.episodic_store import EpisodicStore  # noqa: E402
 from src.pipeline import Pipeline, PipelineContext  # noqa: E402
 from src.session import Session  # noqa: E402
 from src.signatures import EpisodicEntry, HarnessOutput, TaskCategory  # noqa: E402
+from src.stages.memory_gate import MemoryGate  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +359,71 @@ class TestPipeline:
         # Memory recall should surface the stored fact even though the session has no evidence
         assert out.answer or "bluefish42" in str(out.ranked_evidence)
         store.close()
+
+    def test_opaque_extras_preserve_ownership_and_isolate_diagnostic_mappings(self, tmp_path):
+        shared_values = []
+        with (tmp_path / "caller.txt").open("w+") as handle, EpisodicStore(
+            str(tmp_path / "caller.db")
+        ) as store:
+            def attach(ctx):
+                ctx.extras.update(handle=handle, store=store, values=shared_values)
+                return ctx
+
+            def mutate(ctx):
+                ctx.extras.pop("handle")
+                ctx.extras["later"] = True
+                ctx.evidence_windows.clear()
+                ctx.ranked_evidence.clear()
+                return ctx
+
+            with Pipeline(episodic_store=store) as pipe:
+                pipe.with_inspector().add_step("attach", attach).with_retriever().with_reasoner()
+                pipe.add_step("mutate", mutate).with_memory_gate()
+                pipe.run("what is the wifi password", "User: wifi password bluefish42")
+                snapshots = dict(pipe.intermediates)
+                attached = snapshots["attach"]
+                assert attached.extras["handle"] is handle
+                assert attached.extras["store"] is store
+                assert attached.extras["values"] is shared_values
+                assert "later" not in attached.extras
+                assert "handle" not in snapshots["mutate"].extras
+                assert attached.evidence_windows
+                assert snapshots["retriever"].ranked_evidence
+                assert not snapshots["mutate"].evidence_windows
+                assert not snapshots["mutate"].ranked_evidence
+
+                attached.extras.clear()
+                attached.evidence_windows.clear()
+                snapshots["retriever"].ranked_evidence.clear()
+                reread = dict(pipe.intermediates)
+                assert reread["attach"].extras["handle"] is handle
+                assert reread["attach"].evidence_windows
+                assert reread["retriever"].ranked_evidence
+                shared_values.append("caller mutation")
+                assert reread["attach"].extras["values"] == ["caller mutation"]
+
+            assert not handle.closed
+            handle.write("still caller-owned")
+            handle.flush()
+            assert store.count() == 1
+
+    def test_shared_memory_gate_retains_store_and_turn_order(self, tmp_path):
+        with EpisodicStore(str(tmp_path / "shared.db")) as store:
+            gate = MemoryGate(episodic_store=store)
+            with Pipeline(memory_gate=gate).with_all_stages() as first:
+                initial = first.run(
+                    "please remember wifi password bluefish42",
+                    "User: wifi password bluefish42",
+                    session_ending=True,
+                )
+                assert initial.consolidation_applied
+            assert store.count() == 1
+            assert "bluefish42" in gate.memory_md
+            config = HarnessConfig(recall_memory=True)
+            with Pipeline(config=config, memory_gate=gate).with_all_stages() as second:
+                recalled = second.run("what is the wifi password")
+            assert "bluefish42" in recalled.answer
+            assert [episode.turn_id for episode in store.all()] == [0, 1]
 
 
 class TestHarnessOutputSerialisation:

@@ -97,6 +97,8 @@ artifact_expectations:
   - output/reports/evaluation_ledger.jsonl
   - output/reports/paper_audit.json
   - output/reports/formalism_traceability.json
+  - output/reports/dashboard_benchmark_input.json
+  - output/reports/manuscript_benchmark_input.json
 benchmark_rubric:
   name: thalia-harness-readiness
   dimensions:

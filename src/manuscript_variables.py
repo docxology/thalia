@@ -161,13 +161,14 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
             "BACKEND_BENCHMARK_STATUS": "not recorded",
             "BACKEND_BENCHMARK_TABLE": "No backend × method benchmark is recorded.",
             "BACKEND_COMPARISON_TABLE": "No within-model paired method contrasts are recorded.",
+            "BACKEND_SEED_PAIR_TABLE": "No per-seed paired audit is recorded; no benchmark report supplied.",
             "BACKEND_GROUP_TABLE": "No category or stratum observations are recorded.",
             "BACKEND_EXPOSURE_TABLE": "No recorded prompt exposure is available.",
             "BACKEND_BENCHMARK_SCOPE": "No validated method-benchmark artifact was supplied.",
             "BACKEND_BENCHMARK_PROVENANCE": "Not recorded.",
         }
     from .evaluation.backend_benchmark import validate_backend_benchmark
-    from .evaluation.benchmark_analysis import summarize_prompt_exposure
+    from .evaluation.benchmark_analysis import summarize_prompt_exposure, summarize_seed_pairs
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     validate_backend_benchmark(payload)
@@ -191,6 +192,11 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         payload["rows"], methods=[method["name"] for method in payload["methods"]],
         example_ids=[example["example_id"] for example in payload["examples"]],
         reference_method=reference,
+    )
+    seed_pairs = summarize_seed_pairs(
+        payload["rows"], backends=list(backends),
+        methods=[method["name"] for method in payload["methods"]],
+        examples=payload["examples"], reference_method=reference,
     )
 
     def identity(backend_name: str) -> str:
@@ -252,6 +258,23 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
                     comparisons,
                 )
             )
+    seed_tables = [
+        identity(backend_name) + f" **Reference:** {cell(reference)}.\n\n" + table(
+            ["Method", "Seed", "Pairs R/C", "W / T / L", "Mean delta", "Status"],
+            [
+                [
+                    row["method"], row["seed"],
+                    f"{row['n_requested_pairs']} / {row['n_complete_pairs']}",
+                    f"{row['wins']} / {row['ties']} / {row['losses']}",
+                    number(row["mean_delta"]),
+                    row["status"] if row["status"] == "complete"
+                    else "incomplete: seed mean suppressed",
+                ]
+                for row in seed_pairs if row["backend"] == backend_name
+            ],
+        )
+        for backend_name in backends
+    ] if seed_pairs else []
     group_tables = []
     for group in ("category", "stratum"):
         for backend_name in backends:
@@ -285,7 +308,13 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         "exact per-example submitted-text equivalence across this cohort's complete ordered case "
         "vector, not equal code, compute, latency, quality, or independent method-quality evidence. "
         "Missing prompts leave groups unavailable. Missing reference or no recorded prompt pairs "
-        "means no prompt-difference comparison, not a zero quality effect."
+        "means no prompt-difference comparison, not a zero quality effect. "
+        "Within-model contrasts average per-seed mean paired token-F1 deltas with equal seed weight. "
+        "Pooled cell means weight examples, not seeds; their difference is not the equally weighted "
+        "seed-mean contrast when seed sizes differ. Wins/ties/losses count raw complete pairs. "
+        "Any incomplete seed suppresses its mean; any incomplete planned pair suppresses the whole "
+        "contrast and interval, even if other seeds are complete. Single-seed contrasts have no "
+        "interval; small seed-cluster intervals are descriptive, not population-power or significance claims."
     )
     provenance = {
         key: payload[key] for key in (
@@ -318,6 +347,9 @@ def _backend_benchmark_variables(path: Path) -> dict[str, str]:
         ),
         "BACKEND_COMPARISON_TABLE": "\n\n".join(comparison_tables) if comparison_tables else (
             "Reference method absent or no non-reference method selected: within-model contrasts not recorded."
+        ),
+        "BACKEND_SEED_PAIR_TABLE": "\n\n".join(seed_tables) if seed_tables else (
+            "Reference method absent or no non-reference method selected: per-seed paired audit not recorded."
         ),
         "BACKEND_GROUP_TABLE": "\n\n".join(group_tables),
         "BACKEND_BENCHMARK_SCOPE": cell(scope),

@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from importlib import metadata
 from pathlib import Path, PurePosixPath
 from time import perf_counter
-from typing import Any, Sequence, cast
+from typing import Any, Iterator, Sequence, cast
 
 from .. import __version__
 from ..compiler.metrics import EvalExample, token_f1
@@ -85,7 +85,6 @@ def build_benchmark_methods(
     if not names or isinstance(names, str) or len(set(names)) != len(names):
         raise ValueError("method names must be nonempty and unique")
     base = config if config is not None else HarnessConfig()
-    BenchmarkMethod("harness", "harness", base)
     selected = []
     for name in names:
         if name == "full_context":
@@ -301,18 +300,23 @@ def build_benchmark_backends(
     return selected
 
 
-def run_backend_benchmark(
-    backends: Sequence[BenchmarkBackend], *, methods: Sequence[BenchmarkMethod] | None = None,
-    per_category: int = 10, seeds: Sequence[int] = (0,), limit: int | None = None,
-    allow_cloud: bool = False, reference_method: str = "full_context", n_boot: int = 2000,
-    analysis_seed: int = 0,
-) -> dict[str, Any]:
-    """Execute the complete backend × method × seeded-example plan once.
+def _schedule(
+    n_backends: int, n_methods: int, n_examples: int,
+) -> Iterator[tuple[int, int, int]]:
+    """Yield backend, method and example indices in the recorded execution order."""
+    for backend_index in range(n_backends):
+        for example_index in range(n_examples):
+            rotation = example_index % n_methods
+            for method_index in (*range(rotation, n_methods), *range(rotation)):
+                yield backend_index, method_index, example_index
 
-    Backend-outer ordering avoids model thrashing. Methods rotate left by example
-    index. A fresh harness owns each harness cell; full context uses the same
-    typed Reasoner template with every history line, without retrieval filtering.
-    """
+
+def _prepare_benchmark(
+    backends: Sequence[BenchmarkBackend], *, methods: Sequence[BenchmarkMethod] | None,
+    per_category: int, seeds: Sequence[int], limit: int | None, allow_cloud: bool,
+    reference_method: str, n_boot: int, analysis_seed: int,
+) -> tuple[list[BenchmarkBackend], list[BenchmarkMethod], list[EvalExample], dict[str, Any]]:
+    """Resolve and validate one pure plan, without probing or executing clients."""
     selected = list(backends)
     if not any(backend.provider == "extractive" for backend in selected):
         selected.insert(0, BenchmarkBackend("extractive", "extractive", "ExtractiveLM", ExtractiveLM()))
@@ -341,49 +345,112 @@ def run_backend_benchmark(
     _integer(n_boot, "n_boot", minimum=1)
     _seed(analysis_seed, "analysis_seed")
     examples = _cohort(per_category, seeds, limit)
-    dataset_digest = fingerprint_examples(examples)
-    plan = _example_plan(examples)
-    rows: list[dict[str, Any]] = []
-    for backend in selected:
-        for index, (example, identity) in enumerate(zip(examples, plan)):
-            rotation = index % len(chosen)
-            for method_index in (*range(rotation, len(chosen)), *range(rotation)):
-                method = chosen[method_index]
-                recorder = _PromptRecorder(backend.lm)
-                started = perf_counter()
-                answer, score, error_class = None, None, None
-                try:
-                    answer = _execute(method, example, recorder)
-                    if not isinstance(answer, str):
-                        raise TypeError("LM answer must be text")
-                    if len(recorder.fingerprints) != 1:
-                        raise ValueError("complete cells require exactly one completion attempt")
-                    score = token_f1(answer, example.expected_answer)
-                    status = "complete"
-                except Exception as exc:
-                    answer, score = None, None
-                    status, error_class = "failed", type(exc).__name__
-                rows.append({
-                    **identity, "backend": backend.name, "method": method.name,
-                    "method_fingerprint": method_plan[method_index]["method_fingerprint"],
-                    "dataset_fingerprint": dataset_digest, "execution_index": len(rows),
-                    "prompt_fingerprints": recorder.fingerprints, "prompt_characters": recorder.characters,
-                    "answer": answer, "token_f1": score, "latency_seconds": perf_counter() - started,
-                    "status": status, "error_class": error_class,
-                })
-    payload = {
-        "schema_version": 2, "status": "complete" if all(row["status"] == "complete" for row in rows) else "incomplete",
-        "metric": "token_f1", "cohort": {"per_category": per_category, "seeds": list(seeds), "limit": limit},
-        "dataset_fingerprint": dataset_digest, "n_examples": len(examples), "examples": plan,
+    plan = {
+        "metric": "token_f1",
+        "cohort": {"per_category": per_category, "seeds": list(seeds), "limit": limit},
+        "dataset_fingerprint": fingerprint_examples(examples),
+        "n_examples": len(examples), "examples": _example_plan(examples),
         "methods": method_plan,
         "backends": [{"name": backend.name, "provider": backend.provider, "model": backend.model,
                       "generation_options": json.loads(json.dumps(backend.generation_options))} for backend in selected],
+        "analysis": {"reference_method": reference_method, "resamples": n_boot, "seed": analysis_seed,
+                     "confidence": 0.95, "unit": ANALYSIS_UNIT},
+        "execution_order": EXECUTION_ORDER,
+    }
+    return selected, chosen, examples, plan
+
+
+def build_benchmark_plan(
+    backends: Sequence[BenchmarkBackend], *, methods: Sequence[BenchmarkMethod] | None = None,
+    per_category: int = 10, seeds: Sequence[int] = (0,), limit: int | None = None,
+    allow_cloud: bool = False, reference_method: str = "full_context", n_boot: int = 2000,
+    analysis_seed: int = 0,
+) -> dict[str, Any]:
+    """Return JSON-ready planned identities and attempt bounds, never observations.
+
+    The schedule is identical to execution, including the extractive baseline,
+    global cohort limit and method rotation. Counts do not predict successes,
+    retained context, billed tokens, cost or elapsed time. No client is called
+    and no runtime or producer provenance is collected.
+    """
+    selected, chosen, examples, plan = _prepare_benchmark(
+        backends, methods=methods, per_category=per_category, seeds=seeds, limit=limit,
+        allow_cloud=allow_cloud, reference_method=reference_method, n_boot=n_boot,
+        analysis_seed=analysis_seed,
+    )
+    schedule = [
+        {"execution_index": index, "backend": selected[backend_index].name,
+         "method": chosen[method_index].name, "example_id": examples[example_index].example_id,
+         "seed": examples[example_index].seed}
+        for index, (backend_index, method_index, example_index) in enumerate(
+            _schedule(len(selected), len(chosen), len(examples))
+        )
+    ]
+    n_contrasts = len(chosen) - 1 if reference_method in {method.name for method in chosen} else 0
+    return {
+        "status": "planned", **plan, "schedule": schedule,
+        "counts": {"backends": len(selected), "methods": len(chosen), "examples": len(examples),
+                   "planned_attempts": len(schedule),
+                   "planned_pairs": len(selected) * n_contrasts * len(examples)},
+    }
+
+
+def run_backend_benchmark(
+    backends: Sequence[BenchmarkBackend], *, methods: Sequence[BenchmarkMethod] | None = None,
+    per_category: int = 10, seeds: Sequence[int] = (0,), limit: int | None = None,
+    allow_cloud: bool = False, reference_method: str = "full_context", n_boot: int = 2000,
+    analysis_seed: int = 0,
+) -> dict[str, Any]:
+    """Execute the complete backend × method × seeded-example plan once.
+
+    Backend-outer ordering avoids model thrashing. Methods rotate left by example
+    index. A fresh harness owns each harness cell; full context uses the same
+    typed Reasoner template with every history line, without retrieval filtering.
+    """
+    selected, chosen, examples, planned = _prepare_benchmark(
+        backends, methods=methods, per_category=per_category, seeds=seeds, limit=limit,
+        allow_cloud=allow_cloud, reference_method=reference_method, n_boot=n_boot,
+        analysis_seed=analysis_seed,
+    )
+    method_plan = planned["methods"]
+    dataset_digest = planned["dataset_fingerprint"]
+    plan = planned["examples"]
+    rows: list[dict[str, Any]] = []
+    for backend_index, method_index, example_index in _schedule(len(selected), len(chosen), len(examples)):
+        backend, method = selected[backend_index], chosen[method_index]
+        example, identity = examples[example_index], plan[example_index]
+        recorder = _PromptRecorder(backend.lm)
+        started = perf_counter()
+        answer, score, error_class = None, None, None
+        try:
+            answer = _execute(method, example, recorder)
+            if not isinstance(answer, str):
+                raise TypeError("LM answer must be text")
+            if len(recorder.fingerprints) != 1:
+                raise ValueError("complete cells require exactly one completion attempt")
+            score = token_f1(answer, example.expected_answer)
+            status = "complete"
+        except Exception as exc:
+            answer, score = None, None
+            status, error_class = "failed", type(exc).__name__
+        rows.append({
+            **identity, "backend": backend.name, "method": method.name,
+            "method_fingerprint": method_plan[method_index]["method_fingerprint"],
+            "dataset_fingerprint": dataset_digest, "execution_index": len(rows),
+            "prompt_fingerprints": recorder.fingerprints, "prompt_characters": recorder.characters,
+            "answer": answer, "token_f1": score, "latency_seconds": perf_counter() - started,
+            "status": status, "error_class": error_class,
+        })
+    payload = {
+        "schema_version": 2, "status": "complete" if all(row["status"] == "complete" for row in rows) else "incomplete",
+        "metric": planned["metric"], "cohort": planned["cohort"],
+        "dataset_fingerprint": dataset_digest, "n_examples": len(examples), "examples": plan,
+        "methods": method_plan, "backends": planned["backends"],
         "rows": rows,
         **analyze_benchmark_rows(rows, backends=[backend.name for backend in selected],
                                  methods=[method.name for method in chosen], examples=plan,
                                  reference_method=reference_method, n_boot=n_boot, analysis_seed=analysis_seed),
-        "analysis": {"reference_method": reference_method, "resamples": n_boot, "seed": analysis_seed,
-                     "confidence": 0.95, "unit": ANALYSIS_UNIT},
+        "analysis": planned["analysis"],
         "runtime_provenance": runtime_provenance(
             models={backend.name: backend.model_observation for backend in selected},
             benchmark={"lane": "backend_benchmark", "timing": "end_to_end_cell_seconds"},
@@ -524,10 +591,8 @@ def _validate(payload: object) -> None:
     _validate_producer(payload["producer_provenance"])
     _same(payload["execution_order"], EXECUTION_ORDER, "execution order")
     schedule = [
-        (backend, method_names[method_index], example)
-        for backend in names
-        for index, example in enumerate(plan)
-        for method_index in (*range(index % len(methods), len(methods)), *range(index % len(methods)))
+        (names[backend_index], method_names[method_index], plan[example_index])
+        for backend_index, method_index, example_index in _schedule(len(names), len(methods), len(plan))
     ]
     if len(rows) != len(schedule):
         raise ValueError("incomplete planned backend/method/example matrix")
@@ -605,5 +670,6 @@ def write_backend_benchmark(payload: dict[str, Any], path: str | Path) -> Path:
 
 __all__ = [
     "BenchmarkBackend", "BenchmarkMethod", "build_benchmark_backends", "build_benchmark_methods",
+    "build_benchmark_plan",
     "run_backend_benchmark", "validate_backend_benchmark", "write_backend_benchmark",
 ]

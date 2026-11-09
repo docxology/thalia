@@ -42,6 +42,12 @@ explicit CLI flags**.
   `--recency-weight`, `--recall-memory`, `--adaptive-windows`,
   `--adaptive-window-ratio`, plus `--config`.
 
+The four boolean flags also accept `--no-verify`, `--no-query-expansion`,
+`--no-recall-memory`, and `--no-adaptive-windows`. Either spelling is an explicit
+highest-precedence choice; omitting a flag preserves the file/environment value.
+For example, `THALIA_VERIFY=true thalia --query "..." --no-verify` disables the
+optional second completion for that invocation without changing saved settings.
+
 ## Programmatic
 
 ```python
@@ -102,8 +108,10 @@ deterministic-core guarantee.
 
 `thalia-benchmark --config PATH` loads base `HarnessConfig` YAML with
 `apply_env=False`; unlike the query CLI, `THALIA_*` harness overrides are not
-applied. An omitted file uses built-in defaults. `verify=True` is rejected
-before inference to preserve one completion attempt per cell.
+applied. An omitted file uses built-in defaults. A selected harness-derived method
+rejects `verify=True` before inference to preserve one completion attempt per cell.
+Full-context-only selection has no harness configuration and ignores that unused
+base setting.
 
 Repeat `--method` to select `harness`, `full_context`, `lexical_only`, or
 `adaptive` (default `harness`). The base config applies to harness arms;
@@ -122,6 +130,9 @@ analysis, defaulting to 2000, 0, and `full_context`. If that reference is not
 selected, comparisons are not requested. Optional positive `--num-ctx` requests
 Ollama context only; it is not forwarded to cloud or a retention guarantee.
 `--max-tokens` and `--timeout` remain request controls, not whole-run guarantees.
+`--plan` resolves the same cohort, methods, backend identities and execution
+schedule offline, prints planned JSON, and exits without model observation or
+completion calls and without writing the requested report destination.
 
 Python callers use `build_benchmark_methods(names, config=base)` followed by
 `run_backend_benchmark(..., methods=methods, seeds=(...))`. Removed singular

@@ -81,6 +81,49 @@ def summarize_prompt_exposure(
     return summaries
 
 
+def summarize_seed_pairs(
+    rows: Sequence[dict[str, Any]], *, backends: Sequence[str], methods: Sequence[str],
+    examples: Sequence[dict[str, Any]], reference_method: str,
+) -> list[dict[str, Any]]:
+    """Audit paired scores per represented seed from already validated rows.
+
+    Backend and non-reference method order follow the selections; seeds are
+    sorted numerically, including seeds with no surviving pairs. Wins, ties and
+    losses describe complete raw pairs only. Any failed pair suppresses that
+    seed's mean, not its counts. These diagnostics neither resample nor replace
+    the report's complete-contrast, equally weighted seed-mean estimate.
+    """
+    if reference_method not in methods:
+        return []
+    matrix = {(row["backend"], row["method"], row["example_id"]): row for row in rows}
+    by_seed: dict[int, list[dict[str, Any]]] = {}
+    for example in examples:
+        by_seed.setdefault(example["seed"], []).append(example)
+    summaries = []
+    for backend in backends:
+        for method in methods:
+            if method == reference_method:
+                continue
+            for seed, planned in sorted(by_seed.items()):
+                deltas = []
+                for example in planned:
+                    candidate = matrix[(backend, method, example["example_id"])]
+                    reference = matrix[(backend, reference_method, example["example_id"])]
+                    if candidate["status"] == "complete" and reference["status"] == "complete":
+                        deltas.append(candidate["token_f1"] - reference["token_f1"])
+                complete = len(deltas) == len(planned)
+                summaries.append({
+                    "backend": backend, "method": method, "reference_method": reference_method,
+                    "seed": seed, "status": "complete" if complete else "incomplete",
+                    "n_requested_pairs": len(planned), "n_complete_pairs": len(deltas),
+                    "wins": sum(delta > 0 for delta in deltas),
+                    "ties": sum(delta == 0 for delta in deltas),
+                    "losses": sum(delta < 0 for delta in deltas),
+                    "mean_delta": mean(deltas) if complete else None,
+                })
+    return summaries
+
+
 def analyze_benchmark_rows(
     rows: Sequence[dict[str, Any]], *, backends: Sequence[str], methods: Sequence[str],
     examples: Sequence[dict[str, Any]], reference_method: str, n_boot: int,
@@ -137,4 +180,7 @@ def analyze_benchmark_rows(
     return {"summaries": summaries, "groups": groups, "comparisons": comparisons}
 
 
-__all__ = ["ANALYSIS_UNIT", "summarize_rows", "summarize_prompt_exposure", "analyze_benchmark_rows"]
+__all__ = [
+    "ANALYSIS_UNIT", "summarize_rows", "summarize_prompt_exposure",
+    "summarize_seed_pairs", "analyze_benchmark_rows",
+]

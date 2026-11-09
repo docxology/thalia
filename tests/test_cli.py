@@ -177,3 +177,36 @@ class TestExtendedParserFlags:
         cfg = resolve_config(args)
         assert cfg.adaptive_windows is True
         assert cfg.adaptive_window_ratio == 8
+
+    @pytest.mark.parametrize(
+        "field", ["verify", "query_expansion", "recall_memory", "adaptive_windows"]
+    )
+    def test_negative_flag_overrides_enabled_environment_and_file(self, field, monkeypatch, tmp_path):
+        path = tmp_path / "enabled.yaml"
+        path.write_text(f"{field}: true\n")
+        monkeypatch.setenv(f"THALIA_{field.upper()}", "true")
+        flag = "--no-" + field.replace("_", "-")
+        args = build_parser().parse_args(["--query", "q", "--config", str(path), flag])
+        assert getattr(resolve_config(args), field) is False
+
+    @pytest.mark.parametrize(
+        "field", ["verify", "query_expansion", "recall_memory", "adaptive_windows"]
+    )
+    def test_omitted_boolean_retains_enabled_file(self, field, tmp_path):
+        path = tmp_path / "enabled.yaml"
+        path.write_text(f"{field}: true\n")
+        args = build_parser().parse_args(["--query", "q", "--config", str(path)])
+        assert getattr(resolve_config(args), field) is True
+
+    def test_negative_verify_prevents_unwanted_second_completion(self, monkeypatch):
+        monkeypatch.setenv("THALIA_VERIFY", "true")
+        calls: list[str] = []
+
+        def complete(prompt: str) -> str:
+            calls.append(prompt)
+            return "unrelated astronomy"
+
+        args = build_parser().parse_args(["--query", "wifi password", "--no-verify"])
+        result = run_query(args.query, SESSION, config=resolve_config(args), lm=CallableLM(complete))
+        assert result["answer"] == "unrelated astronomy"
+        assert len(calls) == 1

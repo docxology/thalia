@@ -10,6 +10,7 @@ import pytest
 
 from src.dashboard import render_dashboard_html, write_dashboard
 from src.invariants import InvariantResult
+from src.figures.manifest import FIGURE_CAPTIONS
 from src.evaluation.backend_benchmark import (
     BenchmarkBackend, build_benchmark_methods, run_backend_benchmark,
 )
@@ -39,12 +40,18 @@ class DashboardPage(HTMLParser):
         super().__init__()
         self.elements = []
         self.rows = []
+        self.tables = {}
+        self.table_id = None
         self.row = []
         self.cell = None
         self.feed(document)
 
     def handle_starttag(self, tag, attrs):
         self.elements.append((tag, dict(attrs)))
+        if tag == "table":
+            self.table_id = dict(attrs).get("id")
+            if self.table_id:
+                self.tables[self.table_id] = []
         if tag == "tr":
             self.row = []
         if tag in {"td", "th"}:
@@ -60,6 +67,10 @@ class DashboardPage(HTMLParser):
             self.cell = None
         if tag == "tr":
             self.rows.append(self.row)
+            if self.table_id:
+                self.tables[self.table_id].append(self.row)
+        if tag == "table":
+            self.table_id = None
 
 
 @pytest.fixture(scope="module")
@@ -123,6 +134,23 @@ class TestRender:
         out = render_dashboard_html(METRICS, INVARIANTS, FIGURES)
         assert "figures/retriever_comparison.png" in out
         assert out.count("<img") == len(FIGURES)
+
+    def test_authored_alt_is_escaped_and_does_not_replace_caption(self):
+        authored = 'Description <diagram> & "quoted" with \'apostrophes\''
+        out = render_dashboard_html(
+            METRICS, [], FIGURES + ["figures/unknown.png"],
+            figure_descriptions={"retriever_comparison": authored, "noise_scaling": " \n "},
+        )
+        page = DashboardPage(out)
+        images = [attrs for tag, attrs in page.elements if tag == "img"]
+        assert images[0]["alt"] == authored
+        assert images[1]["alt"] == FIGURE_CAPTIONS["noise_scaling"]
+        assert images[2]["alt"] == "unknown"
+        assert authored not in out
+        assert "&lt;diagram&gt;" in out and "&#x27;apostrophes&#x27;" in out
+        caption = out.split("<figcaption", 1)[1].split("</figcaption>", 1)[0]
+        assert FIGURE_CAPTIONS["retriever_comparison"] in caption
+        assert "Description" not in caption
 
     def test_includes_verification_and_demo(self):
         out = render_dashboard_html(
@@ -221,6 +249,7 @@ class TestRender:
         out = render_dashboard_html(METRICS, [], [])
         assert "MISSING" in out
         assert not any(row and row[0] == "Backend" for row in DashboardPage(out).rows)
+        assert "Per-seed paired audit: not recorded; no benchmark report supplied." in out
 
     def test_incomplete_backend_keeps_failure_accounting(self, incomplete_benchmark):
         out = render_dashboard_html(METRICS, [], [], backend_benchmark=incomplete_benchmark)
@@ -262,18 +291,60 @@ class TestRender:
             per_category=1, limit=2,
         )
         out = render_dashboard_html(METRICS, [], [], backend_benchmark=payload)
-        assert "reference method absent" in out
-        assert "not recorded" in out
+        assert payload["comparisons"] == []
+        assert "backend-seed-pairs-" not in out
 
-    def test_seed_cluster_warning_is_visible(self):
+    @pytest.mark.parametrize("fail_first", [False, True])
+    def test_seed_audit_keeps_denominators_and_suppresses_partial_seed(self, fail_first):
+        calls = 0
+
+        def complete(prompt):
+            nonlocal calls
+            calls += 1
+            if fail_first and calls == 1:
+                raise RuntimeError("first real completion fails")
+            return ExtractiveLM().complete(prompt)
+
         payload = run_backend_benchmark(
-            [BenchmarkBackend("baseline", "extractive", "ExtractiveLM", ExtractiveLM())],
+            [BenchmarkBackend("audit <&>", "callable", "offline", CallableLM(complete))],
             methods=build_benchmark_methods(("full_context", "harness")),
-            seeds=(0, 1), per_category=1, limit=4, n_boot=10,
+            seeds=(9, 2), per_category=1, limit=3, n_boot=10,
         )
         out = render_dashboard_html(METRICS, [], [], backend_benchmark=payload)
-        assert "Small-cluster warning" in out
-        assert "equal seed weight" in out
+        page = DashboardPage(out)
+        audit_index = next(
+            index for index, backend in enumerate(payload["backends"])
+            if backend["name"] == "audit <&>"
+        )
+        rows = page.tables[f"backend-seed-pairs-{audit_index}"]
+        matrix = {
+            (row["method"], row["example_id"]): row
+            for row in payload["rows"] if row["backend"] == "audit <&>"
+        }
+        expected = []
+        for seed in sorted({example["seed"] for example in payload["examples"]}):
+            examples = [example for example in payload["examples"] if example["seed"] == seed]
+            deltas = []
+            for example in examples:
+                candidate = matrix[("harness", example["example_id"])]
+                reference = matrix[("full_context", example["example_id"])]
+                if candidate["status"] == reference["status"] == "complete":
+                    deltas.append(candidate["token_f1"] - reference["token_f1"])
+            complete_seed = len(deltas) == len(examples)
+            expected.append([
+                "harness", str(seed), f"{len(examples)} / {len(deltas)}",
+                f"{sum(delta > 0 for delta in deltas)} / {sum(delta == 0 for delta in deltas)} / "
+                f"{sum(delta < 0 for delta in deltas)}",
+                f"{sum(deltas) / len(deltas):.3f}" if complete_seed else "—",
+            ])
+        assert [row[:5] for row in rows[1:]] == expected
+        assert {row[2].split(" / ")[0] for row in rows[1:]} == {"1", "2"}
+        if fail_first:
+            assert any(row[-1] == "complete" for row in rows[1:])
+            comparison = next(row for row in page.rows if row[:4] == [
+                "audit <&>", "harness", "full_context", "incomplete",
+            ])
+            assert comparison[10:12] == ["—", "—"]
 
 
 class TestWrite:

@@ -22,6 +22,7 @@ from src.manuscript_integrity import (  # noqa: E402
     verify_injected_manuscript,
 )
 from src.provenance import validate_artifact_manifest  # noqa: E402
+from src.publication_inputs import validate_publication_inputs  # noqa: E402
 
 
 def main() -> int:
@@ -29,6 +30,9 @@ def main() -> int:
     report = validate_artifact_manifest(PROJECT_ROOT)
     print(f"checked={report.checked} required={report.required} ok={report.ok}")
     for issue in report.issues:
+        print(f"[error] {issue}")
+    publication_issues = validate_publication_inputs(PROJECT_ROOT)
+    for issue in publication_issues:
         print(f"[error] {issue}")
     traceability = load_and_validate_traceability(project_root=PROJECT_ROOT, check_artifacts=True)
     if traceability["status"] != "pass":
@@ -76,7 +80,10 @@ def main() -> int:
         print(f"[error] bibliography validation failed: {exc}")
     return (
         0
-        if report.ok and traceability["status"] == "pass" and claims_ok and integrity_screen_ok and injection_ok and bibliography_ok
+        if (
+            report.ok and not publication_issues and traceability["status"] == "pass"
+            and claims_ok and integrity_screen_ok and injection_ok and bibliography_ok
+        )
         else 1
     )
 

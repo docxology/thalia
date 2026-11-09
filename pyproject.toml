@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thalia"
-version = "0.3.1"
+version = "0.4.0"
 description = "Typed Harness with Analytical Lexical-Integrated Architecture: a DSPy + Hermes auto-harness"
 readme = "README.md"
 license = "MIT"

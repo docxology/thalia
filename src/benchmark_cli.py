@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from .config import load_config
 from .evaluation.backend_benchmark import (
     build_benchmark_backends,
     build_benchmark_methods,
+    build_benchmark_plan,
     run_backend_benchmark,
     write_backend_benchmark,
 )
@@ -23,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ollama-model", action="append", default=[], help="Explicit local model; repeatable")
     parser.add_argument("--openrouter-model", action="append", default=[], help="Explicit cloud model; repeatable")
     parser.add_argument("--allow-cloud", action="store_true", help="Permit explicitly selected OpenRouter requests")
+    parser.add_argument("--plan", action="store_true", help="Print planned identities and attempt bounds as JSON; no requests or output file")
     parser.add_argument("--limit", type=int, help="Global example limit after balanced seed/category ordering")
     parser.add_argument("--seed", type=int, action="append", help="Cohort seed; repeatable, default 0")
     parser.add_argument(
@@ -39,13 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-ctx", type=int, help="Requested Ollama context size; no retention guarantee")
     parser.add_argument(
         "--output", type=Path, default=Path("output/data/backend_benchmark.json"),
-        help="Artifact destination relative to the caller's working directory unless absolute",
+        help="Execution-only artifact destination relative to the caller's working directory unless absolute",
     )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Record selected backends, print the actual artifact path, and return status."""
+    """Print a pure JSON plan or record selected backends and return status."""
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
@@ -54,9 +57,10 @@ def main(argv: list[str] | None = None) -> int:
         backends = build_benchmark_backends(
             ollama_models=args.ollama_model, openrouter_models=args.openrouter_model,
             timeout=args.timeout, max_tokens=args.max_tokens, num_ctx=args.num_ctx,
-            allow_cloud=args.allow_cloud, observe_models=True,
+            allow_cloud=args.allow_cloud, observe_models=not args.plan,
         )
-        payload = run_backend_benchmark(
+        build = build_benchmark_plan if args.plan else run_backend_benchmark
+        payload = build(
             backends, methods=methods, per_category=args.per_category,
             seeds=tuple(args.seed or (0,)), limit=args.limit, allow_cloud=args.allow_cloud,
             reference_method=args.reference_method, n_boot=args.n_boot,
@@ -66,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"Invalid configuration YAML ({type(exc).__name__})")
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
+    if args.plan:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
     path = write_backend_benchmark(payload, args.output)
     print(path)
     if payload["status"] != "complete":

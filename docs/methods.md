@@ -350,8 +350,8 @@ model-dependent evidence tiers remain separate.
 explicitly ordered, inspectable chain. Where `AutoHarness.forward` is a single
 opaque call, a `Pipeline` is a list of `PipelineStep` objects executed in
 insertion order. After `run()` returns, every intermediate context is available
-via `pipeline.intermediates` — defensive deep copies of the
-`(step_name, PipelineContext)` snapshots, one per step.
+via `pipeline.intermediates`, one `(step_name, PipelineContext)` snapshot per step.
+Built-in state and opaque custom extras have the distinct ownership contract below.
 
 ```python
 from src.pipeline import Pipeline
@@ -380,6 +380,16 @@ produce identical outputs in both paths — this is asserted by the invariant su
 `AutoHarness` remains the recommended entry point for straightforward use; `Pipeline`
 is for cases that need custom stage insertion, partial pipelines, or per-step
 inspection.
+`AutoHarness` retains one executing stage graph. Its exposed Inspector,
+Retriever, Reasoner and MemoryGate are the objects actually used for its turns;
+changing the effective Reasoner's LM does not wait until a session reset.
+Compiler examples and benchmark cells still construct fresh harnesses to avoid
+cross-example state.
+Replacing `harness.config` applies only changed configuration fields to the
+executing stages, retaining their identity, effective LM and episodic state.
+Direct Retriever/Reasoner customizations survive unrelated configuration changes;
+an explicit changed config field takes precedence for that setting. Inspector
+budget and partition policy are recomputed from configuration on each turn.
 
 ### Builder methods
 
@@ -398,6 +408,11 @@ The mutable state bag threaded through the chain. Initial fields are `query` and
 `session_history`; each stage enriches it (e.g. `evidence_windows`, `ranked_evidence`,
 `answer`, `consolidation_action`). Custom steps may stash arbitrary data in
 `ctx.extras` without interfering with built-in stage fields.
+Diagnostic snapshots deep-copy built-in stage state but shallow-copy the extras
+mapping. An open file, generator, connection, or other opaque custom value keeps
+its caller-owned identity and is not copied or closed by the pipeline. Mutating
+the returned mapping cannot change the stored mapping, but nested opaque values
+remain shared; callers own their lifetime and any desired value snapshot.
 
 `HarnessOutput` is constructed after the step loop and is not another stage.
 Partial pipelines preserve absent-stage state rather than fabricating completed

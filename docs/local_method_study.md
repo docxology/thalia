@@ -188,8 +188,9 @@ Source-controlled recipe: `284adaa788346a1914ab57c21c39408e552c2b0e`.
 Actual producer build: `41da836be37995fe9a4612c9ce2b325cc58671b4`.
 The original producer wheel has SHA-256
 `b0e6b9da3efddecd12b84bf7df419fc918f91deee1595da28b04c29d2772c67e`.
-Its exact wheel and Git source archive are retained under `STUDY_PRODUCER/`
-in the supplemental archive. Reader-only exposure summaries added afterward
+Its exact wheel and Git source archive are retained under
+`output/release_support/STUDY_PRODUCER/` in v0.4.0 supplements (the
+`STUDY_PRODUCER/` root in v0.3.x). Reader-only exposure summaries added afterward
 do not rewrite the measured rows or their fingerprints.
 
 Primary machine records, included in the release supplement:
@@ -231,9 +232,10 @@ device placement, exclusive load, or retained input.
 ## Observed contrasts and realized inputs
 
 The following is the **harness versus full-context** contrast, not a comparison
-of model quality. Values are rounded; all methods, seed means, category/stratum
-breakdowns, raw answers, and unrounded values remain in the machine report and
-generated manuscript tables.
+of model quality. Values are rounded; raw per-example answers/scores and unrounded
+aggregate values remain in the original machine report. The separately recorded
+analysis receipt retains independently computed seed means; current reader views
+derive per-seed denominators and means directly from those unchanged rows.
 
 | Backend | Full-context mean F1 | Harness mean F1 | Seed-mean delta | Descriptive interval |
 | --- | ---: | ---: | ---: | --- |
@@ -246,6 +248,12 @@ Each contrast has all 72 pairs and three seed clusters. The 1B harness delta
 was positive in all three observed seed means; the 2B delta was negative in
 all three; the 12B seed means changed sign. These are finite observations,
 not significance, superiority, or population-coverage claims.
+The source-owned `summarize_seed_pairs` reader and generated manuscript/dashboard
+tables now expose each represented seed's requested/complete pairs and
+wins/ties/losses. They suppress any incomplete seed's mean and never reconstruct
+a missing whole-contrast estimate from surviving seeds. This is an auditability
+addition, not a new execution, independent replication or gain in statistical
+precision.
 
 | Method | Distinct prompt hashes | Different from harness / cases | Mean characters | Maximum characters |
 | --- | ---: | ---: | ---: | ---: |

@@ -22,6 +22,7 @@ caller-selected external root), and prints produced paths to stdout.
 | `analyze_quality.py` | Double-annotation/adjudication check and fail-closed quality report (agreement, calibration, paired comparisons) | `src.evaluation.quality` | `dev` |
 | `build_dashboard.py` | `output/dashboard.html` static diagnostics dashboard; refreshes the artifact manifest last | `src.dashboard`, `src.evaluation`, `src.provenance` | `dev` |
 | `run_backend_benchmark.py` | Schema-2 backend/method observations and within-backend paired analysis; complete report or incomplete sidecar | `src.benchmark_cli` → `src.evaluation.backend_benchmark` | `uv run --project . python scripts/run_backend_benchmark.py` (no DSPy) |
+| `assemble_release_artifacts.py` | Deterministic explicit frozen supplement, complete inventoried output closure and external member receipt; no native execution or publication | `src.release_artifacts` | `dev`, explicit staged root/allowlist/output |
 | `build_provenance_p0_packets.py` | Builds blinded expert packets, separate blind key, and sealed blinding manifest from external raw rows | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_provenance_p0.py` | Freezes a reviewed P0 protocol with canonical digest and owner-declared margins | `src.evaluation.provenance_p0` | `dev` |
 | `freeze_quality_protocol.py` | Records the post-pilot rubric, estimand, thresholds, and provenance before confirmation | `src.evaluation.quality` | `dev` |
@@ -74,11 +75,11 @@ the integrity screen and its downstream figures/tokens/dashboard/manifest gates.
 
 ## Backend/method observations
 
-Install the wheel downloaded from the versioned v0.3.1 GitHub release into your
+Install the wheel downloaded from the versioned v0.4.0 GitHub release into your
 chosen environment; this is not a PyPI publication claim:
 
 ```bash
-python -m pip install /path/to/thalia-0.3.1-py3-none-any.whl
+python -m pip install /path/to/thalia-0.4.0-py3-none-any.whl
 thalia-benchmark --method full_context --method harness \
   --seed 0 --seed 1 --per-category 2 \
   --output output/data/backend_offline.json
@@ -108,6 +109,10 @@ overrides. Optional positive `--num-ctx` requests Ollama context only, not
 effective context retention. Cloud additionally requires explicit
 `--openrouter-model MODEL --allow-cloud` and an authorized process-environment
 key; a credential alone never invokes cloud.
+Before inference, add `--plan` to print the exact workload without model metadata
+probes, completion calls or output-file writes. The pure `build_benchmark_plan`
+API shares cohort/schedule construction with execution and validation. Planned
+counts are not observed successes, billed tokens, cost or elapsed-time estimates.
 
 Schema 2 separates backend metadata from method configs, cell/group summaries,
 paired comparisons and portable producer provenance. Migrate singular Python
@@ -123,19 +128,23 @@ Any incomplete planned pair suppresses delta/interval; a single seed has no
 interval and small-seed warnings remain visible. Prompt characters are not billed
 tokens; end-to-end timing is not throughput/cost. No retries, benchmark cache,
 model ranking, expert-quality/power claims or scientific promotion.
+Per-seed contribution tables expose requested/complete denominators and suppress
+an incomplete seed's mean. Final publication also requires both generated input
+receipts to bind the same unchanged selected report under `output/data/` to each
+final consumer artifact. External-only or divergent valid selections fail the
+project release gate; neither generator silently copies measured JSON.
 
 See [`../docs/backend_benchmark.md`](../docs/backend_benchmark.md) for the
 contract and [`../docs/local_method_study.md`](../docs/local_method_study.md)
-for the declared finite local study plan, not observed results.
+for the declared finite local plan, preserved original execution and bounded review.
 
 Live neural DSPy tests separately require `THALIA_LIVE_TESTS=1`; optional DSPy
 classes skip without the SDK, and collection does not perform generation.
 
 After a completed strict test/JUnit/coverage run, run `run_demo.py` (or
-`build_dashboard.py`) once to refresh `verification_summary.json` from those
-finished machine reports, then reconcile the `test-count` and `test-coverage`
-entries in `data/claim_ledger.yaml` from that refreshed summary — never from an
-incomplete or failing run.
+`build_dashboard.py`) to refresh `verification_summary.json` from those finished
+machine reports. Zero collection or malformed current reports cannot retain PASS.
+Exact observed counts belong in regenerated evidence, not hand-copied fixed claims.
 
 The PDF render/validate step uses an external, already-provisioned template
 checkout and is optional for standalone non-publication use. The adapter discovers
@@ -147,7 +156,7 @@ reconfigure it.
 
 ### Final publication validation without rerendering
 
-For v0.3.1, THALIA owns `output/reports/thalia_artifact_manifest.json`;
+Since v0.3.1, THALIA owns `output/reports/thalia_artifact_manifest.json`;
 the native renderer owns `output/reports/artifact_manifest.json`. The old shared
 filename let the native generic output scan overwrite THALIA's inventory, omit
 the required committed `data/integrity_advantage.json`, and record QA/preview
@@ -183,12 +192,19 @@ Do not mutate manifest-tracked QA or other outputs after the final sequence.
 Do not refresh the demo/dashboard/verification summary, annotate QA, or render
 again afterward; any tracked change requires a fresh inventory and both gates.
 No measured study JSON is resealed. The retained `STUDY_PRODUCER/` capsule and
-its `0.3.0` wheel still identify the original unreleased producer, not a patch
-rerun. Exact current results belong in the v0.3.1 release manifest.
+its `0.3.0` wheel still identify the original unreleased producer, not a current
+rerun. Exact current results belong in the v0.4.0 release manifest.
 
 See [artifact assembly](../docs/release_artifacts.md) and
-[v0.3.1 release notes](../docs/releases/v0.3.1.md). The patch supersedes the
-v0.3.0 supplement defect without changing that release's tag or assets.
+[v0.4.0 release notes](../docs/releases/v0.4.0.md). Historical v0.3.1 repaired the
+v0.3.0 supplement defect without replacing either version's tag or asset bytes.
+
+`assemble_release_artifacts.py --project-root "$THALIA_STAGE"
+--allowlist /path/to/reviewed-files.json --output /path/to/supplement.tar.gz
+--prefix thalia-0.4.0-artifacts` consumes a JSON-array allowlist. It refuses
+omitted output entries from either inventory and prints a byte/member receipt
+to stdout. Retain that receipt outside frozen inputs. It does not rerun native
+validation, refresh evidence or publish to GitHub.
 
 See [CONVENTIONS.md](CONVENTIONS.md) and [AGENTS.md](AGENTS.md).
 

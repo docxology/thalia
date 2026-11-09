@@ -164,6 +164,9 @@ class TestBackendMethodVariables:
 
         variables = _backend_benchmark_variables(tmp_path / "missing.json")
         assert variables["BACKEND_BENCHMARK_STATUS"] == "not recorded"
+        assert variables["BACKEND_SEED_PAIR_TABLE"] == (
+            "No per-seed paired audit is recorded; no benchmark report supplied."
+        )
 
     def test_selected_path_must_exist(self, tmp_path):
         with pytest.raises(FileNotFoundError):
@@ -208,6 +211,10 @@ class TestBackendMethodVariables:
         assert "incomplete: paired estimate suppressed" in variables["BACKEND_COMPARISON_TABLE"]
         assert "single-seed: interval unavailable" in variables["BACKEND_COMPARISON_TABLE"]
         assert "failed" in variables["BACKEND_BENCHMARK_TABLE"]
+        assert "| harness | 0 | 2 / 0 | 0 / 0 / 0 | not recorded | incomplete: seed mean suppressed |" in (
+            variables["BACKEND_SEED_PAIR_TABLE"]
+        )
+        assert "| harness | 0 | 2 / 2 |" in variables["BACKEND_SEED_PAIR_TABLE"]
 
     def test_missing_reference_has_no_inferred_comparison(self, tmp_path):
         from src.manuscript_variables import _backend_benchmark_variables
@@ -220,4 +227,66 @@ class TestBackendMethodVariables:
         path.write_text(json.dumps(payload), encoding="utf-8")
         variables = _backend_benchmark_variables(path)
         assert "Reference method absent" in variables["BACKEND_COMPARISON_TABLE"]
+        assert "Reference method absent" in variables["BACKEND_SEED_PAIR_TABLE"]
+        assert "| Method | Seed |" not in variables["BACKEND_SEED_PAIR_TABLE"]
+
+    def test_seed_audit_is_grouped_and_escaped(self, tmp_path, method_report):
+        from src.manuscript_variables import _backend_benchmark_variables
+
+        path = tmp_path / "selected.json"
+        path.write_text(json.dumps(method_report), encoding="utf-8")
+        variables = _backend_benchmark_variables(path)
+        audit = variables["BACKEND_SEED_PAIR_TABLE"]
+        assert "**Backend:** baseline &lt;&amp;&gt;\\|" in audit
+        assert "**model:** ExtractiveLM &lt;model&gt;" in audit
+        assert "**Reference:** full\\_context." in audit
+        assert "| Method | Seed | Pairs R/C | W / T / L | Mean delta | Status |" in audit
+        matrix = {(row["method"], row["example_id"]): row for row in method_report["rows"]}
+        for seed in (0, 1):
+            examples = [example for example in method_report["examples"] if example["seed"] == seed]
+            deltas = [
+                matrix[("harness", example["example_id"])]["token_f1"]
+                - matrix[("full_context", example["example_id"])]["token_f1"]
+                for example in examples
+            ]
+            assert (
+                f"| harness | {seed} | {len(examples)} / {len(examples)} | "
+                f"{sum(delta > 0 for delta in deltas)} / {sum(delta == 0 for delta in deltas)} / "
+                f"{sum(delta < 0 for delta in deltas)} | {sum(deltas) / len(deltas):.3f} | complete |"
+            ) in audit
+
+    def test_partial_seed_is_suppressed_without_discarding_complete_seed(self, tmp_path):
+        from src.manuscript_variables import _backend_benchmark_variables
+
+        calls = 0
+
+        def complete(prompt):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("first real completion fails")
+            return ExtractiveLM().complete(prompt)
+
+        payload = run_backend_benchmark(
+            [BenchmarkBackend("partial", "callable", "offline", CallableLM(complete))],
+            methods=build_benchmark_methods(("full_context", "harness")),
+            seeds=(9, 2), per_category=1, limit=3, n_boot=10,
+        )
+        path = tmp_path / "partial.incomplete.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        variables = _backend_benchmark_variables(path)
+        audit = variables["BACKEND_SEED_PAIR_TABLE"].split("**Backend:** partial", 1)[1]
+        rows = [
+            [value.strip() for value in line.strip("|").split("|")]
+            for line in audit.splitlines() if line.startswith("| harness |")
+        ]
+        assert [int(row[1]) for row in rows] == [2, 9]
+        assert {row[2].split(" / ")[0] for row in rows} == {"1", "2"}
+        assert any(row[4] == "not recorded" and row[2] == "2 / 1" for row in rows)
+        assert any(row[-1] == "complete" and row[-2] != "not recorded" for row in rows)
+        comparison = next(
+            row for row in payload["comparisons"]
+            if row["backend"] == "partial" and row["method"] == "harness"
+        )
+        assert comparison["mean_delta"] is None and comparison["interval"] is None
 

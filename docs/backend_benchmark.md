@@ -37,11 +37,11 @@ plan and its interpretation boundary. A plan is not an execution receipt.
 ## Installed CLI and source checkout
 
 Use the wheel from the versioned
-[v0.3.0 GitHub release](https://github.com/docxology/thalia/releases/tag/v0.3.0)
+[v0.4.0 GitHub release](https://github.com/docxology/thalia/releases/tag/v0.4.0)
 in your chosen environment; this is not a PyPI publication claim:
 
 ```bash
-python -m pip install /path/to/thalia-0.3.0-py3-none-any.whl
+python -m pip install /path/to/thalia-0.4.0-py3-none-any.whl
 # Offline, paired methods; installed command works outside the checkout.
 thalia-benchmark --method full_context --method harness \
   --seed 0 --seed 1 --per-category 2 \
@@ -77,9 +77,12 @@ to the **caller's working directory**, never the installed package.
 | `--analysis-seed` | 0; explicit resampling RNG seed, not a generation seed |
 | `--reference-method` | `full_context`; contrasts only if selected |
 | `--output` | `output/data/backend_benchmark.json` |
+| `--plan` | Print the exact planned workload as JSON; no observations, calls, or report file |
 
 `--config` supplies the base for harness-derived methods, not `full_context`.
-The benchmark rejects verification-enabled configurations before inference.
+The benchmark rejects verification-enabled configurations for selected
+harness-derived methods before inference; full-context-only selection ignores
+unused harness settings.
 This differs deliberately from the query CLI's file → environment → flags
 precedence. No `.env` is loaded. The factory records temperature 0, output-token
 options, timeout, and requested Ollama `num_ctx` when supplied; the request does
@@ -100,6 +103,29 @@ to OpenRouter. Do not put credentials, private endpoints, or raw provider error
 messages into report metadata. SDK-free adapters do not import DSPy or use its
 cache; the optional DSPy stack's unresolved persistent-cache advisory remains
 separate (see [operability](manuscript/10_operability.md)).
+
+## Inspect the workload without inference
+
+```bash
+thalia-benchmark --plan --ollama-model gemma3:1b \
+  --method full_context --method harness --method lexical_only \
+  --method adaptive --seed 0 --seed 1 --seed 2 --per-category 2
+```
+
+The plan is derived by the same pure cohort and rotated-schedule builder used by
+execution and validation. It prints planned JSON to stdout, does not write
+`--output`, does not query model availability/metadata, and needs no provider
+credentials. It records selected identities and generation options, examples,
+exact ordered cells and planned counts. The status is `planned`, never complete
+or successful. It is not a schema-2 observation report and cannot be supplied as
+one. Counts are attempt bounds, not observed successes, provider retention, billed
+tokens, money or elapsed-time estimates. Cloud selection still requires explicit
+`--allow-cloud` even for planning; planning itself sends no prompts.
+
+In Python, `build_benchmark_plan` accepts the same selection/cohort/analysis
+arguments as `run_backend_benchmark` and performs no completion or metadata calls.
+Preserve the original `per_category` before limiting: the synthetic generator's
+category-major RNG consumption is part of the dataset identity.
 
 ## Python API and migration
 
@@ -219,6 +245,33 @@ inference and cleanup), not throughput, cost, or a service-level guarantee.
 Failed times remain in rows but not successful-only summaries. Cohort generation
 and factory metadata probes are outside cell timing.
 
+### Per-seed paired audit
+
+After validating the report, inspect the actual contribution and denominator of
+each represented seed without modifying the schema-2 report:
+
+```python
+from src.evaluation.benchmark_analysis import summarize_seed_pairs
+
+seed_pairs = summarize_seed_pairs(
+    report["rows"],
+    backends=[backend["name"] for backend in report["backends"]],
+    methods=[method["name"] for method in report["methods"]],
+    examples=report["examples"],
+    reference_method=report["analysis"]["reference_method"],
+)
+```
+
+Rows are ordered by backend, selected non-reference method and sorted represented
+seed. Each retains requested/complete pairs, raw complete-pair wins/ties/losses,
+status and mean delta. A seed's mean is unavailable if any planned pair in that
+seed fails, including a seed with no surviving pair. An absent reference produces
+no audit rows. The complete overall estimand averages complete seed means equally,
+not in proportion to their example counts; pooled observation-cell means therefore
+need not subtract to that estimand. Visible complete seeds never rescue a whole
+contrast with a missing pair. This helper and the generated tables add
+auditability, not data, resampling precision or a new hypothesis test.
+
 ### Recorded prompt exposure
 
 `src.evaluation.benchmark_analysis.summarize_prompt_exposure(rows, *, methods,
@@ -256,6 +309,23 @@ descriptive diagnostics, not new experiments, causal effects, or model rankings.
 They neither recapture prompts nor authenticate actual inference traffic,
 provider retention, or effective attention. The helper adds no report fields and
 does not alter schema-2 metrics, paired analysis, or report fingerprints.
+
+## One selected report across publication consumers
+
+Dashboard and manuscript generation may independently inspect an explicit valid
+report, including an incomplete sidecar. Each writes a source-owned receipt:
+`output/reports/dashboard_benchmark_input.json` or
+`output/reports/manuscript_benchmark_input.json`. Receipts bind the selected raw
+bytes, dataset/report fingerprints and status to the final dashboard or manuscript
+variables artifact. A schema-valid report is not sufficient if different
+consumers selected different evidence.
+
+For a distributable closure, explicitly stage the unchanged selected report under
+`output/data/` and run both generators using that same path. The full artifact
+gate rejects divergent reports, changed artifacts/raw bytes, missing evidence and
+external-only selections. Standalone external inspection remains supported;
+generation never implicitly copies or rewrites measured JSON. Both explicitly
+unrecorded consumers remain distinct from a fabricated zero measurement.
 
 ## Validation, provenance and failure custody
 

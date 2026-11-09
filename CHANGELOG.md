@@ -4,6 +4,44 @@ All notable changes to THALIA are documented here. Versioned GitHub software
 releases do not themselves assign a new Zenodo DOI. The immutable `0.1.0` archive
 remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 
+## [0.4.0] - 2026-11-09
+
+### Added
+
+- Offline benchmark planning with the same seeded cohort and rotated schedule
+  as execution, explicit planned attempt counts, and no model probes or calls.
+- Per-seed paired audit rows and manuscript/dashboard tables with requested and
+  complete denominators, wins/ties/losses and incomplete-seed suppression.
+- Source-owned consumer receipts bind dashboard and manuscript variables to the
+  same exact staged benchmark bytes; the final gate rejects inconsistent inputs.
+- Explicit frozen supplement assembly with deterministic archive metadata,
+  inventoried member bytes and refusal of omitted manifest-tracked outputs.
+- Negative query flags for verification, expansion, memory recall and adaptive
+  windows override enabled environment/file settings without mutating either.
+
+### Fixed
+
+- Full-context-only selection no longer validates unused harness settings.
+- Defer DSPy import to an explicit signature-bridge call. Merely importing
+  deterministic/compiler/planning code must not trigger LiteLLM's remote pricing
+  lookup when the optional SDK happens to be installed.
+- `AutoHarness` executes the stage objects it exposes instead of rebuilding a
+  separate graph each turn; fresh benchmark-cell and compiler-run isolation remain.
+- Pipeline snapshots isolate built-in state and the extras mapping without
+  copying or closing opaque caller-owned values.
+- Session cleanup closes SQLite even when derived memory persistence fails;
+  disk-backed reset remains a reopen, never raw-episode deletion.
+- Empty or malformed current test reports cannot retain a passing verification
+  observation. Authored registry descriptions reach dashboard image alt text.
+
+### Release boundary
+
+- Preserve schema-2 historical measurements, producer identity and every prior
+  immutable release. New reader/engineering checks are not a new quality study.
+- Exact tests, local-runtime smoke, publication checks, source bindings and asset
+  digests belong in this release's receipts, not inherited historical counts.
+- No new cloud execution, DOI, expert-quality, P0 or production promotion.
+
 ## [0.3.1] - 2026-11-09
 
 ### Fixed

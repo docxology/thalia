@@ -47,8 +47,8 @@ def run_query(
         The dict produced by :func:`output_to_dict`.
     """
     config = config or default_config()
-    out = AutoHarness(config=config, lm=lm).forward(query, session_history)
-    return output_to_dict(out)
+    with AutoHarness(config=config, lm=lm) as harness:
+        return output_to_dict(harness.forward(query, session_history))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,30 +68,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mmr-lambda", type=float, default=None, help="Override MMR relevance/diversity tradeoff.")
     parser.add_argument(
         "--verify",
-        action="store_const",
-        const=True,
+        action=argparse.BooleanOptionalAction,
         default=None,
         help="Enable the Reasoner grounding-verification pass.",
     )
     parser.add_argument(
         "--query-expansion",
-        action="store_const",
-        const=True,
+        action=argparse.BooleanOptionalAction,
         default=None,
         help="Enable pseudo-relevance-feedback query expansion.",
     )
     parser.add_argument("--recency-weight", type=float, default=None, help="Recency bonus in [0,1].")
     parser.add_argument(
         "--recall-memory",
-        action="store_const",
-        const=True,
+        action=argparse.BooleanOptionalAction,
         default=None,
         help="Consult the episodic store + MEMORY.md for evidence.",
     )
     parser.add_argument(
         "--adaptive-windows",
-        action="store_const",
-        const=True,
+        action=argparse.BooleanOptionalAction,
         default=None,
         help="Scale Inspector windows by context length for long contexts.",
     )

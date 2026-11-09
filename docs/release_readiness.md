@@ -1,54 +1,55 @@
 # Versioned GitHub release controls
 
-_Updated 2026-11-09 for v0.3.1._ Software availability remains separate from
+_Updated 2026-11-09 for v0.4.0._ Software availability remains separate from
 scientific claim promotion.
 
 ## Current release identity
 
-- Version: `0.3.1`; release date in source metadata: `2026-11-09`.
-- GitHub release target: [v0.3.1](https://github.com/docxology/thalia/releases/tag/v0.3.1).
+- Version: `0.4.0`; release date in source metadata: `2026-11-09`.
+- GitHub release target: [v0.4.0](https://github.com/docxology/thalia/releases/tag/v0.4.0).
 - Canonical repository: [docxology/thalia](https://github.com/docxology/thalia).
-- Changes and scope: [v0.3.1 release notes](releases/v0.3.1.md).
+- Changes and scope: [v0.4.0 release notes](releases/v0.4.0.md).
 - Current metadata declares no DOI. No Zenodo publication or new DOI is
   authorized for this version. The historical DOI is recorded only as an
-  `isNewVersionOf` relation, not as v0.3.1's identity.
+  `isNewVersionOf` relation, not as v0.4.0's identity.
 
 The versioned URL is the intended release identity, not proof of remote
 publication. The publisher must verify the published tag, exact commit, assets,
 and candidate checks before recording release completion. Earlier local test
-results or an earlier manuscript render do not certify v0.3.1.
+results or an earlier manuscript render do not certify v0.4.0.
 
-This patch corrects publication-manifest closure and supersedes the v0.3.0
-supplement defect without changing the measured study. THALIA owns
-`output/reports/thalia_artifact_manifest.json`; the native renderer owns
-`output/reports/artifact_manifest.json`. Neither writer may overwrite the
-other's manifest. The measured study remains the unreleased producer `41da836`,
-with the original `0.3.0` wheel, fingerprint, and producer capsule names.
+This release adds offline workload planning, per-seed paired auditing, coherent
+executing runtime stages, bidirectional CLI overrides, truthful verification
+observations, cross-consumer evidence receipts and frozen archive assembly.
+It retains the v0.3.1 manifest ownership repair: THALIA and native inventories
+remain separate. The measured study still identifies unreleased producer
+`41da836`, with its original `0.3.0` wheel, fingerprint and capsule filenames.
 
 ## Current-candidate publication gates
 
-1. Finish all source, metadata, citation, documentation, entry-point, and QA
-   changes. Retain measured JSON unchanged; do not reseal evidence or imply a
-   study rerun, new cloud execution, or new scientific acceptance.
-2. Finalize publication artifacts, figures, variables, manuscript injection,
-   dashboard, and QA in dependency order. Inspect the cover's current version
-   versus historical DOI wording, benchmark limitations, tagged-PDF structure,
-   HTML, and slides. Record actual page counts and checks, not carried-forward
-   observations, then freeze the outputs.
-3. Stage clean source plus the allowlisted output closure. Use the external
-   adapter's `--template-root PATH` and `--validate-only` mode to invoke real
-   native validation without rerendering. Require THALIA manifest validation
-   as well; a native pass alone does not certify the publication closure.
-4. After native validation, run the project release gate, including strict
-   test/coverage, typing, lint, locked-dependency, and package-build checks.
-   Exercise installed `thalia` and `thalia-benchmark` outside the checkout;
-   benchmark output belongs in the caller's working directory. Do not edit
-   manifest-tracked QA after final validation; any closure change invalidates
-   that validation and requires a newly frozen, validated closure.
-5. Package the exact verified closure, inventory redistributable assets, and
-   record sizes/checksums and the exact candidate commit. Publish the distinct
-   `v0.3.1` GitHub tag/release, then verify remote publication and attached assets
-   before announcing completion.
+1. Finish all source, metadata, documentation and tests. Run the strict software,
+   coverage, typing, lint, lock and build gates on that source. Exercise installed
+   SDK-free query, offline plan/benchmark, and explicitly selected local runtime
+   behavior outside the checkout. Retain measured study JSON unchanged; a new
+   engineering smoke is separate from historical scientific evidence.
+2. Generate artifacts, figures, variables, exact manuscript injection and
+   dashboard in dependency order. Use the same staged benchmark report in both
+   consumers and validate their input receipts. Inspect current-version cover,
+   benchmark/seed tables, authored descriptions, desktop/mobile HTML, tagged-PDF
+   structure and slides. Record actual observations, then freeze all QA bytes.
+3. Stage exact clean Git source plus the explicit output allowlist, preserving
+   required committed inputs. Freeze THALIA's inventory; invoke the real native
+   adapter with `--template-root PATH --validate-only`; require the full project
+   gate afterward. A native pass alone does not establish publication closure.
+4. Use the source-owned archive assembler on those exact bytes. Require all
+   output members referenced by either inventory, retain the external member
+   receipt, and independently verify extracted bytes. Assembly does not rerun or
+   attest native validation. No pruning, rerendering, consumer rewrite or QA edit
+   follows the final gates; changed bytes require a fresh final sequence.
+5. Require current candidate CI, guarded ordinary merge and exact merged-tree
+   equality. Publish an immutable annotated `v0.4.0` main tag and complete GitHub
+   assets; download and compare every asset's bytes, digest and size. Record
+   source/tag/publication/canonical handoff separately from scientific acceptance.
 
 These are release requirements, not a claim that the checks have already run.
 Model observations do not confer expert-quality or production acceptance.
@@ -69,6 +70,8 @@ silently reinterpret schema-1 data.
 The [v0.3.0 release](releases/v0.3.0.md), tag, and assets also remain unchanged.
 The v0.3.1 patch supersedes its supplement defect; it does not rewrite that
 historical release or rename the original measured producer capsules.
+The [v0.3.1 release](releases/v0.3.1.md) is likewise immutable. Current additions
+do not rewrite its qualification receipts or restamp the historical study.
 
 ## Rights and scientific scope
 

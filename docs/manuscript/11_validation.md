@@ -168,14 +168,18 @@ the earlier `fts5: syntax error` belonged to.
 
 `tests/test_manuscript_integrity.py` enforces two structural contracts that keep
 the reproducibility story honest. **Path hygiene**: no manuscript section or
-shipped doc may reference a project path that no longer exists — a stale path
-makes a documented `pytest` command collect zero tests and exit green, a silent
-false pass the gate now forbids. **Injection-independent token coverage**: the
+shipped doc may reference a project path that no longer exists. A stale path can
+leave no collected tests; zero collection must never become a passing generated
+observation. **Injection-independent token coverage**: the
 manuscript-variable generator locates the template root robustly even when THALIA
 is checked out as a symlink *outside* the template tree, and its token-coverage
 reproducibility contract completes independently of the optional PDF-injection step
 — the gate enforces every published number as a generated token and remains
 independent of renderer plumbing.
+Verification observations require positive collection, consistent nonnegative
+JUnit counts and finite in-range coverage. Present malformed or partial current
+reports invalidate the current observation rather than retaining an earlier PASS.
+Absent historical reports and failed current reads are distinct evidence states.
 
 The v0.3.1 publication repair separates artifact-manifest ownership. THALIA's
 required-output contract uses
@@ -198,14 +202,19 @@ It returns failure if THALIA's separate manifest fails, even when native checks
 succeed. The project gate after native validation also checks claim,
 traceability, integrity-screen, exact-injection, and bibliography contracts.
 Executable runtime and staging instructions are in `docs/release_artifacts.md`.
+It also checks matching dashboard/manuscript input receipts against the exact
+included benchmark bytes and final consumer artifacts. Validating each report
+independently does not establish agreement between consumers. The per-seed
+tables expose planned and complete pair denominators without changing missing-pair
+suppression or treating repeated inputs as independent observations.
 
 No manifest-tracked QA or other output may change after final validation.
 Package exactly the verified closure; a later render, verification-summary
 refresh, QA edit, or allowlist change requires another final inventory and both
 gates. Do not reseal measured study JSON. The retained `0.3.0` producer wheel,
 unreleased `41da836` source, and original study fingerprint remain historical
-producer evidence, not a new run. Exact patch observations belong in the current
-release manifest rather than inherited test or validation counts.
+producer evidence, not a new run. Exact current qualification observations belong
+in the release manifest rather than inherited test or validation counts.
 The patch supersedes the prior supplement defect without replacing its tag or
 assets; it adds no DOI, cloud execution, expert/P0 confirmation, or production
 acceptance.
@@ -218,6 +227,9 @@ breakdown, the invariant pass/fail table, and the generated figures. It is built
 by `scripts/build_dashboard.py` into `output/dashboard.html`. The renderer is a
 pure function of its inputs and HTML-escapes all dynamic content, so it is both
 testable and safe.
+Image alt text consumes the registry's authored nonblank description, while the
+visible caption retains its separate source-owned role. A missing description
+falls back to the source caption; both are escaped at the HTML boundary.
 
 The dashboard is a compact audit surface for the same analysis. It
 shows the same metrics and figures used in this manuscript, alongside invariant

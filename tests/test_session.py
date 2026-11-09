@@ -1,5 +1,10 @@
 """Tests for the persistent multi-turn Session (Zero-Mock, real SQLite files)."""
 
+import sqlite3
+
+import pytest
+
+from src.llm import CallableLM
 from src.session import Session
 from src.memory.episodic_store import EpisodicStore
 from src.signatures import EpisodicEntry
@@ -82,8 +87,8 @@ class TestFilePersistence:
 
 
 class TestSessionLifecycle:
-    def test_reset_clears_transcript(self, tmp_path):
-        """Reset discards in-memory transcript and creates a fresh store."""
+    def test_reset_reconstructs_transcript_without_deleting_episodes(self, tmp_path):
+        """Reset reopens the same append-only store and rebuilds its transcript."""
         db = str(tmp_path / "episodes_reset.db")
         s = Session(db_path=db)
         s.ask("my wifi password is bluefish42")
@@ -113,3 +118,58 @@ class TestSessionLifecycle:
         # After reset: fresh store at same path (episodes still there), memory from disk reloaded.
         assert "1234" in s2.harness.memory_gate.memory_md
         assert s2.turn_count == 1  # episodes persist on disk
+
+    @pytest.mark.parametrize("disk_backed", [False, True])
+    def test_reset_retains_the_effective_executing_lm(self, tmp_path, disk_backed):
+        db = str(tmp_path / "effective.db") if disk_backed else ":memory:"
+        initial_lm = CallableLM(lambda prompt: "initial answer")
+        effective_lm = CallableLM(lambda prompt: "effective answer")
+        with Session(db_path=db, lm=initial_lm) as session:
+            session.harness.reasoner.lm = effective_lm
+            before = session.ask("first question")
+            assert before.answer == "effective answer"
+            old_store = session.harness.memory_gate.store
+            session.reset()
+            with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+                old_store.count()
+            assert session.harness.reasoner.lm is effective_lm
+            assert session.turn_count == int(disk_backed)
+            after = session.ask("second question")
+            assert after.answer == "effective answer"
+            assert after.memory_written.turn_id == int(disk_backed)
+            if disk_backed:
+                assert session.harness.memory_gate.store.all() == [before.memory_written, after.memory_written]
+
+    def test_close_closes_sqlite_even_when_memory_flush_fails(self, tmp_path):
+        blocker = tmp_path / "not-a-directory"
+        blocker.write_text("occupied")
+        db = str(tmp_path / "flush.db")
+        session = Session(db_path=db, memory_path=blocker / "MEMORY.md")
+        recorded = session.ask("first question")
+        store = session.harness.memory_gate.store
+        with pytest.raises(FileExistsError):
+            session.close()
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            store.count()
+        with EpisodicStore(db) as reopened:
+            assert reopened.all() == [recorded.memory_written]
+
+    @pytest.mark.parametrize("body_fails", [False, True])
+    def test_context_flush_failure_closes_sqlite_and_preserves_exception_context(self, tmp_path, body_fails):
+        blocker = tmp_path / "not-a-directory"
+        blocker.write_text("occupied")
+        db = str(tmp_path / "context-flush.db")
+        body_error = RuntimeError("body failed")
+        with pytest.raises(FileExistsError) as caught:
+            with Session(db_path=db, memory_path=blocker / "MEMORY.md") as session:
+                recorded = session.ask("first question")
+                store = session.harness.memory_gate.store
+                if body_fails:
+                    raise body_error
+        assert caught.value.__context__ is (body_error if body_fails else None)
+        assert caught.value.__cause__ is None
+        assert not caught.value.__suppress_context__
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            store.count()
+        with EpisodicStore(db) as reopened:
+            assert reopened.all() == [recorded.memory_written]

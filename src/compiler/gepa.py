@@ -13,13 +13,9 @@ provides an optional bridge to a real ``dspy.Signature`` when DSPy is installed.
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass, field
 from typing import Any, Callable
-
-try:
-    import dspy as _dspy
-except ModuleNotFoundError:  # pragma: no cover - exercised by minimal installs
-    _dspy = None  # type: ignore[assignment]
 
 from ..config import HarnessConfig, default_config
 from ..signatures import HarnessOutput, Signature
@@ -185,8 +181,8 @@ class GEPAOptimizer:
 # ---------------------------------------------------------------------------
 # DSPy signature bridge (real dspy.Signature from any THALIA signature)
 # ---------------------------------------------------------------------------
-
-DSPY_AVAILABLE = _dspy is not None
+# Availability discovery must not import an optional network-capable SDK.
+DSPY_AVAILABLE = importlib.util.find_spec("dspy") is not None
 
 
 def to_dspy_signature(signature: type[Signature]) -> Any:
@@ -203,9 +199,7 @@ def to_dspy_signature(signature: type[Signature]) -> Any:
             "The DSPy signature bridge requires the optional 'neural' extra; "
             "install with `uv sync --extra neural`."
         )
-    dspy = _dspy
-    if dspy is None:  # pragma: no cover - guarded by DSPY_AVAILABLE
-        raise ImportError("DSPy is unavailable")
+    import dspy
 
     fields: dict[str, Any] = {}
     annotations: dict[str, Any] = {}

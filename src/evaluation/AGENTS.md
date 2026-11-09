@@ -10,8 +10,8 @@ Barrel package: `from src.evaluation import run_full_eval, build_demo_dataset, �
 | [`bundle.py`](bundle.py) | `run_full_eval` — JSON bundle for scripts |
 | [`accounting.py`](accounting.py) | Stable fingerprints, per-example/method ledger, deterministic JSONL events, runtime provenance |
 | [`statistics.py`](statistics.py) | IID/stratified/cluster bootstrap, Wilson/exact paired tests, Holm correction, clustered effect sizes, sample planning |
-| [`backend_benchmark.py`](backend_benchmark.py) | Schema-2 sequential backend × named-method × balanced seeded-cohort observations, true full-context Reasoner prompts, portable producer-source checksums, recomputing validator, atomic complete output or incomplete sidecar |
-| [`benchmark_analysis.py`](benchmark_analysis.py) | Pure success-only summaries and category/stratum accounting; recorded prompt exposure and exact per-example vector groups; complete paired seed-mean contrasts with seeded descriptive cluster intervals and no p-values |
+| [`backend_benchmark.py`](backend_benchmark.py) | Shared offline workload planning and schema-2 sequential backend × method × seeded-cohort execution, portable provenance, recomputing validator and atomic failure-preserving output |
+| [`benchmark_analysis.py`](benchmark_analysis.py) | Success-only summaries, prompt exposure/vector groups, per-seed paired audit rows, complete seed-mean contrasts and descriptive cluster intervals without p-values |
 | [`integrity_advantage.py`](integrity_advantage.py) | Native-unit endpoint screen for provenance, poisoning, retrieval, context, compiler, and neural comparisons with source/code hashes |
 | [`provenance_p0.py`](provenance_p0.py) | Isolated P0 source-record protocol, immutable atomic condition rows, sealed blinded-packet/key evidence, expert adjudication, source-condition tables, strata-aware paired analysis, and explicit promotion; it never upgrades the legacy lexical proxy |
 | [`scaling.py`](scaling.py) | Configurable seeded sample-size research audit, paired method comparisons, complete accounting; quick defaults and enlarged publication grids are recorded separately |
@@ -36,6 +36,9 @@ custom named harness configs use `BenchmarkMethod` directly.
 limit=None, allow_cloud=False, reference_method="full_context", n_boot=2000,
 analysis_seed=0)` executes one completion attempt per cell, backend-outer with
 methods rotated by example index and fresh harness resources per cell.
+`build_benchmark_plan` takes the same selection/cohort/analysis arguments and
+returns planned identities, exact schedule and counts without observations or
+client calls. CLI `--plan` disables model probes and writes JSON only to stdout.
 Schema 2 separates backend identities, method configs/fingerprints, observations,
 summaries, category/stratum groups, and paired comparisons. Reference absent means
 no comparisons; any incomplete pair suppresses the entire contrast estimate;
@@ -60,6 +63,12 @@ unordered hash sets. Unique example IDs need not mean unique inputs, and repeate
 inputs are not independent new content. These diagnostics do not authenticate
 inference traffic or establish provider retention, equal code/compute/latency,
 or independent method-quality evidence; they do not modify schema-2 reports.
+`summarize_seed_pairs(rows, *, backends, methods, examples, reference_method)`
+is another post-validation reader exported by `benchmark_analysis`, not the barrel. It
+includes all represented seeds with requested/complete pair counts and raw
+wins/ties/losses, in backend/method/sorted-seed order. Any failed pair suppresses
+that seed's mean; no reference means no rows. These views neither add observations
+nor rescue an incomplete whole contrast.
 Producer inventory conservatively includes every Python file under the installed
 `src` package, not repository/venv files or an executed-file trace. Recorded
 portable paths and source checksums are checked structurally, not for equality

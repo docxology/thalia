@@ -102,18 +102,24 @@ class Session:
             self.memory_path.write_text(self.harness.memory_gate.memory_md)
 
     def close(self) -> None:
-        """Persist memory and close the underlying episodic store."""
-        self._persist_memory()
-        self.harness.memory_gate.store.close()
+        """Flush memory, always closing this session's owned SQLite store.
+
+        Flush errors propagate normally, including Python's exception context
+        when a context-manager body also failed.
+        """
+        try:
+            self._persist_memory()
+        finally:
+            self.harness.memory_gate.store.close()
 
     def reset(self) -> None:
-        """Reset this session to a pristine state, discarding all episodes.
+        """Reopen runtime state without deleting persisted episodes.
 
-        Closes the existing store, clears the in-memory transcript, and creates a
-        fresh :class:`AutoHarness` with a new :class:`EpisodicStore` at the same
-        ``db_path``. The MEMORY.md snapshot is re-read from disk (if a path was
-        configured), so any consolidated memory that was persisted survives the
-        reset; in-memory-only state is lost.
+        The current effective Reasoner LM is retained. A file-backed store keeps
+        all episodes and reconstructs the transcript with the next available
+        turn ID; an in-memory store starts empty. MEMORY.md is re-read from disk
+        when configured, so persisted consolidation survives while unflushed,
+        in-memory-only consolidation is lost.
         """
         self.harness.memory_gate.store.close()
         self._transcript = []

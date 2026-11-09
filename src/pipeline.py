@@ -8,7 +8,7 @@ custom stages, inspect intermediates, or build variants.
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable
 
 from .config import HarnessConfig, default_config
@@ -43,7 +43,13 @@ class PipelineStep:
 
 @dataclass
 class PipelineContext:
-    """Mutable state bag passed through the :class:`Pipeline` chain."""
+    """Mutable state bag passed through the :class:`Pipeline` chain.
+
+    Diagnostics isolate built-in fields with deep copies and isolate the
+    ``extras`` mapping with a shallow copy. Extra values remain opaque,
+    caller-owned references: they are neither copied nor closed, and their
+    contents are not claimed to be immutable snapshots.
+    """
 
     query: str = ""
     session_history: str = ""
@@ -63,6 +69,12 @@ class PipelineContext:
     memory_delta: str = ""
     episodic_entry: EpisodicEntry | None = None
     extras: dict[str, Any] = field(default_factory=dict)
+
+    def snapshot(self) -> "PipelineContext":
+        """Copy built-in state without traversing opaque ``extras`` values."""
+        snapshot = deepcopy(replace(self, extras={}))
+        snapshot.extras = dict(self.extras)
+        return snapshot
 
 
 class Pipeline:
@@ -99,15 +111,14 @@ class Pipeline:
 
     @property
     def intermediates(self) -> list[tuple[str, PipelineContext]]:
-        """Return defensive copies of the per-step context snapshots.
+        """Return per-step snapshots with isolated built-in state and mappings.
 
-        Steps mutate one working context in sequence. Returning that same object
-        for every step would make an inspection trace appear to contain history
-        while every entry actually pointed at the final state. The run loop stores
-        snapshots and this accessor copies them again so callers cannot mutate
-        the pipeline's diagnostic record.
+        Neither a later step nor a diagnostic reader can mutate recorded
+        built-in fields or extras mapping entries. Opaque extra values retain
+        caller identity and ownership; mutations inside those values remain
+        visible, and the pipeline never copies or closes them.
         """
-        return [(name, deepcopy(context)) for name, context in self._intermediates]
+        return [(name, context.snapshot()) for name, context in self._intermediates]
 
     def add_step(self, name: str, fn: Callable[[PipelineContext], PipelineContext]) -> "Pipeline":
         self._steps.append(PipelineStep(name=name, fn=fn))
@@ -171,6 +182,8 @@ class Pipeline:
         else:
             self._inspector.max_windows = self.config.max_windows
         self._inspector.adaptive_windows = self.config.adaptive_windows
+        self._inspector.partition_threshold = self.config.partition_threshold
+        self._inspector.partition_size = self.config.partition_size
         inspected = self._inspector(session_history=ctx.session_history, query=ctx.query)
         ctx.evidence_windows = list(inspected["evidence_windows"])
         ctx.metadata = inspected["metadata"]
@@ -251,7 +264,7 @@ class Pipeline:
         self._intermediates = []
         for step in self._steps:
             ctx = step.fn(ctx)
-            self._intermediates.append((step.name, deepcopy(ctx)))
+            self._intermediates.append((step.name, ctx.snapshot()))
 
         # ``Pipeline`` intentionally supports partial stage chains. Preserve that
         # capability in the result schema instead of pretending omitted stages ran.

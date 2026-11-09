@@ -1,18 +1,18 @@
 # THALIA — Publication-Readiness Assessment
 
-_Release identity updated 2026-11-09 for v0.3.1. The current GitHub release target
-is [v0.3.1](https://github.com/docxology/thalia/releases/tag/v0.3.1); no Zenodo
+_Release identity updated 2026-11-09 for v0.4.0. The current GitHub release target
+is [v0.4.0](https://github.com/docxology/thalia/releases/tag/v0.4.0); no Zenodo
 publication or DOI is assigned to this version. Historical checks below do not
 certify the current candidate or assert that the GitHub target is published._
 
 ## Current software capability and release boundary
 
-v0.3.1 corrects publication-manifest closure and supersedes the v0.3.0 supplement
-defect; it does not change or rerun the measured study. THALIA's manifest is
-`output/reports/thalia_artifact_manifest.json`; the native renderer retains
-ownership of `output/reports/artifact_manifest.json`. The original measured
-study remains an unreleased producer at `41da836`, using the `0.3.0` wheel and
-its original fingerprint and producer capsule names.
+v0.4.0 adds offline experiment planning, per-seed auditing, coherent runtime
+composition, bidirectional CLI overrides, truthful current verification,
+cross-consumer benchmark receipts and deterministic explicit supplement assembly.
+The v0.3.1 ownership repair remains: THALIA and native inventories are separate.
+The original measured study remains unreleased producer `41da836`, with its
+`0.3.0` wheel, original fingerprint and capsule filenames; it is not rerun.
 
 The v0.3.0 capability boundary remains: composable full-context, harness,
 lexical-only, and adaptive methods in the optional common-backend benchmark,
@@ -34,15 +34,15 @@ not silently pooled with this lane.
 
 The manuscript includes this capability and its limitations. Its regenerated
 page count, tagged-PDF structure, HTML, slides, and exact source substitution
-must be checked after the v0.3.1 metadata changes; older renders and earlier
+must be checked after the v0.4.0 source changes; older renders and earlier
 test results are not source-current release receipts. The publisher must
 record the current candidate checks, exact tag/commit, asset inventory, and
 checksums before announcing release completion. See
 [`docs/release_readiness.md`](docs/release_readiness.md) and
-[`docs/releases/v0.3.1.md`](docs/releases/v0.3.1.md).
+[`docs/releases/v0.4.0.md`](docs/releases/v0.4.0.md).
 
 The v0.1.0 DOI and [`docs/release_receipt.md`](docs/release_receipt.md) remain
-immutable historical authority only. The current citation identifies v0.3.1
+immutable historical authority only. The current citation identifies v0.4.0
 on GitHub; the old DOI is retained as an `isNewVersionOf` relation.
 
 ## Historical evidence (2026-08-02, v0.1.0 boundary)

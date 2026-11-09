@@ -177,6 +177,17 @@ cluster resampling of seed means gives descriptive intervals; small-cluster
 warnings remain visible and do not establish significance, power, or a
 target-population claim.
 
+**Per-seed contribution and denominator audit**
+
+{{BACKEND_SEED_PAIR_TABLE}}
+
+These derived rows expose the inputs to the reported estimand without changing
+the recorded report or adding observations. A seed with a missing planned pair
+has no displayed mean; available complete seeds remain diagnostics, not a
+replacement estimate for a suppressed whole contrast. Differences in represented
+seed sizes explain why pooled observation-cell means need not subtract to the
+reported equally weighted seed contrast.
+
 **Category and stratum observations**
 
 {{BACKEND_GROUP_TABLE}}

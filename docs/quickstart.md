@@ -39,6 +39,11 @@ THALIA_TOP_K=4 uv run --project . --extra dev python scripts/run_query.py \
   --adaptive-windows --adaptive-window-ratio 5
 ```
 
+Boolean overrides work in both directions: `--no-verify`,
+`--no-query-expansion`, `--no-recall-memory`, and `--no-adaptive-windows`
+disable an enabled file/environment setting for one invocation. Omission retains
+the inherited value. Disabling verification prevents its optional extra model call.
+
 ## Multi-turn session (Python)
 
 ```python
@@ -53,13 +58,29 @@ with Session(db_path="episodes.db", memory_path="MEMORY.md") as s:
 
 `Session` (and `EpisodicStore`) implement the context-manager protocol so the
 SQLite connection is always closed, even on exception.
+Derived-memory persistence errors still propagate, but SQLite is closed in a
+`finally` path. If both the context body and flush fail, Python exception chaining
+retains the original failure. `reset()` reopens disk-backed state rather than
+deleting append-only episodes.
 
 
 ## Compare context-selection methods within a backend
 
-The installed v0.3.0 wheel provides `thalia-benchmark` without a source checkout
+The installed v0.4.0 wheel provides `thalia-benchmark` without a source checkout
 or DSPy. For source use, replace that command with
 `uv run --project . python scripts/run_backend_benchmark.py`.
+
+Inspect the exact planned workload before allowing any inference:
+
+```bash
+thalia-benchmark --plan --ollama-model gemma3:1b \
+  --method full_context --method harness --method lexical_only \
+  --method adaptive --seed 0 --seed 1 --seed 2 --per-category 2
+```
+
+Planning prints JSON to stdout, performs no provider/model probes or completion
+calls, and writes no report file. Counts are planned attempts, not observed
+successes, cost, tokens, or latency estimates. Remove `--plan` to execute.
 
 ```bash
 thalia-benchmark --method full_context --method harness \
@@ -81,7 +102,9 @@ uv run --project . --extra dev python \
 
 Output paths are caller-relative. `--method` and `--seed` repeat; defaults are
 `harness` and seed 0. `--config PATH` loads base YAML without harness environment
-overrides; verification must be disabled. `--num-ctx` is an optional requested
+overrides; selected harness methods require verification disabled, while
+full-context-only selection ignores unused harness verification settings.
+`--num-ctx` is an optional requested
 Ollama context, not guaranteed effective retention. Methods share the typed
 renderer/query, not selected context. Extractive is always included. No retries,
 benchmark response cache, or verification re-answers are performed.
@@ -93,6 +116,9 @@ Preserve historical cohorts. Any missing pair suppresses delta/interval; a
 single seed has no interval and small-seed warnings must remain visible.
 Prompt characters are not billed tokens; end-to-end timing is not throughput or
 cost. This is not expert quality, model ranking, power, or promotion.
+Generated per-seed audit tables show the actual requested/complete denominators
+and suppress a seed's mean if any of its pairs failed. They do not rescue an
+incomplete whole contrast or add independent observations.
 
 Selected model failures return nonzero and print an `.incomplete.json` sidecar,
 preserving the last complete destination. Use that actual sidecar explicitly in
@@ -100,7 +126,12 @@ both consumers; an old complete file is not a new receipt. The
 [benchmark guide](backend_benchmark.md) covers schema/provenance and cloud
 consent. Cloud requires model selection plus `--allow-cloud`, sends prompts
 outside the local process and may incur cost. A key alone never selects cloud.
-The [local method study](local_method_study.md) is a declared plan, not outcomes.
+The [local method study](local_method_study.md) separates its plan, preserved
+original execution receipt and bounded statistical review.
+For publication, stage the unchanged selected report under `output/data/` and
+run both consumers from that same staged path. Their generated input receipts
+bind the exact report bytes and final consumer artifacts; `validate_artifacts.py`
+rejects divergent selections, mutation, or external-only missing release evidence.
 
 `run_openrouter.py` is instead an optional direct-DSPy smoke diagnostic. It reads
 only the process environment key `THALIA_OPENROUTER_API_KEY` (not `.env`), prints
