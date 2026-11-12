@@ -1,5 +1,12 @@
 # THALIA — Typed Harness with Analytical Lexical-Integrated Architecture
 
+<p align="center">
+  <a href="https://github.com/docxology/thalia/actions/workflows/ci.yml"><img alt="ci.yml workflow status on main" src="https://github.com/docxology/thalia/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://doi.org/10.5281/zenodo.21763245"><img alt="Digital Object Identifier (DOI), Zenodo record: 10.5281/zenodo.21763245" src="https://zenodo.org/badge/DOI/10.5281/zenodo.21763245.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Requires Python 3.11 or newer" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
+</p>
+
 A typed agentic harness that fuses DSPy's compiler-driven optimization
 with the Hermes Agent layered-memory and trace-evolution ecosystem, built inside
 the [`docxology/template`](https://github.com/docxology/template) reproducible-
@@ -491,3 +498,43 @@ Contributor workflow and responsible security reporting are documented in
 - `domain_profile.yaml` · `experiment_plan.yaml` · `data/claim_ledger.yaml` · `data/paper_audit.yaml` — evidence and audit registries
 
 See [`AGENTS.md`](AGENTS.md) for the agent-facing technical reference.
+
+### Package map
+
+Generated on 2026-11-12 from the `import` statements under `src/`. An arrow from A to B means code in A imports B; arrows already implied by a longer path are left out, so the picture shows layering rather than every edge. It shows 14 of the package's 30 top-level parts: the largest ones that import or are imported by others.
+
+```mermaid
+flowchart TB
+    accTitle: Internal dependency map of the src package in thalia
+    accDescr: Generated from import statements in src. Each box is a subpackage or module of the package; an arrow from A to B means code in A imports B; arrows already implied by a longer path are omitted. Most-imported: signatures, evaluation, compiler.
+    n_evaluation["evaluation/"]
+    n_figures["figures/"]
+    n_manuscript_variables["manuscript_variables.py"]
+    n_manuscript_integrity["manuscript_integrity.py"]
+    n_retrieval["retrieval/"]
+    n_stages["stages/"]
+    n_compiler["compiler/"]
+    n_dspy_runtime["dspy_runtime/"]
+    n_dashboard["dashboard.py"]
+    n_provenance["provenance.py"]
+    n_formalism_traceability["formalism_traceability.py"]
+    n_signatures["signatures/"]
+    n_memory["memory/"]
+    n_pipeline["pipeline.py"]
+    n_evaluation --> n_compiler
+    n_stages --> n_retrieval
+    n_dspy_runtime --> n_evaluation
+    n_pipeline --> n_stages
+    n_compiler --> n_signatures
+    n_evaluation --> n_dspy_runtime
+    n_stages --> n_memory
+    n_figures --> n_evaluation
+    n_memory --> n_signatures
+    n_dashboard --> n_figures
+    n_evaluation --> n_pipeline
+    n_formalism_traceability --> n_manuscript_integrity
+    n_manuscript_variables --> n_figures
+    n_manuscript_variables --> n_formalism_traceability
+    n_provenance --> n_figures
+    n_retrieval --> n_evaluation
+```
