@@ -53,12 +53,12 @@ dev = [
     "types-PyYAML>=6.0",
     "mypy>=1.10.0",
     "ruff>=0.14.0",
-    "dspy>=3.2.1",
+    "dspy>=3.2.1,<3.5",
     "filelock>=4.2.1",
 ]
 
 neural = [
-    "dspy>=3.2.1",
+    "dspy>=3.2.1,<3.5",
     "filelock>=4.2.1",
 ]
 
