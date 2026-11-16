@@ -4,6 +4,16 @@ All notable changes to THALIA are documented here. Versioned GitHub software
 releases do not themselves assign a new Zenodo DOI. The immutable `0.1.0` archive
 remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 
+## Unreleased
+
+### Fixed
+
+- Synchronize the locked optional DSPy requirement metadata with the relaxed
+  `<3.6` development and neural extras, preserving the existing resolved packages.
+- Use DSPy's canonical request/response engine on 3.5 and later, while retaining
+  the supported 3.2–3.4 adapter. Explicit Chat field delimiters preserve the
+  extractive consumer contract across DSPy 3.5's XML-default change.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added
