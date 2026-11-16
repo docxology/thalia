@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import os
 from typing import Any
 
@@ -24,7 +23,8 @@ from .adapters import (
 )
 
 
-_CANONICAL_LM = importlib.util.find_spec("dspy.lm15") is not None
+# DSPy 3.4 bundles lm15 but its adapters still dispatch messages=.
+_CANONICAL_LM = tuple(int(part) for part in _dspy.__version__.split(".")[:2]) >= (3, 5)
 
 
 def _extractive_completion(lm: LMClient, system: str, user: str) -> str:
@@ -35,7 +35,7 @@ def _extractive_completion(lm: LMClient, system: str, user: str) -> str:
 
 
 class _ExtractiveEngine:
-    """DSPy 3.4+ canonical engine; execution/cache ownership stays with DSPy."""
+    """DSPy 3.5+ canonical engine; execution/cache ownership stays with DSPy."""
 
     def __init__(self, lm: LMClient) -> None:
         self.lm = lm
