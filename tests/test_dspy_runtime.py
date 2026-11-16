@@ -110,7 +110,7 @@ class TestPersistentCacheBoundary:
         import dspy
         from src.dspy_runtime import runtime
 
-        previous_cache, previous_lm = dspy.cache, dspy.settings.lm
+        previous_cache, previous_lm, previous_adapter = dspy.cache, dspy.settings.lm, dspy.settings.adapter
         disk_cache = None
         request = {"model": "cache-boundary-test", "prompt": "source-owned synthetic request"}
         persisted = {"answer": "untrusted persisted answer"}
@@ -135,7 +135,7 @@ class TestPersistentCacheBoundary:
             if disk_cache is not None:
                 disk_cache.disk_cache.close()
             dspy.cache = previous_cache
-            dspy.configure(lm=previous_lm)
+            dspy.configure(lm=previous_lm, adapter=previous_adapter)
 
 
 @pytest.mark.skipif(not DSPY_AVAILABLE, reason="requires the optional DSPy extra")

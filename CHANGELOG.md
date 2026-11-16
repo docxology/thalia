@@ -10,6 +10,9 @@ remains at [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245).
 
 - Synchronize the locked optional DSPy requirement metadata with the relaxed
   `<3.6` development and neural extras, preserving the existing resolved packages.
+- Use DSPy's canonical request/response engine on 3.4 and later, while retaining
+  the supported 3.2 adapter. Explicit Chat field delimiters preserve the
+  extractive consumer contract across DSPy 3.5's XML-default change.
 
 ## [0.4.0] - 2026-11-09
 

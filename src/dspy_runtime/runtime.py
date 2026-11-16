@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from typing import Any
 
@@ -23,26 +24,60 @@ from .adapters import (
 )
 
 
+_CANONICAL_LM = importlib.util.find_spec("dspy.lm15") is not None
+
+
+def _extractive_completion(lm: LMClient, system: str, user: str) -> str:
+    inputs = parse_input_fields(user)
+    output_fields = parse_output_fields(system)
+    answer = lm.complete(render_extractive_prompt(inputs))
+    return format_dspy_completion(output_fields, answer)
+
+
+class _ExtractiveEngine:
+    """DSPy 3.4+ canonical engine; execution/cache ownership stays with DSPy."""
+
+    def __init__(self, lm: LMClient) -> None:
+        self.lm = lm
+
+    def complete(self, request: Any) -> Any:
+        from dspy.lm15 import Message, Response, Usage
+
+        system = request.system or ""
+        if not isinstance(system, str):
+            system = "".join(part.text for part in system)
+        user = "".join(message.text or "" for message in request.messages if message.role == "user")
+        completion = _extractive_completion(self.lm, system, user)
+        return Response(
+            id=None, model=request.model, message=Message.assistant(completion),
+            finish_reason="stop", usage=Usage(),
+        )
+
+
 class ExtractiveDSPyLM(_dspy.BaseLM):
     """A real ``dspy`` LM backed by the project's deterministic ExtractiveLM."""
 
     def __init__(self, lm: LMClient | None = None, model: str = "thalia-extractive") -> None:
-        super().__init__(model=model)
         self.lm: LMClient = lm or ExtractiveLM()
+        if _CANONICAL_LM:
+            super().__init__(model=model, engine=_ExtractiveEngine(self.lm), num_retries=0)
+        else:
+            super().__init__(model=model)
 
     def __call__(
         self,
-        prompt: str | None = None,
+        prompt: Any = None,
         messages: list[dict] | None = None,
         **kwargs: Any,
-    ) -> list[dict[str, Any] | str]:
+    ) -> Any:
+        if _CANONICAL_LM:
+            if messages is not None:
+                raise TypeError("Canonical DSPy calls require a Request rather than messages=")
+            return super().__call__(prompt, **kwargs)
         messages = messages or ([{"role": "user", "content": prompt}] if prompt else [])
         system = next((m["content"] for m in messages if m.get("role") == "system"), "")
         user = "".join(m["content"] for m in messages if m.get("role") == "user")
-        inputs = parse_input_fields(user)
-        output_fields = parse_output_fields(system)
-        answer = self.lm.complete(render_extractive_prompt(inputs))
-        return [format_dspy_completion(output_fields, answer)]
+        return [_extractive_completion(self.lm, system, user)]
 
 
 class AnswerFromContext(_dspy.Signature):
@@ -56,7 +91,7 @@ class AnswerFromContext(_dspy.Signature):
 def _configure_backend(lm: Any) -> Any:
     """Do not replay persistent, pickle-backed SDK cache entries."""
     _dspy.configure_cache(enable_disk_cache=False)
-    _dspy.configure(lm=lm)
+    _dspy.configure(lm=lm, adapter=_dspy.ChatAdapter())
     return lm
 
 
