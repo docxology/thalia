@@ -1585,6 +1585,8 @@ def _run_receipt_contract_issues(
     by_run: dict[str, P0RunReceipt] = {}
     receipt_ids: set[str] = set()
     raw_paths: set[str] = set()
+    # The protocol digest serialises every probe; compute it once per call.
+    protocol_sha256 = protocol.protocol_sha256
     for receipt in run_receipts:
         if receipt.run_id in by_run:
             issues.append(f"duplicate_run_receipt:{receipt.run_id}")
@@ -1596,7 +1598,7 @@ def _run_receipt_contract_issues(
         if receipt.raw_path in raw_paths:
             issues.append(f"duplicate_run_receipt_raw_path:{receipt.raw_path}")
         raw_paths.add(receipt.raw_path)
-        if receipt.protocol_sha256 != protocol.protocol_sha256:
+        if receipt.protocol_sha256 != protocol_sha256:
             issues.append(f"run_receipt_protocol_mismatch:{receipt.run_id}")
         if receipt.run_id not in protocol.run_ids:
             issues.append(f"unknown_run_receipt:{receipt.run_id}")
@@ -1631,6 +1633,11 @@ def _row_contract_issues(
     raw_paths: set[str] = set()
     probes = {probe.task_id: probe for probe in protocol.probes}
     conditions = {condition.condition_id: condition for condition in protocol.conditions}
+    # Both digests are pure functions of the protocol, which this loop never
+    # mutates: hash the protocol once and each probe at most once per call
+    # instead of once per row.
+    protocol_sha256 = protocol.protocol_sha256
+    probe_input_sha256: dict[str, str] = {}
     for row in rows:
         key = _row_key(row)
         if key in by_key:
@@ -1644,7 +1651,7 @@ def _row_contract_issues(
         if row.raw_path in raw_paths:
             issues.append(f"duplicate_raw_path:{row.raw_path}")
         raw_paths.add(row.raw_path)
-        if row.protocol_sha256 != protocol.protocol_sha256:
+        if row.protocol_sha256 != protocol_sha256:
             issues.append(f"protocol_sha_mismatch:{row.row_id}")
         probe = probes.get(row.task_id)
         if probe is None:
@@ -1677,7 +1684,9 @@ def _row_contract_issues(
             issues.append(f"true_source_mismatch:{row.row_id}")
         if tuple(sorted(row.injected_source_ids)) != tuple(sorted(probe.injected_source_ids)):
             issues.append(f"injected_source_mismatch:{row.row_id}")
-        if row.canonical_input_sha256 != probe.input_sha256:
+        if probe.task_id not in probe_input_sha256:
+            probe_input_sha256[probe.task_id] = probe.input_sha256
+        if row.canonical_input_sha256 != probe_input_sha256[probe.task_id]:
             issues.append(f"canonical_input_mismatch:{row.row_id}")
         known_sources = {source.record_id: source for source in probe.sources}
         known_claim_ids = {claim.claim_id for claim in probe.claims}
