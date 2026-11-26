@@ -137,6 +137,16 @@ an ordinary punctuated question ("What is the wifi password?") raised an
 tokenizer's own alphabet), and a regression test exercises punctuation, hyphens, and
 quotes so the recall path remains protected for natural-language input.
 
+The SQLite recall fixture also distinguishes episodic evidence from the
+active transcript. In a file-backed store, one fixture pairs a question
+about residence with Lisbon and another records an unrelated lunch.
+After closing and reopening the database, the residence query retrieves
+the Lisbon episode under a negative source index. Negative indices mark
+retrieved memory rather than windows in the active transcript. The empty
+store returns no evidence for the same question. This checks persistence
+and provenance on a small synthetic example. The method is independent
+of an external model or a generated answer quality score.
+
 ## Null Results, Fallbacks, and Robustness {#sec:val-negative}
 
 A trustworthy evaluation records null results alongside positive findings. Three

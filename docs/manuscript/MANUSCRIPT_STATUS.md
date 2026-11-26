@@ -1,7 +1,11 @@
-# Manuscript Status
+# Manuscript status
 
-- **Project:** thalia
-- **Manuscript title:** THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments
-- **Location:** `docs/manuscript/` (canonical default; legacy `docs/manuscript/` fallback resolved by `infrastructure.core.project_paths.resolve_manuscript_dir`)
-- **Type:** Active publication-target manuscript (22 section files)
-- **Status file purpose:** Tracks publication-readiness of the manuscript content in this directory. Migrated from legacy `docs/manuscript/` location.
+[`docs/manuscript/`](README.md) is the canonical source for THALIA's
+technical manuscript. The numbered files, configuration, preamble, and
+bibliography are tracked here. The numbered files in `output/manuscript/`
+are generated from this source and its evidence artifacts.
+
+The current source uses the v0.4.0 software identity. The v0.1.0 Zenodo
+archive and its checksums belong to the [historical release receipt](../release_receipt.md).
+The [publication assessment](../publication_assessment.md) records the
+separate evidence and release boundaries.

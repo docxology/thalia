@@ -91,4 +91,4 @@ expert answer-quality labels. The extractive generation ceiling and
 hashing-embedding surrogate remain explicit limitations. Independent P0 integrity,
 expert-rater quality, and production acceptance remain separate gates; neither
 GitHub publication nor the historical DOI promotes those claims. See
-[`PUBLICATION_READINESS.md`](../PUBLICATION_READINESS.md).
+[publication assessment](publication_assessment.md).

@@ -38,10 +38,10 @@ must be checked after the v0.4.0 source changes; older renders and earlier
 test results are not source-current release receipts. The publisher must
 record the current candidate checks, exact tag/commit, asset inventory, and
 checksums before announcing release completion. See
-[`docs/release_readiness.md`](docs/release_readiness.md) and
-[`docs/releases/v0.4.0.md`](docs/releases/v0.4.0.md).
+[`docs/release_readiness.md`](release_readiness.md) and
+[`docs/releases/v0.4.0.md`](releases/v0.4.0.md).
 
-The v0.1.0 DOI and [`docs/release_receipt.md`](docs/release_receipt.md) remain
+The v0.1.0 DOI and [`docs/release_receipt.md`](release_receipt.md) remain
 immutable historical authority only. The current citation identifies v0.4.0
 on GitHub; the old DOI is retained as an `isNewVersionOf` relation.
 
@@ -121,7 +121,7 @@ annotated tag points to commit `ab6543c1b139a6ac4ca0b8a091b588384997bcf9`, and
 Zenodo record [10.5281/zenodo.21763245](https://doi.org/10.5281/zenodo.21763245)
 is published with open-access MIT metadata, the exact source archive, the
 rendered PDF, and the derived artifact bundle. File sizes and SHA-256 values
-are recorded in [`docs/release_receipt.md`](docs/release_receipt.md).
+are recorded in [`docs/release_receipt.md`](release_receipt.md).
 
 This release is a reproducibility and software-availability milestone, not a
 promotion of model-quality, true-source-recovery, integrity-advantage, or
@@ -133,7 +133,7 @@ evidence ceilings remain unchanged.
 1. **P0 integrity confirmation:** freeze the protocol and adjudication rubric;
    collect matched, balanced attack families across the specified conditions;
    retain raw source and adjudication records; and pass paired, held-out, and
-   replay promotion gates. See [`docs/integrity_advantage_handoff.md`](docs/integrity_advantage_handoff.md).
+   replay promotion gates. See [`docs/integrity_advantage_handoff.md`](integrity_advantage_handoff.md).
 2. **Expert-rater quality study:** freeze the reviewed rubric, primary
    correctness estimand, thresholds, missing-data rules, safety criteria, and
    held-out IDs; run and adjudicate the pilot and confirmatory sets; then

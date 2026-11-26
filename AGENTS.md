@@ -106,7 +106,7 @@ uv run --project . --extra dev python scripts/build_dashboard.py
 uv run --project . --extra dev python scripts/validate_artifacts.py
 
 # Re-render the PDF and validate output (run LAST, after every artifact above is
-# fresh, or the PDF silently ships stale figures/tokens — see PUBLICATION_READINESS.md)
+# fresh, or the PDF silently ships stale figures/tokens — see docs/publication_assessment.md)
 # Optional external template integration; ../template must be populated. The
 # adapter creates a temporary exact project link and removes it on exit.
 uv run --no-sync --project ../template python \

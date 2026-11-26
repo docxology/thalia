@@ -9,7 +9,7 @@ runtime prerequisite.
 ## Install & verify
 
 ```bash
-uv sync --project . --extra dev
+uv sync --project . --locked --extra dev
 uv run --project . --extra dev python scripts/00_preflight.py
 PYTHONWARNINGS=error::ResourceWarning \
   uv run --project . --extra dev python -m pytest tests/ \
@@ -23,12 +23,16 @@ The project Python pin is 3.13. Live neural DSPy tests additionally require
 They do not generate at collection time; optional DSPy classes skip without the
 SDK. Offline HTTP loopback tests do not require a provider key.
 
+For a small offline smoke check, follow the [recall walkthrough](offline_recall.md).
+For the pinned renderer and exact input order, see the
+[manuscript build guide](manuscript/README.md).
+
 ## Run a query
 
 ```bash
 uv run --project . --extra dev python scripts/run_query.py \
-  --query "What is the wifi password?" \
-  --session-history "User: my wifi password is bluefish42" --json
+  --query "Where do I live?" \
+  --session-history "User: I live in Lisbon." --json
 ```
 
 Configure via a file, environment, or flags (lowest to highest precedence):

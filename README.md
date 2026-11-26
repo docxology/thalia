@@ -17,6 +17,9 @@ hashing-embedding + weighted RRF); and the pipeline records bounded optimization
 traces through structured search (MIPRO-style) and trace-reflective evolution
 (GEPA-style).
 
+Start with the [documentation index](docs/README.md), the [offline recall
+walkthrough](docs/offline_recall.md), or the [manuscript build guide](docs/manuscript/README.md).
+
 > **Current version:** v0.4.0 (2026-11-09), identified by its versioned
 > [GitHub release URL](https://github.com/docxology/thalia/releases/tag/v0.4.0).
 > Source metadata is not evidence that the release has been published: the
@@ -34,7 +37,7 @@ traces through structured search (MIPRO-style) and trace-reflective evolution
 
 > **Scientific scope:** software availability and complete benchmark accounting
 > do not promote model-quality, integrity-advantage, or production-readiness
-> claims. The dated [`PUBLICATION_READINESS.md`](PUBLICATION_READINESS.md)
+> claims. The dated [publication assessment](docs/publication_assessment.md)
 > separates historical evidence from current-candidate release checks.
 
 ## Status & next actions

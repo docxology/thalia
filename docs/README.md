@@ -5,6 +5,7 @@ Agent- and reader-facing documentation hub. Start with [`quickstart.md`](quickst
 | Doc | Purpose |
 | --- | --- |
 | [`quickstart.md`](quickstart.md) | Install, test, run a query, regenerate artifacts |
+| [Offline recall](offline_recall.md) | Reopen a real SQLite fixture and trace its evidence source |
 | [`architecture.md`](architecture.md) | The five stages, data flow, module boundaries |
 | [`methods.md`](methods.md) | Algorithms and formulae (BM25, RRF, MMR, verification, recursion) |
 | [`configuration.md`](configuration.md) | `HarnessConfig`, files, `THALIA_*` env, CLI precedence |
@@ -16,8 +17,10 @@ Agent- and reader-facing documentation hub. Start with [`quickstart.md`](quickst
 | [`release_artifacts.md`](release_artifacts.md) | Exact staged inputs, consumer receipts, frozen archive assembly and download checks |
 | [`release_readiness.md`](release_readiness.md) | Current version identity, publication gates and scientific non-promotion boundaries |
 
-The full design rationale lives in [`manuscript/`](manuscript/); the
-runnable, tested implementation lives in [`../src/`](../src).
+The [manuscript and build guide](manuscript/README.md) contain the full design
+and evaluation. The [publication assessment](publication_assessment.md)
+separates the v0.4.0 candidate checks from the historical archive. The
+runnable, tested implementation lives in [`../src/`](../src/).
 
 ## Task and evidence ownership
 
