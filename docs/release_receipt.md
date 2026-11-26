@@ -55,4 +55,4 @@ grant third-party redistribution rights.
 These checks establish software and reproducibility release integrity. They do
 not promote model-quality, true-source-recovery, integrity-advantage, or
 production-readiness claims; those remain conditional in
-[`PUBLICATION_READINESS.md`](../PUBLICATION_READINESS.md).
+[publication assessment](publication_assessment.md).

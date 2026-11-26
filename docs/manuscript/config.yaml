@@ -3,6 +3,8 @@
 # Consumed by infrastructure/rendering (PDF metadata) and project scripts such as
 # scripts/z_generate_manuscript_variables.py.
 
+manuscript_dir: "docs/manuscript"
+
 paper:
   title: "THALIA: A Typed Agentic Harness for Reproducible Long-Context Memory Experiments"
   subtitle: "v0.4.0 composable runtime and auditable experiment planning"
@@ -73,7 +75,7 @@ testing:
   max_project_test_failures: 0
 
 # Project-specific provenance accepted by the template config schema. Runtime
-# harness configuration remains canonical in ../config/harness.yaml, which
+# harness configuration remains canonical in ../../config/harness.yaml, which
 # leaves lexical_weight/semantic_weight null (per-task-category defaults from
 # src/stages/retriever.py::_CATEGORY_WEIGHTS, ranging (0.75,0.25) to
 # (0.55,0.45) across the 6 categories). The pair below is illustrative only:
