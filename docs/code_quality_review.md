@@ -124,8 +124,9 @@ cd /path/to/thalia && PYTHONWARNINGS=error::ResourceWarning uv run --project . -
 
 `src/provenance.py::write_verification_summary` (called from `src/demo.py::
 build_demo_artifacts`, itself invoked by `scripts/run_demo.py`, and separately
-from `scripts/build_dashboard.py`) writes
-[`output/reports/verification_summary.json`](../output/reports/verification_summary.json).
+from `scripts/build_dashboard.py`) writes the local report
+`output/reports/verification_summary.json`. See [Install & verify](quickstart.md#install--verify)
+for the current checkout checks.
 The summary preserves the canonical commands and, after the strict suite and
 artifact sweep, records the observed test count, coverage, lock/compile/package
 checks, and validator result. A fresh gate remains authoritative for a new
